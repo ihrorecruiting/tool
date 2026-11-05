@@ -66,6 +66,15 @@ tr:last-child td{border-bottom:0}
 .ov .box{background:#fff;border-radius:16px;padding:20px;max-width:440px;width:100%}
 .ov input{width:100%;font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin:4px 0 12px}
 .ov label{font-size:13px;color:var(--muted)}
+.stk{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:4px 0 12px}.stk>div{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px 12px}.stk .l{font-size:12px;color:var(--muted)}.stk .v{font-size:22px;font-weight:700}
+@media (max-width:520px){.stk{grid-template-columns:repeat(2,1fr)}}
+.kpis5{grid-template-columns:repeat(5,1fr)}.kpis4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:900px){.kpis5{grid-template-columns:repeat(3,1fr)}.kpis4{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.kpis5{grid-template-columns:repeat(2,1fr)}.kpis5>.card:first-child{grid-column:1/-1}}
+.amp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.amp i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chk{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}.chk input{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.chk label{font-size:12.5px;color:var(--muted)}.res{margin-top:12px;display:grid;gap:8px}.res>div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+@media (max-width:620px){.chk{grid-template-columns:1fr}}
 .days{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:6px}
 .days .d{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);min-width:0}
 .days .d i{display:block;width:100%;max-width:34px;background:var(--acc);border-radius:4px 4px 0 0}
@@ -258,6 +267,119 @@ async function vqExcel(key) {
 }
 function vqBind(key) { const b = document.getElementById("vqXls"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "wird erstellt …"; try { await vqExcel(key); } catch (e) { alert(e.message); } b.disabled = false; b.textContent = "Als Excel herunterladen"; }; }
 
+/* Zentralstandorte (Herr Schmuck, 05.11.2026) und Abstellort-Regel (Dennis, 05.11.2026):
+   Wohnort bis 20 km vom nächsten Standort → Abstellort frei wählbar.
+   über 20 km → Treffpunkt in der Mitte: Fahrer und LKW fahren je die Hälfte (z. B. 60 km → Fahrer 30 km). Keine Obergrenze.
+   Die Stufen unten zeigen nur, wie weit der Fahrer selbst fahren müsste. */
+const STANDORTE = [
+  { key: "schwerte", name: "Schwerte", plz: "58239", region: "ruhr" },
+  { key: "schkeuditz", name: "Schkeuditz", plz: "04435", region: "halle" },
+  { key: "osnabrueck", name: "Osnabrück", plz: "49074", region: "osnabrueck" },
+  { key: "lorsch", name: "Lorsch", plz: "64653", region: "rheinmain" },
+];
+const ST_FARBE = "#ea580c", ST_FREI = 20, ST_RING = 40;
+let ST_LEADS = [], ST_FILTER = "alle";
+const stPos = (s) => PLZ[s.plz];
+function naechsterSt(lat, lon) {
+  if (lat == null) return null;
+  let best = null;
+  for (const s of STANDORTE) { const p = stPos(s), d = km(p[0], p[1], lat, lon); if (!best || d < best.km) best = { ...s, km: d }; }
+  return best;
+}
+const REGEL = [["frei", "bis 20 km", "Abstellort frei wählbar", "#16a34a"], ["m40", "20–40 km", "Treffpunkt Mitte, Fahrer fährt bis 20 km", "#eab308"], ["weit", "über 40 km", "Treffpunkt Mitte, Fahrer fährt über 20 km", "#dc2626"]];
+const regelOf = (d) => d <= ST_FREI ? "frei" : d <= 40 ? "m40" : "weit";
+const regelFarbe = (k) => REGEL.find((r) => r[0] === k)[3];
+function regelText(n) {
+  if (!n) return "";
+  const k = regelOf(n.km), h = Math.round(n.km / 2);
+  return k === "frei" ? "Abstellort frei wählbar" : `Mitte: Fahrer ca. ${h} km, LKW ca. ${Math.round(n.km - h)} km`;
+}
+function stZelle(lat, lon) {
+  const n = naechsterSt(lat, lon); if (!n) return "–";
+  const k = regelOf(n.km);
+  return `<span class="amp"><i style="background:${regelFarbe(k)}"></i><b>${Math.round(n.km)} km</b> ${esc(n.name)}</span><br><span class="note" style="margin:0">${esc(regelText(n))}</span>`;
+}
+const stExcelCols = (lat, lon) => { const n = naechsterSt(lat, lon); return n ? { "Nächster Standort": n.name, "km zum Standort": Math.round(n.km), "Abstellort-Regel": regelText(n) } : { "Nächster Standort": "", "km zum Standort": "", "Abstellort-Regel": "" }; };
+/* Reiter „Standorte“: nur Qualifizierte (online vorqualifiziert + telefonisch qualifiziert), je nächstem Standort, sortiert nach Entfernung */
+function stQual() {
+  return (QL || []).map((v) => { const p = PLZ[v.plz]; const n = p ? naechsterSt(p[0], p[1]) : null; return { ...v, lat: p ? p[0] : null, lon: p ? p[1] : null, ortN: v.ort || (p ? p[2] : ""), st: n, regel: n ? regelOf(n.km) : null, online: /online/i.test(v.status) }; });
+}
+function renderStandorte() {
+  const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
+  if (!QL) { $("main").innerHTML = '<div class="msg err">Liste der Qualifizierten konnte nicht geladen werden.</div>'; return; }
+  const Q = stQual(), mit = Q.filter((v) => v.st), ohne = Q.filter((v) => !v.st);
+  const zahl = (L, k) => L.filter((v) => v.regel === k).length;
+  const stand = (v) => v.online ? '<span style="color:#2563eb;font-weight:600">online</span>' : '<span style="color:#16a34a;font-weight:600">telefonisch</span>';
+  const kach = STANDORTE.map((s) => { const L = mit.filter((v) => v.st.key === s.key); return `<div class="card kpi"><div class="l">📍 ${esc(s.name)} <span style="font-size:11px">${s.plz}</span></div><div class="v">${L.length}</div>
+    <div class="s"><b style="color:#16a34a">${zahl(L, "frei")}</b> bis 20 · <b style="color:#a16207">${zahl(L, "m40")}</b> 20–40 · <b style="color:#dc2626">${zahl(L, "weit")}</b> über 40 km</div></div>`; }).join("");
+  const in60 = mit.filter((v) => v.st.km <= 60).length, aus60 = Q.length - in60, p60 = Q.length ? Math.round(in60 / Q.length * 100) : 0;
+  const top = `<div class="card" style="border:2px solid ${ST_FARBE};margin-bottom:14px"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+    <div style="flex:1;min-width:220px"><div class="l" style="font-size:13px;color:var(--muted)">Qualifizierte im Umkreis von 60 km um einen der vier Standorte</div>
+      <div style="display:flex;gap:28px;margin:6px 0 4px"><div><div style="font-size:34px;font-weight:800;color:#16a34a;line-height:1.1">${p60} %</div><div style="font-size:13px;font-weight:600">im Umkreis (${in60})</div></div>
+        <div><div style="font-size:34px;font-weight:800;color:#dc2626;line-height:1.1">${Q.length ? 100 - p60 : 0} %</div><div style="font-size:13px;font-weight:600">außerhalb (${aus60})</div></div></div>
+      <div class="s" style="font-size:13px;color:var(--muted)">${in60} von ${Q.length} Qualifizierten wohnen höchstens 60 km entfernt (Fahrer fährt höchstens 30 km), ${aus60} weiter weg oder ohne PLZ.</div></div>
+    <div style="flex:1;min-width:220px"><div class="qbar" style="height:18px;border-radius:9px"><i style="width:${p60}%;background:#16a34a"></i><i style="width:${100 - p60}%;background:#dc2626"></i></div></div></div></div>`;
+  const ges = `<div class="card kpi"><div class="l">Qualifiziert gesamt</div><div class="v">${Q.length}</div><div class="s">${Q.filter((v) => v.online).length} online · ${Q.filter((v) => !v.online).length} telefonisch</div></div>
+`;
+  const STUFEN = [["bis 20 km", 0, 20, "#16a34a", "Abstellort frei wählbar"], ["20–40 km", 20, 40, "#ca8a04", "Fahrer fährt bis 20 km"], ["40–60 km", 40, 60, "#ea580c", "Fahrer fährt bis 30 km"], ["über 60 km", 60, 1e9, "#dc2626", "Fahrer fährt über 30 km"]];
+  const stufenK = STUFEN.map(([t, a, z, c, txt]) => { const n = mit.filter((v) => v.st.km > a && v.st.km <= z || (a === 0 && v.st.km === 0)).length;
+    return `<div class="card kpi" style="border-top:4px solid ${c}"><div class="l">${t} zum Standort</div><div class="v" style="color:${c}">${n}</div><div class="s">${pct(n, Q.length)} · ${txt}</div></div>`; }).join("");
+  const zeile = (v) => `<tr><td>${esc(v.name)}${v.hinweis ? ` <span title="${esc(v.hinweis)}" style="color:#dc2626;font-weight:700">⚠</span>` : ""}</td><td>${stand(v)}</td><td>${esc(v.plz)} ${esc(v.ortN)}</td>
+    <td class="n"><b>${Math.round(v.st.km)} km</b></td><td>${esc(regelText(v.st))}</td><td>${esc(regName(v.region))}</td><td>${esc(v.erreichbar)}</td><td>${esc(startText(v))}</td></tr>`;
+  const bloecke = STANDORTE.map((s) => {
+    const L = mit.filter((v) => v.st.key === s.key).sort((a, b) => a.st.km - b.st.km);
+    const teile = REGEL.map(([k, t, txt, c]) => { const G = L.filter((v) => v.regel === k); return G.length ? `<tr><td colspan="8" style="background:#f2f4f7;font-weight:700;padding-top:10px"><span class="dot" style="background:${c}"></span> ${t} <span class="note" style="margin:0;font-weight:500">· ${txt} · ${G.length} Fahrer</span></td></tr>${G.map(zeile).join("")}` : ""; }).join("");
+    return `<div class="card" style="margin-top:14px"><h2>📍 Standort ${esc(s.name)} <span class="note" style="margin:0;font-weight:500">${s.plz} · ${L.length} qualifizierte Fahrer</span></h2>
+      <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Stand</th><th>Wohnort</th><th class="n">Entfernung</th><th>Abstellort</th><th>Kampagne</th><th>Erreichbar</th><th>Start</th></tr></thead>
+      <tbody>${teile || '<tr><td colspan="8" class="note">Noch keine qualifizierten Fahrer, die diesem Standort am nächsten wohnen.</td></tr>'}</tbody></table></div></div>`;
+  }).join("");
+  $("main").innerHTML = `
+  ${top}
+  <div class="grid kpis5">${ges}${stufenK}</div>
+  <div class="grid kpis4" style="margin-top:14px">${kach}</div>
+  <div class="card" style="margin-top:14px"><div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
+    <div><h2>Qualifizierte Fahrer und Zentralstandorte</h2><p class="sub">Online vorqualifiziert und telefonisch qualifiziert, jeder dem nächstgelegenen Standort zugeordnet – egal über welche Kampagne er kam. Ring innen 20 km, außen 40 km.</p></div>
+    <button class="pri noprint" id="stXls" ${Q.length ? "" : "disabled"}>Als Excel herunterladen</button></div>
+    <div id="map"></div>
+    <div class="legend qleg">${REGEL.map(([, t, txt, c]) => `<span><i class="dot" style="background:${c}"></i>${t}: ${txt}</span>`).join("")}</div></div>
+  ${bloecke}
+  ${ohne.length ? `<div class="card" style="margin-top:14px"><h2>Ohne gültige PLZ</h2><p class="sub">Wohnort nachtragen, dann erscheinen sie oben.</p><table><tbody>${ohne.map((v) => `<tr><td>${esc(v.name)}</td><td>${stand(v)}</td><td>${esc(v.plz || "–")} ${esc(v.ort)}</td><td>${esc(regName(v.region))}</td></tr>`).join("")}</tbody></table></div>` : ""}
+  <p class="note">Entfernung Luftlinie zwischen den PLZ-Mittelpunkten. Abstellort-Regel: bis 20 km frei wählbar, darüber Treffpunkt in der Mitte (Fahrer und LKW je die Hälfte). Talentpool ist nicht enthalten.</p>`;
+  const b = document.getElementById("stXls");
+  if (b) b.onclick = async () => { b.disabled = true; b.textContent = "wird erstellt …"; try { await stExcel(); } catch (e) { alert(e.message); } b.disabled = false; b.textContent = "Als Excel herunterladen"; };
+  baseMap([51.2, 9.6], 6);
+  if (!map) return;
+  const ringe = addStandorte();
+  for (const v of mit) window.L.circleMarker([v.lat, v.lon], { radius: 7, color: "#fff", weight: 2, fillColor: regelFarbe(v.regel), fillOpacity: 1 }).addTo(map)
+    .bindTooltip(`<b>${esc(v.name)}</b> (${v.online ? "online" : "telefonisch"})<br>${esc(v.plz)} ${esc(v.ortN)} · ${Math.round(v.st.km)} km bis ${esc(v.st.name)}<br>${esc(regelText(v.st))}`);
+  const bnd = window.L.latLngBounds(mit.map((v) => [v.lat, v.lon]).concat(STANDORTE.map((s) => stPos(s).slice(0, 2))));
+  ringe.forEach((c) => bnd.extend(c.getBounds()));
+  map.fitBounds(bnd.pad(0.05));
+}
+async function stExcel() {
+  await xlsxLaden();
+  const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
+  const ord = (v) => v.st ? STANDORTE.findIndex((s) => s.key === v.st.key) * 1e4 + v.st.km : 9e9;
+  const rows = stQual().sort((a, b) => ord(a) - ord(b)).map((v) => ({ Standort: v.st?.name || "ohne PLZ", Stufe: v.regel ? REGEL.find((r) => r[0] === v.regel)[1] : "", "km zum Standort": v.st ? Math.round(v.st.km) : "", Abstellort: v.st ? regelText(v.st) : "",
+    Name: v.name, Stand: v.online ? "online vorqualifiziert" : "telefonisch qualifiziert", PLZ: v.plz, Ort: v.ortN, Kampagne: regName(v.region), "Am besten erreichbar": v.erreichbar, Start: startText(v), Hinweis: v.hinweis }));
+  const ws = XLSX.utils.json_to_sheet(rows); ws["!cols"] = [14, 12, 10, 36, 24, 22, 8, 22, 18, 20, 30, 30].map((w) => ({ wch: w }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Standorte");
+  XLSX.writeFile(wb, `Transa_Qualifizierte_nach_Standort_${new Date().toLocaleDateString("en-CA")}.xlsx`);
+}
+/* Pins mit Ringen 20 km (frei) und 40 km (entgegenkommen); nur Standorte im Kartenausschnitt der Region */
+function addStandorte(nur) {
+  if (!map) return [];
+  const pin = window.L.divIcon({ className: "", html: `<svg width="28" height="38" viewBox="0 0 28 38"><path d="M14 1C7 1 1.5 6.5 1.5 13.5 1.5 23 14 37 14 37s12.5-14 12.5-23.5C26.5 6.5 21 1 14 1z" fill="${ST_FARBE}" stroke="#fff" stroke-width="2"/><circle cx="14" cy="13.5" r="5" fill="#fff"/></svg>`, iconSize: [28, 38], iconAnchor: [14, 37], tooltipAnchor: [0, -30] });
+  const out = [];
+  for (const s of STANDORTE.filter((x) => !nur || x.region === nur)) {
+    const p = stPos(s);
+    window.L.circle([p[0], p[1]], { radius: ST_RING * 1000, color: ST_FARBE, weight: 1.5, dashArray: "3 5", fillOpacity: .03, interactive: false }).addTo(map);
+    out.push(window.L.circle([p[0], p[1]], { radius: ST_FREI * 1000, color: ST_FARBE, weight: 2.5, fillOpacity: .08, interactive: false }).addTo(map));
+    window.L.marker([p[0], p[1]], { icon: pin, zIndexOffset: 1000 }).addTo(map).bindTooltip(`<b>Standort ${esc(s.name)}</b> (${s.plz})<br>innen 20 km: Abstellort frei · außen 40 km: Fahrer fährt bis 20 km`);
+  }
+  return out;
+}
+
 async function load() {
   const c = conn();
   if (!c.url || !c.token) { $("conn").classList.add("show"); return; }
@@ -356,7 +478,7 @@ function stats(L, K, r) {
 }
 
 function tabs() {
-  const t = [["alle", "Alle Regionen", null], ...DATA.regionen.map((r) => [r.key, r.name, COL[r.key]])];
+  const t = [["alle", "Alle Regionen", null], ...DATA.regionen.map((r) => [r.key, r.name, COL[r.key]]), ["standorte", "📍 Standorte", null]];
   $("tabs").innerHTML = t.map(([k, n, c]) => `<button data-t="${k}" class="${k === TAB ? "on" : ""}">${c ? `<span class="dot" style="background:${c}"></span>` : ""}${esc(n)}</button>`).join("");
   $("tabs").querySelectorAll("button").forEach((b) => b.onclick = () => { TAB = b.dataset.t; render(); });
 }
@@ -366,7 +488,8 @@ function render() {
   const { reg, leads, kosten } = prep();
   $("stand").textContent = "Stand " + new Date(DATA.stand).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " Uhr · " + $("zeit").selectedOptions[0].text + " · Meta-Zielgebiet je Region " + (DATA.regionen[0]?.ziel?.radius || 60) + " km";
   if (map) { map.remove(); map = null; }
-  if (TAB === "alle") renderAlle(reg, leads, kosten); else renderRegion(reg[TAB], leads.filter((l) => l.region === TAB), kosten.filter((k) => k.region === TAB));
+  ST_LEADS = leads;
+  if (TAB === "standorte") renderStandorte(); else if (TAB === "alle") renderAlle(reg, leads, kosten); else renderRegion(reg[TAB], leads.filter((l) => l.region === TAB), kosten.filter((k) => k.region === TAB));
 }
 
 function hbars(rows) {
@@ -417,7 +540,7 @@ function addRegion(r, L, opts = {}) {
   for (const p of pts.slice().sort((a, b) => QORDER.indexOf(qOf(b)) - QORDER.indexOf(qOf(a)))) {
     const q = qOf(p);
     window.L.circleMarker([p.lat, p.lon], { radius: q === "neu" ? 5 : q === "online" ? 9 : 7, color: c, weight: q === "neu" ? 2 : 2.5, fillColor: QF[q], fillOpacity: 1 }).addTo(map)
-      .bindTooltip(`<b>${esc(QNAME[q])}</b><br>${esc(p.ortName)} (${p.plz})${p.km != null ? " · " + Math.round(p.km) + " km" : ""} · ${fmtD(p.datum)}`);
+      .bindTooltip(`<b>${esc(QNAME[q])}</b><br>${esc(p.ortName)} (${p.plz})${p.km != null ? " · " + Math.round(p.km) + " km" : ""} · ${fmtD(p.datum)}${naechsterSt(p.lat, p.lon) ? `<br>📍 ${Math.round(naechsterSt(p.lat, p.lon).km)} km bis ${esc(naechsterSt(p.lat, p.lon).name)}` : ""}`);
   }
 }
 
@@ -435,7 +558,7 @@ function renderAlle(reg, leads, kosten) {
   <div class="grid kpis">${kpiRow("alle")}</div>
   <div class="grid two" style="margin-top:14px">
     <div class="card"><h2>Woher kommen die Bewerber?</h2><p class="sub">Punkt = Bewerber (Wohnort laut PLZ): Füllung = Stand im Ablauf, Rand = Region. Wärme = Häufung, gestrichelt = Meta-Zielgebiet.</p><div id="map"></div>
-      ${qLegend()}<div class="legend">${DATA.regionen.map((r) => `<span><i class="dot" style="background:${COL[r.key]}"></i>${esc(r.name)}</span>`).join("")}</div></div>
+      ${qLegend()}<div class="legend">${DATA.regionen.map((r) => `<span><i class="dot" style="background:${COL[r.key]}"></i>${esc(r.name)}</span>`).join("")}<span><i class="dot" style="background:${ST_FARBE}"></i>📍 Zentralstandort</span></div></div>
     <div class="card"><h2>Auf einen Blick</h2><ul class="finds">${finds.map((f) => `<li>${f}</li>`).join("") || "<li>Noch keine Daten im Zeitraum.</li>"}</ul>
       <p class="note">Bewerber ohne gültige PLZ fehlen auf der Karte (${leads.filter((l) => l.lat == null).length}). Ab 31.10. wird zusätzlich der Ort abgefragt; die Karte nutzt immer die PLZ.</p></div>
   </div>
@@ -455,6 +578,7 @@ function renderAlle(reg, leads, kosten) {
   vqBind("alle"); abBind("alle");
   baseMap([51.2, 9.6], 6);
   DATA.regionen.forEach((r) => addRegion(r, leads.filter((l) => l.region === r.key), { heat: 22 }));
+  addStandorte();
   const b = DATA.regionen.filter((r) => r.ziel).map((r) => [r.ziel.lat, r.ziel.lon]);
   if (map && b.length) map.fitBounds(window.L.latLngBounds(b).pad(0.35));
 }
@@ -508,11 +632,13 @@ function renderRegion(r, L, K) {
   baseMap(r.ziel ? [r.ziel.lat, r.ziel.lon] : [51.2, 9.6], r.ziel ? 8 : 6);
   addRegion(r, L);
   if (!map) return;
+  const stK = addStandorte(r.key);
   const pts = L.filter((l) => l.lat != null).map((l) => [l.lat, l.lon]);
   if (r.ziel) pts.push([r.ziel.lat, r.ziel.lon]);
   const circle = r.ziel ? window.L.circle([r.ziel.lat, r.ziel.lon], { radius: rad * 1000 }).addTo(map) : null;
   const bounds = window.L.latLngBounds(pts.length ? pts : [[51.2, 9.6]]);
   if (circle) { bounds.extend(circle.getBounds()); map.removeLayer(circle); }
+  stK.forEach((c) => bounds.extend(c.getBounds()));
   map.fitBounds(bounds.pad(0.08));
 }
 
