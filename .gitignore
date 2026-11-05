@@ -1,0 +1,48 @@
+# >>> GitHub-Sync (automatisch ergänzt) – das bleibt NICHT auf GitHub >>>
+# Schlüssel und Passwörter
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+.netrc
+.claude/settings.local.json
+# Videos, Audios, Archive (liegen weiter in iCloud)
+*.mp4
+*.mov
+*.m4v
+*.webm
+*.mkv
+*.avi
+*.wav
+*.mp3
+*.m4a
+*.aac
+*.flac
+*.ogg
+*.aif
+*.aiff
+*.zip
+*.tgz
+*.tar.gz
+*.7z
+*.dmg
+*.psd
+# Bibliotheken und Erzeugtes
+node_modules
+.frames/
+dist/
+.next/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+# Render-Ordner out/: nur die Beschreibungen (README, Anzeigentexte) kommen mit
+**/out/**
+!**/out/**/
+!**/out/**/*.md
+!**/out/**/*.txt
+# <<< GitHub-Sync <<<
