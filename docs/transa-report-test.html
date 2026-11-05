@@ -69,6 +69,9 @@ tr:last-child td{border-bottom:0}
 .ov label{font-size:13px;color:var(--muted)}
 .stk{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:4px 0 12px}.stk>div{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px 12px}.stk .l{font-size:12px;color:var(--muted)}.stk .v{font-size:22px;font-weight:700}
 @media (max-width:520px){.stk{grid-template-columns:repeat(2,1fr)}}
+.kpis5{grid-template-columns:repeat(5,1fr)}.kpis4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:900px){.kpis5{grid-template-columns:repeat(3,1fr)}.kpis4{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.kpis5{grid-template-columns:repeat(2,1fr)}.kpis5>.card:first-child{grid-column:1/-1}}
 .amp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.amp i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .chk{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}.chk input{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
 .chk label{font-size:12.5px;color:var(--muted)}.res{margin-top:12px;display:grid;gap:8px}.res>div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
@@ -311,7 +314,10 @@ function renderStandorte() {
   const kach = STANDORTE.map((s) => { const L = mit.filter((v) => v.st.key === s.key); return `<div class="card kpi"><div class="l">📍 ${esc(s.name)} <span style="font-size:11px">${s.plz}</span></div><div class="v">${L.length}</div>
     <div class="s"><b style="color:#16a34a">${zahl(L, "frei")}</b> bis 20 · <b style="color:#a16207">${zahl(L, "m40")}</b> 20–40 · <b style="color:#dc2626">${zahl(L, "weit")}</b> über 40 km</div></div>`; }).join("");
   const ges = `<div class="card kpi"><div class="l">Qualifiziert gesamt</div><div class="v">${Q.length}</div><div class="s">${Q.filter((v) => v.online).length} online · ${Q.filter((v) => !v.online).length} telefonisch</div></div>
-    <div class="card kpi"><div class="l">davon bis 40 km</div><div class="v" style="color:#16a34a">${mit.filter((v) => v.regel !== "weit").length}</div><div class="s">${pct(mit.filter((v) => v.regel !== "weit").length, Q.length)} der Qualifizierten</div></div>`;
+`;
+  const STUFEN = [["bis 20 km", 0, 20, "#16a34a", "Abstellort frei wählbar"], ["20–40 km", 20, 40, "#ca8a04", "Fahrer fährt bis 20 km"], ["40–60 km", 40, 60, "#ea580c", "Fahrer fährt bis 30 km"], ["über 60 km", 60, 1e9, "#dc2626", "Fahrer fährt über 30 km"]];
+  const stufenK = STUFEN.map(([t, a, z, c, txt]) => { const n = mit.filter((v) => v.st.km > a && v.st.km <= z || (a === 0 && v.st.km === 0)).length;
+    return `<div class="card kpi" style="border-top:4px solid ${c}"><div class="l">${t} zum Standort</div><div class="v" style="color:${c}">${n}</div><div class="s">${pct(n, Q.length)} · ${txt}</div></div>`; }).join("");
   const zeile = (v) => `<tr><td>${esc(v.name)}${v.hinweis ? ` <span title="${esc(v.hinweis)}" style="color:#dc2626;font-weight:700">⚠</span>` : ""}</td><td>${stand(v)}</td><td>${esc(v.plz)} ${esc(v.ortN)}</td>
     <td class="n"><b>${Math.round(v.st.km)} km</b></td><td>${esc(regelText(v.st))}</td><td>${esc(regName(v.region))}</td><td>${esc(v.erreichbar)}</td><td>${esc(startText(v))}</td></tr>`;
   const bloecke = STANDORTE.map((s) => {
@@ -322,7 +328,8 @@ function renderStandorte() {
       <tbody>${teile || '<tr><td colspan="8" class="note">Noch keine qualifizierten Fahrer, die diesem Standort am nächsten wohnen.</td></tr>'}</tbody></table></div></div>`;
   }).join("");
   $("main").innerHTML = `
-  <div class="grid kpis">${ges}${kach}</div>
+  <div class="grid kpis5">${ges}${stufenK}</div>
+  <div class="grid kpis4" style="margin-top:14px">${kach}</div>
   <div class="card" style="margin-top:14px"><div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
     <div><h2>Qualifizierte Fahrer und Zentralstandorte</h2><p class="sub">Online vorqualifiziert und telefonisch qualifiziert, jeder dem nächstgelegenen Standort zugeordnet – egal über welche Kampagne er kam. Ring innen 20 km, außen 40 km.</p></div>
     <button class="pri noprint" id="stXls" ${Q.length ? "" : "disabled"}>Als Excel herunterladen</button></div>
