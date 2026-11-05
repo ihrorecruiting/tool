@@ -313,6 +313,13 @@ function renderStandorte() {
   const stand = (v) => v.online ? '<span style="color:#2563eb;font-weight:600">online</span>' : '<span style="color:#16a34a;font-weight:600">telefonisch</span>';
   const kach = STANDORTE.map((s) => { const L = mit.filter((v) => v.st.key === s.key); return `<div class="card kpi"><div class="l">📍 ${esc(s.name)} <span style="font-size:11px">${s.plz}</span></div><div class="v">${L.length}</div>
     <div class="s"><b style="color:#16a34a">${zahl(L, "frei")}</b> bis 20 · <b style="color:#a16207">${zahl(L, "m40")}</b> 20–40 · <b style="color:#dc2626">${zahl(L, "weit")}</b> über 40 km</div></div>`; }).join("");
+  const in60 = mit.filter((v) => v.st.km <= 60).length, aus60 = Q.length - in60, p60 = Q.length ? Math.round(in60 / Q.length * 100) : 0;
+  const top = `<div class="card" style="border:2px solid ${ST_FARBE};margin-bottom:14px"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+    <div style="flex:1;min-width:220px"><div class="l" style="font-size:13px;color:var(--muted)">Qualifizierte im Umkreis von 60 km um einen der vier Standorte</div>
+      <div style="display:flex;gap:28px;margin:6px 0 4px"><div><div style="font-size:34px;font-weight:800;color:#16a34a;line-height:1.1">${p60} %</div><div style="font-size:13px;font-weight:600">im Umkreis (${in60})</div></div>
+        <div><div style="font-size:34px;font-weight:800;color:#dc2626;line-height:1.1">${Q.length ? 100 - p60 : 0} %</div><div style="font-size:13px;font-weight:600">außerhalb (${aus60})</div></div></div>
+      <div class="s" style="font-size:13px;color:var(--muted)">${in60} von ${Q.length} Qualifizierten wohnen höchstens 60 km entfernt (Fahrer fährt höchstens 30 km), ${aus60} weiter weg oder ohne PLZ.</div></div>
+    <div style="flex:1;min-width:220px"><div class="qbar" style="height:18px;border-radius:9px"><i style="width:${p60}%;background:#16a34a"></i><i style="width:${100 - p60}%;background:#dc2626"></i></div></div></div></div>`;
   const ges = `<div class="card kpi"><div class="l">Qualifiziert gesamt</div><div class="v">${Q.length}</div><div class="s">${Q.filter((v) => v.online).length} online · ${Q.filter((v) => !v.online).length} telefonisch</div></div>
 `;
   const STUFEN = [["bis 20 km", 0, 20, "#16a34a", "Abstellort frei wählbar"], ["20–40 km", 20, 40, "#ca8a04", "Fahrer fährt bis 20 km"], ["40–60 km", 40, 60, "#ea580c", "Fahrer fährt bis 30 km"], ["über 60 km", 60, 1e9, "#dc2626", "Fahrer fährt über 30 km"]];
@@ -328,6 +335,7 @@ function renderStandorte() {
       <tbody>${teile || '<tr><td colspan="8" class="note">Noch keine qualifizierten Fahrer, die diesem Standort am nächsten wohnen.</td></tr>'}</tbody></table></div></div>`;
   }).join("");
   $("main").innerHTML = `
+  ${top}
   <div class="grid kpis5">${ges}${stufenK}</div>
   <div class="grid kpis4" style="margin-top:14px">${kach}</div>
   <div class="card" style="margin-top:14px"><div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
