@@ -4191,7 +4191,7 @@ function wiederDa() {
 document.addEventListener("visibilitychange", wiederDa);
 window.addEventListener("pageshow", (e) => { if (e.persisted) wiederDa(); });
 // ---------- Einrichtung auf neuen Geräten (iPhone) ----------
-const PAGES_URL = "https://dennismendehub.github.io/tool/";
+const PAGES_URL = "https://cockpit.karriere-ihro.de/";
 function loadFail(e) {
   const msg = /fetch|network|load failed/i.test(e.message) ? "Keine Verbindung zum Server – Internet prüfen und oben auf Aktualisieren tippen." : e.message;
   for (const id of ["queue", "newest", "wkBody"]) { const el = $(id); if (el && el.querySelector(".sk")) el.innerHTML = `<div class="loadfail">${esc(msg)}</div>`; }
