@@ -982,6 +982,8 @@
         <button class="tr-only" data-f="jetzt" title="Online-Vorgespräch ausgefüllt und passt – Status „Online-Vorqualifiziert“: jetzt anrufen">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
         <button class="tr-only" data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
         <button class="tr-only" data-f="nq" title="Transa-Bewerber mit Status „Nicht qualifiziert“ – über „Alle Kampagnen“ je Region">Nicht qualifiziert <span class="segn" id="nqN"></span></button>
+        <button class="tr-only" data-f="abs" title="Transa-Bewerber mit Status „Absage durch Bewerber“">Absage <span class="segn" id="absN"></span></button>
+        <button class="tr-only" data-f="tp" title="Transa-Bewerber mit Status „Talentpool bestätigt“">Talentpool <span class="segn" id="tpN"></span></button>
       </div>
       <div class="trstand tr-only" id="trStand" aria-label="Stand im Online-Vorgespräch"></div>
       <select class="inp" id="campFilter"><option value="">Alle Kampagnen</option></select>
@@ -1541,8 +1543,8 @@ function miniHtml(l, right) {
 // Transa: Listen „Qualifiziert“ / „Nicht qualifiziert“ (Status aus LeadTable, mit Punkten aus dem Gespräch)
 let TRQ = null;
 // Seit 04.11.2026 Online-Vorgespräch (fahrer.talentjagd.de/vorgespraech): Make setzt die Stände, Dennis ruft „Online-Vorqualifiziert“ an
-const QST = { jetzt: "Online-Vorqualifiziert", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Qualifizierung", erinn: "Erinnerungsmail verschickt", kr: "Keine Reaktion auf Vor-Quali" };
-const QTITEL = { jetzt: "Jetzt anrufen", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Mail raus – wartet auf Vorgespräch", erinn: "Erinnerung verschickt", kr: "Keine Reaktion auf Vorgespräch" };
+const QST = { jetzt: "Online-Vorqualifiziert", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Qualifizierung", erinn: "Erinnerungsmail verschickt", kr: "Keine Reaktion auf Vor-Quali", abs: "Absage durch Bewerber", tp: "Talentpool bestätigt" };
+const QTITEL = { jetzt: "Jetzt anrufen", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Mail raus – wartet auf Vorgespräch", erinn: "Erinnerung verschickt", kr: "Keine Reaktion auf Vorgespräch", abs: "Absage durch Bewerber", tp: "Talentpool" };
 const stN = (s) => String(s || "").trim().toLowerCase();
 const trqList = (f) => (TRQ || []).filter((l) => stN(l.status) === stN(QST[f]));
 let TRSTAND = null;
@@ -1550,7 +1552,8 @@ const STAND = [ // Reihenfolge und Farben wie im Transa-Report
   { f: "neu", st: "Unbearbeitet", t: "Neu", c: "#ffffff" }, { f: "mail", st: "Qualifizierung", t: "Mail raus", c: "#facc15" },
   { f: "erinn", st: "Erinnerungsmail verschickt", t: "Erinnerung", c: "#f97316" }, { f: "kr", st: "Keine Reaktion auf Vor-Quali", t: "Keine Reaktion", c: "#111827" },
   { f: "jetzt", st: "Online-Vorqualifiziert", t: "Online vorqualifiziert", c: "#2563eb" }, { f: "qual", st: "Qualifiziert", t: "Qualifiziert", c: "#16a34a" },
-  { f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" }];
+  { f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" },
+  { f: "abs", st: "Absage durch Bewerber", t: "Absage", c: "#6b7280" }, { f: "tp", st: "Talentpool bestätigt", t: "Talentpool", c: "#8b5cf6" }];
 function renderStand() {
   const el = $("trStand"); if (!el) return;
   const n = (st) => { if (!TRSTAND) return 0; let k = 0; for (const [s, v] of Object.entries(TRSTAND)) if (stN(s) === stN(st)) k += v; return k; };
@@ -1570,6 +1573,7 @@ async function loadTrq() {
     const n1 = trqList("qual").length, n2 = trqList("nq").length, n0 = trqList("jetzt").length;
     $("qualN").textContent = n1 || ""; $("qualN").hidden = !n1; $("nqN").textContent = n2 || ""; $("nqN").hidden = !n2;
     $("jetztN").textContent = n0 || ""; $("jetztN").hidden = !n0;
+    for (const k of ["abs", "tp"]) { const n = trqList(k).length; $(k + "N").textContent = n || ""; $(k + "N").hidden = !n; }
     renderStand();
     if (QST[qf]) renderQueue();
   } catch (e) { if (QST[qf]) toast(e.message, true); }
@@ -1646,7 +1650,7 @@ function renderTrq(L) {
   const reg = (l) => String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "") || "ohne Region";
   const wo = (l) => { const f = trAnswersMap({ answers: l.answers || [] }); const o = [f.wohnort, f.ort].find((x) => x && !REGWORT.test(x)) || ""; return [f.plz, o].filter(Boolean).join(" "); };
   const leer = { jetzt: "Gerade niemand zum Anrufen – sobald jemand das Online-Vorgespräch passend ausfüllt, steht er hier", qual: "Noch niemand qualifiziert", nq: "Noch niemand als nicht qualifiziert eingestuft",
-    mail: "Niemand wartet gerade auf das Vorgespräch", erinn: "Keine offenen Erinnerungen", kr: "Niemand ohne Reaktion" }[qf] || "Niemand";
+    mail: "Niemand wartet gerade auf das Vorgespräch", erinn: "Keine offenen Erinnerungen", kr: "Niemand ohne Reaktion", abs: "Noch keine Absagen durch Bewerber", tp: "Noch niemand im Talentpool" }[qf] || "Niemand";
   if (!TRQ) $("queue").innerHTML = `<div class="sk"><i></i><i></i></div>`;
   else if (!L.length) $("queue").innerHTML = `<div class="empty">${leer}${campF ? " in dieser Region" : ""}.</div>`;
   else if (qf === "jetzt") {
@@ -1661,7 +1665,7 @@ function renderTrq(L) {
       h += liHtml(l, sb, `<span class="age" title="seit dann online vorqualifiziert">${rel(l.last_status_change || l.lead_created_at)}</span>`);
     }
     $("queue").innerHTML = h;
-  } else $("queue").innerHTML = L.map((l) => liHtml(l, sub(l), `${QST[qf] === "Qualifiziert" || QST[qf] === "Nicht qualifiziert" ? kl(l) : ""}<span class="age">${rel(l.last_status_change || l.lead_created_at)}</span>`)).join("");
+  } else $("queue").innerHTML = L.map((l) => liHtml(l, sub(l), `${["qual", "nq", "abs", "tp"].includes(qf) ? kl(l) : ""}<span class="age">${rel(l.last_status_change || l.lead_created_at)}</span>`)).join("");
   const camps = [...new Set(base.map((l) => l.kampagne))].sort(), sel = $("campFilter"), keep = sel.value;
   sel.innerHTML = `<option value="">Alle Kampagnen</option>` + camps.map((c) => `<option ${c === keep ? "selected" : ""}>${esc(c)}</option>`).join("");
 }
