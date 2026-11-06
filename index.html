@@ -347,7 +347,11 @@
   .mdupe button{border:0;background:none;color:var(--blue-ink);font:inherit;font-weight:600;padding:0;cursor:pointer}
   .pass{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:0 6px;line-height:17px;margin-right:2px;vertical-align:1px}
   .pass.p-hoch{background:#dcfce7;color:#166534}.pass.p-mittel{background:#fef3c7;color:#92400e}.pass.p-gering{background:#f2f4f7;color:#475467}.pass.p-ko{background:#fee2e2;color:#991b1b}
-  .trstand{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+  .trstand{display:flex;flex-direction:column;gap:5px;margin:2px 0 4px}
+  .trstand .st-zeile,.trstand .st-kopf{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .trstand .st-gr{flex:0 0 100%;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3,#8a8f98);margin-top:2px}
+  .trstand button.st-zu{border:0;background:none;padding:2px 2px;font-size:12.5px;font-weight:700;color:var(--ink2)}
+  .trstand button.z{padding:2px 8px;font-size:11.5px;opacity:.55}
   .trstand button{display:inline-flex;align-items:center;gap:6px;border:.5px solid var(--sep-strong);background:var(--field);color:var(--ink2);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
   .trstand button b{font-variant-numeric:tabular-nums;color:var(--ink)}
   .trstand button i{width:9px;height:9px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
@@ -980,10 +984,10 @@
         <button data-f="ne">Nicht erreicht</button>
         <button data-f="ptplan" title="Alle mit Status „Probetag vereinbaren“ – Termin noch abstimmen">Probetag planen <span class="segn" id="ptN"></span></button>
         <button class="tr-only" data-f="jetzt" title="Online-Vorgespräch ausgefüllt und Abstellort passt – „Abstellort frei …“, „Kommt entgegen …“ oder noch „Online-Vorqualifiziert“: jetzt anrufen">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
-        <button class="tr-only" data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
-        <button class="tr-only" data-f="nq" title="Transa-Bewerber mit Status „Nicht qualifiziert“ – über „Alle Kampagnen“ je Region">Nicht qualifiziert <span class="segn" id="nqN"></span></button>
-        <button class="tr-only" data-f="abs" title="Transa-Bewerber mit Status „Absage durch Bewerber“">Absage <span class="segn" id="absN"></span></button>
-        <button class="tr-only" data-f="tp" title="Transa-Bewerber mit Status „Talentpool bestätigt“">Talentpool <span class="segn" id="tpN"></span></button>
+        <button class="tr-only" hidden data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
+        <button class="tr-only" hidden data-f="nq" title="Transa-Bewerber mit Status „Nicht qualifiziert“ – über „Alle Kampagnen“ je Region">Nicht qualifiziert <span class="segn" id="nqN"></span></button>
+        <button class="tr-only" hidden data-f="abs" title="Transa-Bewerber mit Status „Absage durch Bewerber“">Absage <span class="segn" id="absN"></span></button>
+        <button class="tr-only" hidden data-f="tp" title="Transa-Bewerber mit Status „Talentpool bestätigt“">Talentpool <span class="segn" id="tpN"></span></button>
       </div>
       <div class="trstand tr-only" id="trStand" aria-label="Stand im Online-Vorgespräch"></div>
       <select class="inp" id="campFilter"><option value="">Alle Kampagnen</option></select>
@@ -1551,21 +1555,25 @@ const QTITEL = { jetzt: "Jetzt anrufen", ab: "Abstellort bestätigt", vu: "Vertr
 const stN = (s) => String(s || "").trim().toLowerCase();
 const trqList = (f) => { const w = [].concat(QST[f]).map(stN); return (TRQ || []).filter((l) => w.includes(stN(l.status))); };
 let TRSTAND = null;
-const STAND = [ // Reihenfolge und Farben wie im Transa-Report
-  { f: "neu", st: "Unbearbeitet", t: "Neu", c: "#ffffff" }, { f: "mail", st: "Qualifizierung", t: "Mail raus", c: "#facc15" },
-  { f: "erinn", st: "Erinnerungsmail verschickt", t: "Erinnerung", c: "#f97316" }, { f: "kr", st: "Keine Reaktion auf Vor-Quali", t: "Keine Reaktion", c: "#111827" },
-  { f: "afv", st: "Abstellort frei, Vorschlag da", t: "Frei + Vorschlag", c: "#16a34a" }, { f: "afh", st: "Abstellort frei, Hilfe nötig", t: "Frei, Hilfe nötig", c: "#4ade80" },
-  { f: "kev", st: "Kommt entgegen, Vorschlag da", t: "Entgegen + Vorschlag", c: "#ea580c" }, { f: "keh", st: "Kommt entgegen, Hilfe nötig", t: "Entgegen, Hilfe nötig", c: "#fb923c" },
-  { f: "ovq", st: "Online-Vorqualifiziert", t: "Online vorqualifiziert (alt)", c: "#2563eb" },
-  { f: "spr", st: "Standort prüfen", t: "Standort prüfen", c: "#eab308" }, { f: "aa", st: "Abstellort-Anfrage verschickt", t: "Abstellort gefragt", c: "#a5b4fc" },
-  { f: "akr", st: "Keine Reaktion auf Abstellort", t: "Abstellort: keine Reaktion", c: "#374151" }, { f: "qual", st: "Qualifiziert", t: "Qualifiziert", c: "#16a34a" },
-  { f: "ab", st: "Abstellort bestätigt", t: "Abstellort bestätigt", c: "#15803d" }, { f: "vu", st: "Vertrag unterschrieben", t: "Vertrag unterschrieben", c: "#0369a1" },
-  { f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" },
-  { f: "abs", st: "Absage durch Bewerber", t: "Absage", c: "#6b7280" }, { f: "tp", st: "Talentpool bestätigt", t: "Talentpool", c: "#8b5cf6" }];
+const STAND = [ // Reihenfolge und Farben wie im Transa-Report; g = Gruppe (Zeile) im Block „Stand“
+  { g: "vg", f: "neu", st: "Unbearbeitet", t: "Neu", c: "#ffffff" }, { g: "vg", f: "mail", st: "Qualifizierung", t: "Mail raus", c: "#facc15" },
+  { g: "vg", f: "erinn", st: "Erinnerungsmail verschickt", t: "Erinnerung", c: "#f97316" }, { g: "vg", f: "kr", st: "Keine Reaktion auf Vor-Quali", t: "Keine Reaktion", c: "#111827" },
+  { g: "ab", f: "afv", st: "Abstellort frei, Vorschlag da", t: "Frei + Vorschlag", c: "#16a34a" }, { g: "ab", f: "afh", st: "Abstellort frei, Hilfe nötig", t: "Frei, Hilfe nötig", c: "#4ade80" },
+  { g: "ab", f: "kev", st: "Kommt entgegen, Vorschlag da", t: "Entgegen + Vorschlag", c: "#ea580c" }, { g: "ab", f: "keh", st: "Kommt entgegen, Hilfe nötig", t: "Entgegen, Hilfe nötig", c: "#fb923c" },
+  { g: "ab", f: "spr", st: "Standort prüfen", t: "Standort prüfen", c: "#eab308" }, { g: "ab", f: "aa", st: "Abstellort-Anfrage verschickt", t: "Gefragt", c: "#a5b4fc" },
+  { g: "ab", f: "akr", st: "Keine Reaktion auf Abstellort", t: "Keine Reaktion", c: "#374151" }, { g: "ab", f: "ovq", st: "Online-Vorqualifiziert", t: "Online vorqualifiziert (alt)", c: "#2563eb" },
+  { g: "erg", f: "qual", st: "Qualifiziert", t: "Qualifiziert", c: "#16a34a" }, { g: "erg", f: "ab", st: "Abstellort bestätigt", t: "Abstellort bestätigt", c: "#15803d" },
+  { g: "erg", f: "vu", st: "Vertrag unterschrieben", t: "Vertrag", c: "#0369a1" }, { g: "erg", f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" },
+  { g: "erg", f: "abs", st: "Absage durch Bewerber", t: "Absage", c: "#6b7280" }, { g: "erg", f: "tp", st: "Talentpool bestätigt", t: "Talentpool", c: "#8b5cf6" }];
+const STAND_GR = [["vg", "Vorgespräch"], ["ab", "Abstellort"], ["erg", "Ergebnis"]];
+let standZu = store.get("tc_standzu") === "1";
 function renderStand() {
   const el = $("trStand"); if (!el) return;
   const n = (st) => { if (!TRSTAND) return 0; let k = 0; for (const [s, v] of Object.entries(TRSTAND)) if (stN(s) === stN(st)) k += v; return k; };
-  el.innerHTML = STAND.map((x) => `<button type="button" data-f="${x.f}" class="${qf === x.f ? "on" : ""}" title="${esc(x.st)}"><i style="background:${x.c}"></i>${esc(x.t)} <b>${TRSTAND ? n(x.st) : "…"}</b></button>`).join("");
+  const chip = (x) => { const k = TRSTAND ? n(x.st) : null; return `<button type="button" data-f="${x.f}" class="${qf === x.f ? "on" : ""}${k === 0 && qf !== x.f ? " z" : ""}" title="${esc(x.st)}"><i style="background:${x.c}"></i>${esc(x.t)} <b>${k === null ? "…" : k}</b></button>`; };
+  const gew = STAND.find((x) => x.f === qf);
+  const kopf = `<div class="st-kopf"><button type="button" class="st-zu" data-zu="1" aria-expanded="${!standZu}">${standZu ? "▸" : "▾"} Stand</button>${standZu && gew ? chip(gew) : ""}</div>`;
+  el.innerHTML = kopf + (standZu ? "" : STAND_GR.map(([g, name]) => `<div class="st-zeile"><span class="st-gr">${name}</span>${STAND.filter((x) => x.g === g).map(chip).join("")}</div>`).join(""));
 }
 // Aus der LeadTable-Beschreibung (Make schreibt das Vorgespräch hinein): „Am besten erreichbar“ und Prüfhinweis
 function vgInfo(l) {
@@ -1754,7 +1762,7 @@ function renderWork() {
 }
 $("qFilter").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); qf = b.dataset.f; renderQueue(); });
 $("campFilter").addEventListener("change", (e) => { campF = e.target.value; renderQueue(); });
-$("trStand").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; qf = b.dataset.f; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderStand(); renderQueue(); });
+$("trStand").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.zu) { standZu = !standZu; store.set("tc_standzu", standZu ? "1" : "0"); renderStand(); return; } qf = b.dataset.f; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderStand(); renderQueue(); });
 $("trSort").value = trSort;
 $("trSort").addEventListener("change", (e) => { trSort = e.target.value; store.set("tc_trsort", trSort); renderQueue(); });
 for (const id of ["queue", "newest", "planned", "trials"]) $(id).addEventListener("click", (e) => { const b = e.target.closest(".li"); if (b) openLead(b.dataset.id); });
