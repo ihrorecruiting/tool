@@ -208,7 +208,9 @@ function vqRow(l) {
   for (const z of d) { const m = z.match(/am besten erreichbar\s*:\s*(.+)/i); if (m) err = m[1].trim(); const s = z.match(/^\s*start\s*:\s*(.+)/i); if (s) vgStart = s[1].trim(); }
   const warn = [...new Set(d.filter((z) => /⚠|bitte prüfen/i.test(z)).map((z) => z.trim()))].join(" | ");
   const reg = (VQ_REG.find(([, re]) => re.test(l.kampagne || "")) || ["allgemein"])[0];
-  return { id: l.lead_id, name: l.name || "", plz: (a.plz || "").replace(/\D/g, "").slice(0, 5), ort: [a.wohnort, a.ort].find((o) => o && !REGWORT.test(o)) || "", region: reg,
+  // the postcode from the Online-Vorgespräch (Abstellort step) is newer than the one from the application and wins (06.11.2026)
+  const ab = l.abstellort || null;
+  return { id: l.lead_id, name: l.name || "", abst: ab, plz: ab?.plz || (a.plz || "").replace(/\D/g, "").slice(0, 5), ort: [a.wohnort, a.ort].find((o) => o && !REGWORT.test(o)) || "", region: reg,
     kampagne: l.kampagne || "", seit: l.last_status_change || l.lead_created_at, klasse: l.gespraech && !l.gespraech.entwurf ? [l.gespraech.klasse, l.gespraech.punkte != null ? l.gespraech.punkte + " P." : ""].filter(Boolean).join(" · ") : "", erreichbar: err, erfahrung: a.erfahrung || "", start: a.start || "", vgStart: vgStart === "–" ? "" : vgStart, adr: a.adr || "", hinweis: warn };
 }
 /* Startmonat (Dennis, 04.11.2026): Liste und Excel nach Beginn Januar / Februar / später (Talentpool) ordnen.
@@ -321,10 +323,17 @@ function abPruef(lat, lon) {
   return { art: dA <= AB_FREI ? "frei" : "ab", reg, dM, dA };
 }
 const abHinweis = (e) => e.art === "frei" ? "Abstellort frei wählbar" : e.art === "ab" ? `kommt ca. ${Math.round(e.dA - AB_FREI)} km Richtung Autobahn entgegen` : e.art === "aus" && e.reg ? `${Math.round(e.dM - (e.reg.ziel.radius || 60))} km außerhalb ${e.reg.name}` : "";
+// what the driver answered in the Abstellort step (Online-Vorgespräch or follow-up mail), from the LeadTable description
+function abAntwort(v) {
+  const a = v.abst; if (!a) return '<span class="note" style="margin:0">noch nicht gefragt</span>';
+  const t = { frei: "frei wählbar", entgegen: "kommt entgegen: ja", passt_nicht: "⚠ passt nicht", aus: "⚠ außerhalb", unbekannt: "⚠ PLZ unbekannt" }[a.fall] || a.text;
+  const z = a.vorschlag ? "Vorschlag: " + a.vorschlag : a.hilfe ? "möchte Hilfe" : "";
+  return esc(t) + (z ? `<br><span class="note" style="margin:0">${esc(z)}</span>` : "");
+}
 function abDaten() {
   const namen = new Map([...(QL || []), ...(AB || [])].map((v) => [v.id, v]));
   const quelle = AB_MODE === "qual"
-    ? (QL || []).map((v) => { const p = PLZ[v.plz]; return { id: v.id, name: v.name, plz: v.plz, ort: v.ort || (p ? p[2] : ""), lat: p ? p[0] : null, lon: p ? p[1] : null, region: v.region, stand: /online/i.test(v.status) ? "online vorqualifiziert" : "telefonisch qualifiziert", start: startText(v), erreichbar: v.erreichbar || "" }; })
+    ? (QL || []).map((v) => { const p = PLZ[v.plz]; return { id: v.id, name: v.name, plz: v.plz, ort: v.ort || (p ? p[2] : ""), lat: p ? p[0] : null, lon: p ? p[1] : null, region: v.region, stand: /^qualifiziert$/i.test(v.status) ? "telefonisch qualifiziert" : /^standort/i.test(v.status) ? v.status : "online vorqualifiziert", start: startText(v), erreichbar: v.erreichbar || "", abst: v.abst }; })
     : ST_LEADS.map((l) => ({ id: l.id, name: namen.get(l.id)?.name || "", plz: l.plz, ort: l.ortName, lat: l.lat, lon: l.lon, region: l.region, stand: QNAME[qOf(l)], datum: l.datum, start: "", erreichbar: "" }));
   return quelle.map((v) => ({ ...v, e: abPruef(v.lat, v.lon) }));
 }
@@ -339,12 +348,12 @@ function renderStandorte() {
     return `<tr><td><span class="dot" style="background:${COL[r.key]}"></span> ${esc(r.name)} <span class="note" style="margin:0">${esc(r.ziel.name)}, ${r.ziel.radius || 60} km</span></td><td class="n"><b style="color:#16a34a">${f}</b></td><td class="n"><b style="color:#b45309">${a}</b></td><td class="n"><b>${f + a}</b></td><td class="n" style="color:#6b7280">${o}</td></tr>`; }).join("");
   const zeile = (v) => `<tr><td>${esc(v.name) || '<span class="note" style="margin:0">–</span>'}</td><td>${esc(v.stand)}</td><td>${esc(v.plz)} ${esc(v.ort)}</td>
     <td class="n">${v.e.dM != null ? Math.round(v.e.dM) + " km" : "–"}</td><td class="n">${v.e.dA != null ? Math.round(v.e.dA) + " km" : "–"}</td>
-    <td><span class="amp"><i style="background:${AB_FARBE[v.e.art]}"></i>${esc(abHinweis(v.e) || AB_TXT[v.e.art])}</span></td><td>${esc(regName(v.region))}</td>${AB_MODE === "qual" ? `<td>${esc(v.start)}</td>` : `<td class="n">${fmtD(v.datum)}</td>`}</tr>`;
-  const kopf = `<tr><th>Name</th><th>Stand</th><th>Wohnort</th><th class="n">zur Mitte</th><th class="n">zur Autobahn</th><th>Ergebnis</th><th>Kampagne</th><th>${AB_MODE === "qual" ? "Start" : "Bewerbung"}</th></tr>`;
+    <td><span class="amp"><i style="background:${AB_FARBE[v.e.art]}"></i>${esc(abHinweis(v.e) || AB_TXT[v.e.art])}</span></td><td>${abAntwort(v)}</td><td>${esc(regName(v.region))}</td>${AB_MODE === "qual" ? `<td>${esc(v.start)}</td>` : `<td class="n">${fmtD(v.datum)}</td>`}</tr>`;
+  const kopf = `<tr><th>Name</th><th>Stand</th><th>Wohnort</th><th class="n">zur Mitte</th><th class="n">zur Autobahn</th><th>Ergebnis</th><th>Antwort Fahrer</th><th>Kampagne</th><th>${AB_MODE === "qual" ? "Start" : "Bewerbung"}</th></tr>`;
   const sortA = (a, b) => (a.e.art === "frei" ? 0 : 1) - (b.e.art === "frei" ? 0 : 1) || (a.e.dA ?? 99) - (b.e.dA ?? 99);
   const bloecke = regs.map((r) => { const L = D.filter((v) => v.e.reg?.key === r.key && v.e.art !== "aus").sort(sortA);
     return `<div class="card" style="margin-top:14px"><h2><span class="dot" style="background:${COL[r.key]}"></span> ${esc(r.name)} <span class="note" style="margin:0;font-weight:500">${L.length} ${wer} passen</span></h2>
-      <div style="overflow-x:auto"><table><thead>${kopf}</thead><tbody>${L.map(zeile).join("") || '<tr><td colspan="8" class="note">Noch niemand in dieser Region.</td></tr>'}</tbody></table></div></div>`; }).join("");
+      <div style="overflow-x:auto"><table><thead>${kopf}</thead><tbody>${L.map(zeile).join("") || '<tr><td colspan="9" class="note">Noch niemand in dieser Region.</td></tr>'}</tbody></table></div></div>`; }).join("");
   const aus = D.filter((v) => v.e.art === "aus" || v.e.art === "nop").sort((a, b) => (a.e.dM ?? 999) - (b.e.dM ?? 999) - ((a.e.reg?.ziel?.radius || 0) - (b.e.reg?.ziel?.radius || 0)));
   $("main").innerHTML = `
   ${regelBox(false)}
@@ -400,8 +409,10 @@ async function stExcel(D) {
   const ord = { frei: 0, ab: 1, aus: 2, nop: 3 };
   const rows = [...D].sort((a, b) => (a.e.reg?.name || "").localeCompare(b.e.reg?.name || "") || ord[a.e.art] - ord[b.e.art] || (a.e.dA ?? 99) - (b.e.dA ?? 99)).map((v) => ({
     Region: v.e.reg?.name || "", Ergebnis: AB_TXT[v.e.art], "km zur Mitte": v.e.dM != null ? Math.round(v.e.dM) : "", "km zur Autobahn": v.e.dA != null ? Math.round(v.e.dA) : "", Hinweis: abHinweis(v.e),
-    Name: v.name, Stand: v.stand, PLZ: v.plz, Ort: v.ort, Kampagne: regName(v.region), Start: v.start, "Am besten erreichbar": v.erreichbar }));
-  const ws = XLSX.utils.json_to_sheet(rows); ws["!cols"] = [16, 34, 10, 12, 34, 24, 26, 8, 22, 18, 26, 20].map((w) => ({ wch: w }));
+    Name: v.name, Stand: v.stand, PLZ: v.plz, Ort: v.ort, Kampagne: regName(v.region), Start: v.start, "Am besten erreichbar": v.erreichbar,
+    "Antwort Abstellort (Fahrer)": v.abst ? ({ frei: "frei wählbar", entgegen: "kommt entgegen: ja", passt_nicht: "passt nicht", aus: "außerhalb", unbekannt: "PLZ unbekannt" }[v.abst.fall] || v.abst.text) : "noch nicht gefragt",
+    "Vorschlag Abstellort": v.abst?.vorschlag || (v.abst?.hilfe ? "möchte Hilfe / Rücksprache" : "") }));
+  const ws = XLSX.utils.json_to_sheet(rows); ws["!cols"] = [16, 34, 10, 12, 34, 24, 26, 8, 22, 18, 26, 20, 24, 30].map((w) => ({ wch: w }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, AB_MODE === "qual" ? "Qualifizierte" : "Alle Bewerber");
   XLSX.writeFile(wb, `Transa_Abgleich_${AB_MODE === "qual" ? "Qualifizierte" : "alle"}_${new Date().toLocaleDateString("en-CA")}.xlsx`);
 }
@@ -418,10 +429,10 @@ async function load() {
     DATA = d; zielErsatz();
     // Liste „Online vorqualifiziert“ für die Dispo (mit Namen; aus der Function transa-gespraech)
     try {
-      const r2 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Online-Vorqualifiziert", "Qualifiziert"] }) });
+      const r2 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Online-Vorqualifiziert", "Qualifiziert", "Standort passt", "Standort prüfen"] }) });
       const d2 = await r2.json().catch(() => ({}));
       QL = r2.ok ? (d2.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b/i.test(l.name || "")).map((l) => ({ ...vqRow(l), status: String(l.status || "").trim() })) : null;
-      VQ = QL ? QL.filter((v) => /^online-vorqualifiziert$/i.test(v.status)) : null;
+      VQ = QL ? QL.filter((v) => /^(online-vorqualifiziert|standort passt|standort prüfen)$/i.test(v.status)) : null;
     } catch { VQ = null; QL = null; }
     try {
       const r3 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Nicht qualifiziert", "Absage durch Bewerber", "Talentpool bestätigt"], mitText: true }) });
@@ -433,7 +444,8 @@ async function load() {
 }
 
 /* Testeinträge (eigene Testbewerbungen) zählen im Report nicht */
-const TEST_IDS = new Set(["6ae83c5ca286e77282f27196", "6ae31d16f5aeb9f5a81e9491", "6ae2101e24e78f012e4d8007", "6aeae29339f68c19b9832cb0"]);
+const TEST_IDS = new Set(["6ae83c5ca286e77282f27196", "6ae31d16f5aeb9f5a81e9491", "6ae2101e24e78f012e4d8007", "6aeae29339f68c19b9832cb0",
+  "6aedc0e9c05978b08b168b87", "6aedc451c38a53f3760d80cf", "6aedc7a23ca49457fa3cf125"]); // Dennis' Tests 06.11. (A6)
 
 /* Bewerber mit Koordinaten, Entfernung zum Mittelpunkt der Kampagne, Zeitraum-Filter */
 function prep() {
