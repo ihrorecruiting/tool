@@ -21,7 +21,8 @@ h1 small{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margi
 .sp{flex:1}
 select,button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;color:var(--ink);cursor:pointer}
 button.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
-.tabs{display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 12px}
+@media (max-width:620px){.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent)}}
 .tabs button{white-space:nowrap;border-radius:999px;padding:6px 14px;display:flex;align-items:center;gap:7px}
 .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
@@ -35,6 +36,7 @@ main{padding:18px 0 40px}
 h2{font-size:16px;margin:0 0 4px}
 .sub{font-size:13px;color:var(--muted);margin:0 0 12px}
 .two{grid-template-columns:3fr 2fr}
+.grid>*{min-width:0}
 #map{height:520px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
 .mapLock{font:600 13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 13px;box-shadow:0 1px 4px rgba(0,0,0,.15);color:var(--ink)}.mapLock.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -71,6 +73,12 @@ tr:last-child td{border-bottom:0}
 .kpis5{grid-template-columns:repeat(5,1fr)}.kpis4{grid-template-columns:repeat(4,1fr)}
 @media (max-width:900px){.kpis5{grid-template-columns:repeat(3,1fr)}.kpis4{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:520px){.kpis5{grid-template-columns:repeat(2,1fr)}.kpis5>.card:first-child{grid-column:1/-1}}
+.zt{display:grid;grid-template-columns:150px 1fr 40px 44px;gap:8px;align-items:center;font-size:13.5px;margin:5px 0}.zt b{text-align:right;font-variant-numeric:tabular-nums}.zt em{font-style:normal;font-size:12px;color:var(--muted);text-align:right}
+.ztbar{height:14px;border-radius:7px;background:#f2f4f7;overflow:hidden}.ztbar i{display:block;height:100%;border-radius:7px}
+@media (max-width:520px){.zt{grid-template-columns:105px 1fr 34px 40px}}
+.kpis7{grid-template-columns:repeat(7,1fr)}@media (max-width:1100px){.kpis7{grid-template-columns:repeat(4,1fr)}}@media (max-width:520px){.kpis7{grid-template-columns:repeat(2,1fr)}}
+.kpis7 .kpi .v{font-size:24px}
+.seg2{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.seg2 button{border:0;border-radius:0;padding:6px 10px;font-size:13px}.seg2 button.on{background:var(--ink);color:#fff}
 .amp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.amp i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .chk{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}.chk input{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
 .chk label{font-size:12.5px;color:var(--muted)}.res{margin-top:12px;display:grid;gap:8px}.res>div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
@@ -136,6 +144,36 @@ const zP = (z) => z ? (Array.isArray(z.punkte) && z.punkte.length ? z.punkte : [
 const zKm = (z, lat, lon) => Math.min(...zP(z).map((p) => km(p.lat, p.lon, lat, lon) - (p.radius || z.radius || 60))) + (z.radius || 60);
 
 let DATA = null, TAB = "alle", map = null, VQ = null, QL = null, AB = null;
+/* Wohnort für alle Rechnungen (06.11.2026): normalerweise der PLZ-Mittelpunkt. Steht in LeadTable ein Ort, der mehr als 15 km von der
+   PLZ abweicht (z. B. von Dennis von Hand eingetragen, weil der Fahrer umzieht), zählt der Ort – mit Hinweis „Ort statt PLZ“. */
+let ORT_IDX = null;
+const ortNorm = (o) => String(o || "").toLowerCase().replace(/\s*\((.*?)\)\s*/g, "/$1").replace(/\s*\/\s*/g, "/").replace(/\s+/g, " ").trim();
+const ortWort = (o) => ortNorm(o).split(/[\s\/,-]/)[0];
+function ortKoord(ort) {
+  if (!ORT_IDX) { ORT_IDX = new Map(); for (const v of Object.values(PLZ)) { for (const k of new Set([String(v[2]).toLowerCase(), ortNorm(v[2]), "#" + ortWort(v[2])])) { const a = ORT_IDX.get(k) || []; a.push(v); ORT_IDX.set(k, a); } } }
+  const a = ORT_IDX.get(String(ort || "").toLowerCase().trim()) || ORT_IDX.get(ortNorm(ort)); if (!a) return null;
+  const lat = a.reduce((s, v) => s + v[0], 0) / a.length, lon = a.reduce((s, v) => s + v[1], 0) / a.length;
+  // gleicher (Anfangs-)Name an weit entfernten Orten, z. B. Coswig in Sachsen und in Anhalt: nicht raten
+  const gleich = ORT_IDX.get("#" + ortWort(ort)) || [];
+  return [...a, ...gleich].some((v) => km(lat, lon, v[0], v[1]) > 25) ? null : [lat, lon];
+}
+function koord(plz, ort) {
+  const p = PLZ[plz], o = ort ? ortKoord(ort) : null;
+  // gleicher Ortsname wie die PLZ (z. B. „Essen (Oldenburg)“ zu „Essen/Oldenburg“): PLZ bleibt
+  if (o && (!p || (ortWort(p[2]) !== ortWort(ort) && km(p[0], p[1], o[0], o[1]) > 15))) return { lat: o[0], lon: o[1], ort: String(ort), ortStatt: true, plzOrt: p ? p[2] : "" };
+  return p ? { lat: p[0], lon: p[1], ort: p[2], ortStatt: false } : { lat: null, lon: null, ort: "", ortStatt: false };
+}
+const ortStattT = (v) => v.ortStatt ? ` <span title="Ort aus LeadTable statt PLZ ${esc(v.plz)}${v.plzOrt ? " (" + esc(v.plzOrt) + ")" : ""}" style="color:#b45309;font-weight:700;white-space:nowrap">⚠ Ort statt PLZ</span>` : "";
+// Entfernung zur Autobahn: unter 5 km nicht genauer zeigen, als die PLZ es hergibt
+const kmA = (d) => d == null ? "–" : d < 5 ? "unter 5 km" : Math.round(d) + " km";
+/* Zielgebiet-Umstellung (Dennis, 06.11.2026): Rhein-Main von Frankfurt 60 km auf Lorsch 60 km. Die Heatmap rechnet ab sofort mit Lorsch,
+   auch solange Meta noch Frankfurt meldet; dann steht ein Hinweis da und der alte Kreis ist grau gestrichelt zu sehen. */
+const ZIEL_NEU = { rheinmain: { name: "Lorsch", lat: 49.651, lon: 8.566, radius: 60, seit: "06.11.2026" } };
+function umstellBox(nur) {
+  const U = DATA.regionen.filter((r) => r.umstellung && (!nur || r.key === nur));
+  return U.map((r) => `<div class="card" style="border-left:5px solid ${COL[r.key]};margin-bottom:14px;background:#f0fdfa"><b>${esc(r.name)}: Zielgebiet seit ${esc(r.umstellung.seit)} ${esc(r.ziel.name)} ${r.ziel.radius} km</b> (vorher ${esc(r.umstellung.alt)} ${r.umstellung.altRadius} km).
+    ${r.umstellung.meta ? "Meta meldet noch das alte Zielgebiet – die Heatmap rechnet trotzdem schon mit dem neuen." : "Meta meldet das neue Zielgebiet."} Bewerbungen bis zur Umstellung kamen über die alte Anzeige; der alte Umkreis ist auf den Karten grau gestrichelt.</div>`).join("");
+}
 // LeadTable-Status (endgültig seit 06.11.2026, Dennis): nach dem Online-Vorgespräch steht der Abstellort-Fall im Status
 const ABST_ST = ["Abstellort frei, Vorschlag da", "Abstellort frei, Hilfe nötig", "Kommt entgegen, Vorschlag da", "Kommt entgegen, Hilfe nötig"];
 const ONLINE_ST = /^(online-vorqualifiziert|standort passt|standort prüfen|abstellort frei, .+|kommt entgegen, .+)$/i;
@@ -198,7 +236,7 @@ function kpiRow(key) {
   const kost = K.reduce((s, k) => s + k.kosten, 0), kH = K.filter((k) => k.tag === heute).reduce((s, k) => s + k.kosten, 0);
   const Q = (QL || []).filter((v) => key === "alle" || v.region === key), qH = Q.filter((v) => v.seit && bDay(v.seit) === heute).length;
   const qOn = Q.filter((v) => ONLINE_ST.test(v.status)).length, nq = L.filter((l) => /^nicht qualifiziert$/i.test(String(l.status || "").trim())).length;
-  return kpi("Bewerbungen gesamt", L.length, key === "alle" ? "alle 5 Regionen" : "seit Kampagnenstart") + kpi("Bewerbungen heute", nH, "seit 0 Uhr") + kpi("Bewerbungen 7 Tage", n7, "inkl. heute") +
+  return kpi("Bewerbungen gesamt", L.length, key === "alle" ? "alle Regionen, seit Start" : "seit Kampagnenstart") + kpi("Bewerbungen heute", nH, "seit 0 Uhr") + kpi("Bewerbungen 7 Tage", n7, "inkl. heute") +
     kpi("Qualifiziert", `${QL ? Q.length : "–"}${QL && qH ? ` <span style="font-size:15px;color:#16a34a">+${qH} heute</span>` : ""}`, QL ? `${qOn} online · ${Q.length - qOn} von dir · ${nq} nicht qualifiziert` : "nicht geladen") +
     kpi("Werbekosten", eur(kost), `heute ${eur(kH)} · Meta`) +
     kpi("Kosten je Bewerbung", nH ? eur(kH / nH) : "–", `heute · Durchschnitt ${L.length ? eur(kost / L.length) : "–"}`);
@@ -234,26 +272,44 @@ function startGrp(v) {
 }
 const startText = (v) => v.vgStart ? `${v.vgStart} (Vorgespräch)` : v.start ? `${schoen(v.start)} (Bewerbung)` : "";
 const sgOrd = (v) => SG.findIndex(([k]) => k === startGrp(v));
-/* Qualifizierte plus Talentpool, geordnet nach Startmonat, dann Region und PLZ */
+/* Spalte „Abstellort“: Antwort des Fahrers, sonst was seine PLZ nach Regel 2 ergibt */
+function vqAbst(v) {
+  if (v.abst) return abAntwort(v);
+  const k = koord(v.plz, v.ort); if (k.lat == null) return '<span class="note" style="margin:0">noch nicht gefragt, PLZ fehlt</span>';
+  const e = abPruef(k.lat, k.lon);
+  const t = e.art === "frei" ? `frei (${kmA(e.dA)} zur Autobahn)` : e.art === "ab" ? `kommt ca. ${Math.round(e.dA - AB_FREI)} km entgegen` : "außerhalb der Regionen";
+  return `<span class="note" style="margin:0">noch nicht gefragt · laut PLZ: <span style="color:${AB_FARBE[e.art]};font-weight:600">${t}</span></span>`;
+}
+/* Gruppierung der Liste: nach Stand (neue Abstellort-Status, Standard seit 06.11.2026) oder nach Startmonat */
+let QGRP = (() => { try { return localStorage.getItem("transa_qgrp") || "stand"; } catch (e) { return "stand"; } })();
+const qStand = (v) => /talentpool/i.test(v.status || "") ? "Talentpool bestätigt" : String(v.status || "").trim();
+const qGruppe = (v) => QGRP === "stand" ? qStand(v) : startGrp(v);
+const qGruppen = (L) => QGRP === "stand"
+  ? [...new Set(L.map(qStand))].sort((a, b) => stIdx(a) - stIdx(b)).map((k) => [k, k === "Talentpool bestätigt" ? "Talentpool (Start später)" : standName(k).replace(/^./, (c) => c.toUpperCase())])
+  : SG;
+const abKurzText = (v) => { const a = v.abst; if (!a) return ""; const t = { frei: "frei wählbar", entgegen: "kommt entgegen: ja", passt_nicht: "passt nicht", aus: "außerhalb", unbekannt: "PLZ unbekannt" }[a.fall] || a.text; return t; };
+/* Qualifizierte plus Talentpool, geordnet nach Stand bzw. Startmonat, dann Region und PLZ */
 function qListe(key) {
   const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
   const pool = (AB || []).filter((v) => /talentpool/i.test(v.status));
   return [...QL, ...pool].filter((v) => key === "alle" || v.region === key)
-    .sort((a, b) => sgOrd(a) - sgOrd(b) || regName(a.region).localeCompare(regName(b.region), "de") || String(a.plz).localeCompare(String(b.plz)));
+    .sort((a, b) => (QGRP === "stand" ? stIdx(qStand(a)) - stIdx(qStand(b)) || sgOrd(a) - sgOrd(b) : sgOrd(a) - sgOrd(b) || stIdx(qStand(a)) - stIdx(qStand(b))) || regName(a.region).localeCompare(regName(b.region), "de") || String(a.plz).localeCompare(String(b.plz)));
 }
 function vqCard(key) {
   if (!QL) return `<div class="card" style="margin-top:14px"><h2>Qualifiziert</h2><p class="note">Liste konnte nicht geladen werden.</p></div>`;
   const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
-  const L = qListe(key), cols = key === "alle" ? 9 : 8;
+  const L = qListe(key), cols = key === "alle" ? 10 : 9;
   const standT = (v) => /talentpool/i.test(v.status) ? `<span style="color:#6b7280;font-weight:600">Talentpool bestätigt</span>` : /^qualifiziert$/i.test(v.status) ? `<span style="color:#16a34a;font-weight:600">telefonisch qualifiziert</span>${v.klasse ? ` <span class="note" style="margin:0">${esc(v.klasse)}</span>` : ""}` : `<span style="color:${standFarbe(v.status)};font-weight:600">${esc(standName(v.status))}</span>${v.klasse ? ` <span class="note" style="margin:0">${esc(v.klasse)}</span>` : ""}`;
   const ortT = (v) => { const p = PLZ[v.plz]; return v.ort || (p ? p[2] : ""); };
-  const zeile = (v) => `<tr><td>${esc(v.name)}${v.hinweis ? ` <span title="${esc(v.hinweis)}" style="color:#dc2626;font-weight:700">⚠</span>` : ""}</td><td>${standT(v)}</td><td>${esc(v.plz)}</td><td>${esc(ortT(v))}</td>${key === "alle" ? `<td><span class="dot" style="background:${COL[v.region] || "#999"}"></span> ${esc(regName(v.region))}</td>` : ""}<td>${esc(v.erreichbar)}</td><td>${esc(v.erfahrung)}</td><td>${esc(startText(v))}</td><td class="n">${fmtD(v.seit)}</td></tr>`;
-  const bloecke = SG.map(([k, n]) => [k, n, L.filter((v) => startGrp(v) === k)]).filter(([, , g]) => g.length);
-  const zahl = SG.map(([k, n]) => `${L.filter((v) => startGrp(v) === k).length} ${n.replace(/ 2027$/, "").replace(/^Start /, "")}`).join(" · ");
+  const zeile = (v) => `<tr><td>${esc(v.name)}${v.hinweis ? ` <span title="${esc(v.hinweis)}" style="color:#dc2626;font-weight:700">⚠</span>` : ""}</td><td>${standT(v)}</td><td>${esc(v.plz)}</td><td>${esc(ortT(v))}${ortStattT(koord(v.plz, v.ort).ortStatt ? { ...v, ortStatt: true, plzOrt: koord(v.plz, v.ort).plzOrt } : {})}</td>${key === "alle" ? `<td><span class="dot" style="background:${COL[v.region] || "#999"}"></span> ${esc(regName(v.region))}</td>` : ""}<td>${vqAbst(v)}</td><td>${esc(v.erreichbar)}</td><td>${esc(v.erfahrung)}</td><td>${esc(startText(v))}</td><td class="n">${fmtD(v.seit)}</td></tr>`;
+  const G = qGruppen(L);
+  const bloecke = G.map(([k, n]) => [k, n, L.filter((v) => qGruppe(v) === k)]).filter(([, , g]) => g.length);
+  const zahl = QGRP === "stand" ? `${L.filter((v) => zStufe(v.status) >= 3).length} mit passendem Abstellort` : SG.map(([k, n]) => `${L.filter((v) => startGrp(v) === k).length} ${n.replace(/ 2027$/, "").replace(/^Start /, "")}`).join(" · ");
   return `<div class="card" style="margin-top:14px"><div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
-      <div><h2>Qualifizierte Fahrer nach Start${key === "alle" ? "" : " · " + esc(regName(key))}</h2><p class="sub">Online vorqualifiziert, telefonisch qualifiziert und Talentpool – geordnet nach Startmonat, für die Planung der Abstellorte. ${L.length} Fahrer${L.length ? `: ${zahl}` : ""}.</p></div>
-      <button class="pri noprint" id="vqXls" ${L.length ? "" : "disabled"}>Als Excel herunterladen</button></div>
-    <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Stand</th><th>PLZ</th><th>Ort</th>${key === "alle" ? "<th>Region</th>" : ""}<th>Erreichbar</th><th>Erfahrung</th><th>Start</th><th class="n">seit</th></tr></thead>
+      <div><h2>Qualifizierte Fahrer nach ${QGRP === "stand" ? "Stand" : "Start"}${key === "alle" ? "" : " · " + esc(regName(key))}</h2><p class="sub">Online vorqualifiziert, telefonisch qualifiziert und Talentpool – ${QGRP === "stand" ? "geordnet nach Stand in LeadTable (weiteste zuerst)" : "geordnet nach Startmonat"}. ${L.length} Fahrer${L.length ? `: ${zahl}` : ""}.</p></div>
+      <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="seg2"><button id="vqG1" class="${QGRP === "stand" ? "on" : ""}">nach Stand</button><button id="vqG2" class="${QGRP === "start" ? "on" : ""}">nach Start</button></span>
+      <button class="pri" id="vqXls" ${L.length ? "" : "disabled"}>Als Excel herunterladen</button></div></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Stand</th><th>PLZ</th><th>Ort</th>${key === "alle" ? "<th>Region</th>" : ""}<th>Abstellort (Fahrer)</th><th>Erreichbar</th><th>Erfahrung</th><th>Start</th><th class="n">seit</th></tr></thead>
     <tbody>${bloecke.map(([k, n, g]) => `<tr><td colspan="${cols}" style="background:#f2f4f7;font-weight:700;padding-top:10px">${esc(n)} <span class="note" style="margin:0;font-weight:500">· ${g.length} Fahrer</span></td></tr>${g.map(zeile).join("")}`).join("")
       || `<tr><td colspan="${cols}" class="note">Noch niemand qualifiziert${key === "alle" ? "" : " in dieser Region"}.</td></tr>`}</tbody></table></div>
     <p class="note">Start: Antwort aus dem Online-Vorgespräch, sonst Angabe aus der Bewerbung. Bei telefonisch Qualifizierten Klasse und Punkte aus deinem Gespräch. ⚠ = Make hat einen Prüfhinweis in LeadTable vermerkt. Keine Telefonnummern im Export.</p></div>`;
@@ -268,15 +324,16 @@ async function vqExcel(key) {
   await xlsxLaden();
   const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
   const L = qListe(key);
-  const rows = L.map((v) => ({ Start: SG_NAME[startGrp(v)], Name: v.name, Stand: /talentpool/i.test(v.status) ? "Talentpool bestätigt" : standName(v.status), "Klasse (Telefonat)": v.klasse, PLZ: v.plz, Ort: v.ort || (PLZ[v.plz] ? PLZ[v.plz][2] : ""), Region: regName(v.region), "Am besten erreichbar": v.erreichbar,
+  const rows = L.map((v) => ({ Stand: /talentpool/i.test(v.status) ? "Talentpool bestätigt" : standName(v.status), Start: SG_NAME[startGrp(v)], Name: v.name, "Klasse (Telefonat)": v.klasse, PLZ: v.plz, Ort: v.ort || (PLZ[v.plz] ? PLZ[v.plz][2] : ""), Region: regName(v.region), "Abstellort (Fahrer)": abKurzText(v) || (() => { const k = koord(v.plz, v.ort); if (k.lat == null) return "noch nicht gefragt"; const e = abPruef(k.lat, k.lon); return "noch nicht gefragt, laut PLZ: " + (e.art === "frei" ? "frei" : e.art === "ab" ? "kommt ca. " + Math.round(e.dA - AB_FREI) + " km entgegen" : "außerhalb"); })(), "Vorschlag Abstellort": v.abst?.vorschlag || (v.abst?.hilfe ? "möchte Hilfe" : ""), "Am besten erreichbar": v.erreichbar,
     Erfahrung: v.erfahrung, "Start (Angabe)": startText(v), ADR: v.adr, "Qualifiziert am": v.seit ? new Date(v.seit).toLocaleDateString("de-DE") : "", Hinweis: v.hinweis }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [20, 24, 22, 16, 8, 22, 18, 20, 16, 30, 10, 14, 40].map((w) => ({ wch: w }));
+  ws["!cols"] = [26, 20, 24, 16, 8, 22, 18, 20, 30, 20, 16, 30, 10, 14, 40].map((w) => ({ wch: w }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Qualifiziert");
   const tag = new Date().toLocaleDateString("en-CA");
   XLSX.writeFile(wb, `Transa_qualifiziert_${key === "alle" ? "alle" : regName(key).replace(/[^\wäöüÄÖÜß-]+/g, "_")}_${tag}.xlsx`);
 }
-function vqBind(key) { const b = document.getElementById("vqXls"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "wird erstellt …"; try { await vqExcel(key); } catch (e) { alert(e.message); } b.disabled = false; b.textContent = "Als Excel herunterladen"; }; }
+function vqBind(key) { for (const [id, g] of [["vqG1", "stand"], ["vqG2", "start"]]) { const t = document.getElementById(id); if (t) t.onclick = () => { QGRP = g; try { localStorage.setItem("transa_qgrp", g); } catch (e) {} render(); }; }
+  const b = document.getElementById("vqXls"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "wird erstellt …"; try { await vqExcel(key); } catch (e) { alert(e.message); } b.disabled = false; b.textContent = "Als Excel herunterladen"; }; }
 
 /* Die Regel als Kasten (Reiter „Alle Regionen“ und „Abgleich“) */
 function regelBox(kurz) {
@@ -312,6 +369,12 @@ function abKm(lat, lon) {
 // five pins from the ad set (20 km each) stand in, so the rule check and the maps work from the first applicant on
 const A6_PINS = [[49.3837, 8.5415], [49.3194, 8.5746], [49.2187, 9.0166], [49.2046, 9.4728], [49.1788, 9.9259]];
 function zielErsatz() {
+  for (const r of DATA.regionen) { const n = ZIEL_NEU[r.key]; if (!n) continue;
+    const meta = r.ziel, schon = meta && km(meta.lat, meta.lon, n.lat, n.lon) < 3;
+    r.zielAlt = schon ? null : meta;
+    r.umstellung = { seit: n.seit, alt: meta && !schon ? meta.name : "Frankfurt", altRadius: meta && !schon ? meta.radius || 60 : 60, meta: !schon };
+    if (!schon) r.ziel = { name: n.name, lat: n.lat, lon: n.lon, radius: n.radius };
+  }
   for (const r of DATA.regionen) if (r.key === "a6" && !r.ziel) {
     const punkte = A6_PINS.map(([lat, lon]) => ({ name: "Nadel", lat, lon, radius: 20 }));
     r.ziel = { ...punkte[0], name: "5 Standorte", radius: 20, punkte };
@@ -327,7 +390,7 @@ function abPruef(lat, lon) {
   if (dM > (reg.ziel.radius || 60)) return { art: "aus", reg, dM, dA };
   return { art: dA <= AB_FREI ? "frei" : "ab", reg, dM, dA };
 }
-const abHinweis = (e) => e.art === "frei" ? "Abstellort frei wählbar" : e.art === "ab" ? `kommt ca. ${Math.round(e.dA - AB_FREI)} km Richtung Autobahn entgegen` : e.art === "aus" && e.reg ? `${Math.round(e.dM - (e.reg.ziel.radius || 60))} km außerhalb ${e.reg.name}` : "";
+const abHinweis = (e) => e.art === "frei" ? "Abstellort frei wählbar" : e.art === "ab" ? `kommt ca. ${Math.round(e.dA - AB_FREI)} km Richtung Autobahn entgegen` : e.art === "aus" && e.reg ? `${e.dM - (e.reg.ziel.radius || 60) < 1 ? "knapp (unter 1 km)" : Math.round(e.dM - (e.reg.ziel.radius || 60)) + " km"} außerhalb ${e.reg.name}` : "";
 // what the driver answered in the Abstellort step (Online-Vorgespräch or follow-up mail), from the LeadTable description
 function abAntwort(v) {
   const a = v.abst; if (!a) return '<span class="note" style="margin:0">noch nicht gefragt</span>';
@@ -338,8 +401,8 @@ function abAntwort(v) {
 function abDaten() {
   const namen = new Map([...(QL || []), ...(AB || [])].map((v) => [v.id, v]));
   const quelle = AB_MODE === "qual"
-    ? (QL || []).map((v) => { const p = PLZ[v.plz]; return { id: v.id, name: v.name, plz: v.plz, ort: v.ort || (p ? p[2] : ""), lat: p ? p[0] : null, lon: p ? p[1] : null, region: v.region, stand: standName(v.status), start: startText(v), erreichbar: v.erreichbar || "", abst: v.abst }; })
-    : ST_LEADS.map((l) => ({ id: l.id, name: namen.get(l.id)?.name || "", plz: l.plz, ort: l.ortName, lat: l.lat, lon: l.lon, region: l.region, stand: QNAME[qOf(l)], datum: l.datum, start: "", erreichbar: "" }));
+    ? (QL || []).map((v) => { const k = koord(v.plz, v.ort); return { id: v.id, name: v.name, plz: v.plz, ort: v.ort || k.ort, lat: k.lat, lon: k.lon, ortStatt: k.ortStatt, plzOrt: k.plzOrt, region: v.region, stand: standName(v.status), start: startText(v), erreichbar: v.erreichbar || "", abst: v.abst }; })
+    : ST_LEADS.map((l) => ({ id: l.id, name: namen.get(l.id)?.name || "", plz: l.plz, ort: l.ortName, lat: l.lat, lon: l.lon, ortStatt: l.ortStatt, plzOrt: l.plzOrt, region: l.region, stand: QNAME[qOf(l)], datum: l.datum, start: "", erreichbar: "" }));
   return quelle.map((v) => ({ ...v, e: abPruef(v.lat, v.lon) }));
 }
 function renderStandorte() {
@@ -350,9 +413,9 @@ function renderStandorte() {
   const regs = abRegionen();
   const kach = (t, v, c, sub) => `<div class="card kpi" style="border-top:4px solid ${c}"><div class="l">${t}</div><div class="v" style="color:${c}">${v}</div><div class="s">${sub}</div></div>`;
   const regZ = regs.map((r) => { const L = D.filter((v) => v.e.reg?.key === r.key); const f = L.filter((v) => v.e.art === "frei").length, a = L.filter((v) => v.e.art === "ab").length, o = L.filter((v) => v.e.art === "aus").length;
-    return `<tr><td><span class="dot" style="background:${COL[r.key]}"></span> ${esc(r.name)} <span class="note" style="margin:0">${esc(r.ziel.name)}, ${r.ziel.radius || 60} km</span></td><td class="n"><b style="color:#16a34a">${f}</b></td><td class="n"><b style="color:#b45309">${a}</b></td><td class="n"><b>${f + a}</b></td><td class="n" style="color:#6b7280">${o}</td></tr>`; }).join("");
-  const zeile = (v) => `<tr><td>${esc(v.name) || '<span class="note" style="margin:0">–</span>'}</td><td>${esc(v.stand)}</td><td>${esc(v.plz)} ${esc(v.ort)}</td>
-    <td class="n">${v.e.dM != null ? Math.round(v.e.dM) + " km" : "–"}</td><td class="n">${v.e.dA != null ? Math.round(v.e.dA) + " km" : "–"}</td>
+    return `<tr><td><span class="dot" style="background:${COL[r.key]}"></span> ${esc(r.name)} <span class="note" style="margin:0">${esc(r.ziel.name)}, ${r.ziel.radius || 60} km</span></td><td class="n"><b style="color:#16a34a">${f}</b></td><td class="n"><b style="color:#b45309">${a}</b></td><td class="n"><b>${f + a}</b></td><td class="n">${o ? `<a href="#ausListe" style="color:#b45309;font-weight:600">${o} ansehen</a>` : '<span style="color:#6b7280">0</span>'}</td></tr>`; }).join("");
+  const zeile = (v) => `<tr><td>${esc(v.name) || '<span class="note" style="margin:0">–</span>'}</td><td>${esc(v.stand)}</td><td>${esc(v.plz)} ${esc(v.ort)}${ortStattT(v)}</td>
+    <td class="n">${v.e.dM != null ? Math.round(v.e.dM) + " km" : "–"}</td><td class="n">${kmA(v.e.dA)}</td>
     <td><span class="amp"><i style="background:${AB_FARBE[v.e.art]}"></i>${esc(abHinweis(v.e) || AB_TXT[v.e.art])}</span></td><td>${abAntwort(v)}</td><td>${esc(regName(v.region))}</td>${AB_MODE === "qual" ? `<td>${esc(v.start)}</td>` : `<td class="n">${fmtD(v.datum)}</td>`}</tr>`;
   const kopf = `<tr><th>Name</th><th>Stand</th><th>Wohnort</th><th class="n">zur Mitte</th><th class="n">zur Autobahn</th><th>Ergebnis</th><th>Antwort Fahrer</th><th>Kampagne</th><th>${AB_MODE === "qual" ? "Start" : "Bewerbung"}</th></tr>`;
   const sortA = (a, b) => (a.e.art === "frei" ? 0 : 1) - (b.e.art === "frei" ? 0 : 1) || (a.e.dA ?? 99) - (b.e.dA ?? 99);
@@ -361,9 +424,10 @@ function renderStandorte() {
       <div style="overflow-x:auto"><table><thead>${kopf}</thead><tbody>${L.map(zeile).join("") || '<tr><td colspan="9" class="note">Noch niemand in dieser Region.</td></tr>'}</tbody></table></div></div>`; }).join("");
   const aus = D.filter((v) => v.e.art === "aus" || v.e.art === "nop").sort((a, b) => (a.e.dM ?? 999) - (b.e.dM ?? 999) - ((a.e.reg?.ziel?.radius || 0) - (b.e.reg?.ziel?.radius || 0)));
   $("main").innerHTML = `
+  ${umstellBox()}
   ${regelBox(false)}
   <div class="card" style="margin-bottom:14px"><div style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap">
-    <div><h2>Abgleich Wohnort ↔ Region und Autobahn</h2>
+    <div><h2>Abgleich Wohnort ↔ Region und Autobahn${(() => { const k = abDaten().filter((v) => v.e.art === "aus" || v.e.art === "nop").length; return k ? ` <a href="#ausListe" class="noprint" style="font-size:13px;font-weight:600;color:#b45309;margin-left:8px">${k} passen nicht ↓</a>` : ""; })()}</h2>
     <p class="sub">Jeder Bewerber wird automatisch nach Regel 1 und 2 geprüft – bei jedem Öffnen und „Aktualisieren“ mit den aktuellen Daten aus LeadTable und Meta.</p></div>
     <div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap"><button id="abQ" class="${AB_MODE === "qual" ? "pri" : ""}">Qualifizierte</button><button id="abA" class="${AB_MODE === "alle" ? "pri" : ""}">Alle Bewerber</button><button id="abX">Excel</button></div></div></div>
   <div class="card" style="border:2px solid #16a34a;margin-bottom:14px"><div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
@@ -382,8 +446,11 @@ function renderStandorte() {
     <div class="card"><h2>Karte</h2><div id="map" style="height:420px"></div>
       <div class="legend">${["frei", "ab", "aus"].map((k) => `<span><i class="dot" style="background:${AB_FARBE[k]}"></i>${AB_TXT[k]}</span>`).join("")}<span><i class="dot" style="background:#fde68a"></i>Gebiet über ${AB_FREI} km zur Autobahn (Fahrer kommt entgegen)</span><span><i class="dot" style="background:#475569"></i>Anschlussstelle</span></div></div></div>
   ${bloecke}
-  <div class="card" style="margin-top:14px"><h2>Außerhalb der Regionen / ohne PLZ <span class="note" style="margin:0;font-weight:500">${aus.length}</span></h2>
-    <div style="overflow-x:auto;max-height:420px;overflow-y:auto"><table><thead>${kopf}</thead><tbody>${aus.map(zeile).join("") || '<tr><td colspan="8" class="note">Niemand.</td></tr>'}</tbody></table></div></div>
+  <div class="card" style="margin-top:14px" id="ausListe"><h2>Passen nicht: außerhalb der Regionen / ohne PLZ <span class="note" style="margin:0;font-weight:500">${aus.length}</span></h2>
+    <p class="sub">Je nächster Region, die knappsten zuerst. <b>Grenzfall</b> = höchstens 10 km außerhalb des Meta-Umkreises – hier lohnt sich ein Blick (z. B. Umzug, Pendelbereitschaft).</p>
+    <div style="overflow-x:auto"><table><thead>${kopf}</thead><tbody>${[...regs, null].map((r) => { const G = aus.filter((v) => (v.e.reg?.key || null) === (r ? r.key : null) && (r || v.e.art === "nop" || !v.e.reg)); if (!G.length) return "";
+      return `<tr><td colspan="9" style="background:#f2f4f7;font-weight:700;padding-top:10px">${r ? `<span class="dot" style="background:${COL[r.key]}"></span> nächste Region: ${esc(r.name)}` : "ohne gültige PLZ / keine Region in der Nähe"} <span class="note" style="margin:0;font-weight:500">· ${G.length}</span></td></tr>` +
+        G.map((v) => zeile(v).replace("<td>", v.e.dM != null && v.e.reg && v.e.dM - (v.e.reg.ziel.radius || 60) <= 10 ? '<td><span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 6px;font-size:12px;font-weight:700;margin-right:6px">Grenzfall</span>' : "<td>")).join(""); }).join("") || '<tr><td colspan="9" class="note">Niemand.</td></tr>'}</tbody></table></div></div>
   <p class="note">Entfernungen Luftlinie zwischen PLZ-Mittelpunkt und Anschlussstelle (auf der Straße meist rund ein Viertel mehr). Anschlussstellen: OpenStreetMap, nur Autobahnen (A-Nummern), ohne Kreuze und Dreiecke. ${AB_MODE === "qual" ? "Qualifiziert = online vorqualifiziert oder telefonisch qualifiziert." : "Namen nur bei Bewerbern, die schon qualifiziert, abgelehnt oder im Talentpool sind."}</p>`;
   $("abQ").onclick = () => { AB_MODE = "qual"; render(); }; $("abA").onclick = () => { AB_MODE = "alle"; render(); };
   $("abX").onclick = async () => { const b = $("abX"); b.disabled = true; try { await stExcel(D); } catch (e) { alert(e.message); } b.disabled = false; };
@@ -391,6 +458,7 @@ function renderStandorte() {
   if (!map) return;
   const cv = window.L.canvas({ padding: 0.3 });
   for (const r of regs) {
+    altKreis(r);
     for (const z of zP(r.ziel)) {
     const R = z.radius || r.ziel.radius || 60, k = Math.cos(z.lat * Math.PI / 180), st = 3 / 111;
     for (let la = z.lat - R / 111; la <= z.lat + R / 111; la += st) for (let lo = z.lon - R / 111 / k; lo <= z.lon + R / 111 / k; lo += st / k) {
@@ -405,7 +473,7 @@ function renderStandorte() {
   for (const v of pts) window.L.circleMarker([v.lat, v.lon], { radius: 6, color: "#fff", weight: 1.5, fillColor: AB_FARBE[v.e.art], fillOpacity: 1 }).addTo(map)
     .bindTooltip(`${v.name ? "<b>" + esc(v.name) + "</b><br>" : ""}${esc(v.plz)} ${esc(v.ort)}<br>${v.e.dA != null ? Math.round(v.e.dA) + " km zur Autobahn · " : ""}${esc(abHinweis(v.e) || AB_TXT[v.e.art])}`);
   const bnd = window.L.latLngBounds(regs.flatMap((r) => zP(r.ziel).map((z) => [z.lat, z.lon])));
-  regs.forEach((r) => zP(r.ziel).forEach((z) => bnd.extend(window.L.circle([z.lat, z.lon], { radius: (z.radius || r.ziel.radius || 60) * 1000 }).getBounds())));
+  regs.forEach((r) => zP(r.ziel).forEach((z) => bnd.extend(window.L.latLng(z.lat, z.lon).toBounds((z.radius || r.ziel.radius || 60) * 2000))));
   map.fitBounds(bnd.pad(0.05));
 }
 async function stExcel(D) {
@@ -420,6 +488,160 @@ async function stExcel(D) {
   const ws = XLSX.utils.json_to_sheet(rows); ws["!cols"] = [16, 34, 10, 12, 34, 24, 26, 8, 22, 18, 26, 20, 24, 30].map((w) => ({ wch: w }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, AB_MODE === "qual" ? "Qualifizierte" : "Alle Bewerber");
   XLSX.writeFile(wb, `Transa_Abgleich_${AB_MODE === "qual" ? "Qualifizierte" : "alle"}_${new Date().toLocaleDateString("en-CA")}.xlsx`);
+}
+
+/* ---------- Seit 06.11.2026 nachmittags (Dennis): Ziel 20 Verträge, Abstellort-Planung, Listen nach Status ---------- */
+const ZIEL_VERTRAEGE = 20, ZIEL_DATUM = "2026-11-30";
+// Reihenfolge der Stände in Listen und Excel (weiteste zuerst)
+const ST_ORD = ["Vertrag unterschrieben", "Abstellort bestätigt", "Abstellort frei, Vorschlag da", "Abstellort frei, Hilfe nötig", "Kommt entgegen, Vorschlag da",
+  "Kommt entgegen, Hilfe nötig", "Standort prüfen", "Online-Vorqualifiziert", "Standort passt", "Qualifiziert", "Talentpool bestätigt"];
+const stIdx = (s) => { const i = ST_ORD.findIndex((x) => x.toLowerCase() === String(s || "").trim().toLowerCase()); return i < 0 ? ST_ORD.length : i; };
+// Stufe im Ziel-Trichter aus dem LeadTable-Status: 5 Vertrag, 4 Abstellort bestätigt, 3 Abstellort passt, 2 qualifiziert, 0 sonst
+function zStufe(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (/^vertrag unterschrieben$|^eingestellt$/.test(s)) return 5;
+  if (/^abstellort bestätigt$/.test(s)) return 4;
+  if (/^abstellort frei, |^kommt entgegen, /.test(s)) return 3;
+  if (/^qualifiziert$|^online-vorqualifiziert$|^standort (passt|prüfen)$|^abstellort-anfrage verschickt$|^keine reaktion auf abstellort$|^mündliche zusage$|bedenkzeit|angebot|nachfass|nachgefasst|details verschickt/.test(s)) return 2;
+  return 0;
+}
+function zielCard() {
+  // telefonisch Qualifizierte, die auf die Abstellort-Nachfrage „passt“ geantwortet haben, zählen bei „Abstellort passt“ mit
+  const passtQ = new Set((QL || []).filter((v) => /^qualifiziert$/i.test(v.status) && v.abst && ["frei", "entgegen"].includes(v.abst.fall)).map((v) => v.id));
+  const L = DATA.leads.filter((l) => !TEST_IDS.has(l.id));
+  const st = (l) => Math.max(zStufe(l.status), passtQ.has(l.id) ? 3 : 0);
+  const zeile = (name, c, LL) => { const n = (k) => LL.filter((l) => st(l) >= k).length; return { name, c, b: LL.length, q: n(2), p: n(3), a: n(4), v: n(5) }; };
+  const regs = DATA.regionen.filter((r) => L.some((l) => l.region === r.key));
+  const rows = regs.map((r) => zeile(r.name, COL[r.key], L.filter((l) => l.region === r.key)));
+  const g = zeile("Gesamt", "#111827", L);
+  const tage = Math.max(0, Math.ceil((new Date(ZIEL_DATUM + "T23:59:59").getTime() - Date.now()) / 864e5));
+  const anteil = Math.min(100, g.v / ZIEL_VERTRAEGE * 100);
+  const stufen = [["b", "Bewerbungen"], ["q", "qualifiziert"], ["p", "Abstellort passt"], ["a", "Abstellort bestätigt"], ["v", "Vertrag"]];
+  const farbe = { b: "#cbd5e1", q: "#2563eb", p: "#16a34a", a: "#15803d", v: "#0369a1" };
+  const trichter = stufen.map(([k, t], i) => { const w = g.b ? Math.max(2, g[k] / g.b * 100) : 0; const vorher = i ? g[stufen[i - 1][0]] : 0;
+    return `<div class="zt"><span>${t}</span><div class="ztbar"><i style="width:${w}%;background:${farbe[k]}"></i></div><b>${g[k]}</b><em>${i ? pct(g[k], vorher) : ""}</em></div>`; }).join("");
+  return `<div class="card" style="margin-top:14px;border-top:4px solid #0369a1"><div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+    <div style="min-width:210px"><h2>Ziel: ${ZIEL_VERTRAEGE} Verträge bis ${new Date(ZIEL_DATUM).toLocaleDateString("de-DE")}</h2>
+      <div style="font-size:40px;font-weight:800;line-height:1.1;color:#0369a1">${g.v} <span style="font-size:18px;color:var(--muted);font-weight:600">von ${ZIEL_VERTRAEGE}</span></div>
+      <div class="qbar" style="height:12px;margin:8px 0 6px"><i style="width:${anteil}%;background:#0369a1"></i></div>
+      <div class="note" style="margin:0">noch ${tage} Tage · in Reichweite: <b>${g.p - g.v}</b> mit passendem Abstellort, davon ${g.a - g.v} bestätigt</div></div>
+    <div style="flex:1;min-width:260px"><p class="sub" style="margin-bottom:6px">Trichter, alle Regionen (Prozent = Anteil der Stufe davor)</p>${trichter}</div></div>
+    <div style="overflow-x:auto;margin-top:12px"><table><thead><tr><th>Region</th>${stufen.map(([, t]) => `<th class="n">${t}</th>`).join("")}</tr></thead>
+    <tbody>${[...rows, g].map((x) => `<tr${x === g ? ' style="font-weight:700"' : ""}><td><span class="dot" style="background:${x.c}"></span> ${esc(x.name)}</td>${stufen.map(([k]) => `<td class="n">${x[k]}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    <p class="note">Grundlage ist der Status in LeadTable (immer seit Kampagnenstart, ohne Testbewerber). „Qualifiziert“ = online vorqualifiziert, telefonisch qualifiziert oder weiter. „Abstellort passt“ = „Abstellort frei …“ / „Kommt entgegen …“ oder telefonisch Qualifizierte mit passender Antwort auf die Abstellort-Nachfrage.</p></div>`;
+}
+
+/* Nächste Anschlussstelle mit Lage (für die Richtung „kommt entgegen“) */
+function abNah(lat, lon) {
+  let best = 1e9, bp = null;
+  for (const p of AB_AS) { if (Math.abs(p[0] - lat) > 0.6 || Math.abs(p[1] - lon) > 0.9) continue; const d = km(lat, lon, p[0], p[1]); if (d < best) { best = d; bp = p; } }
+  if (!bp) for (const p of AB_AS) { const d = km(lat, lon, p[0], p[1]); if (d < best) { best = d; bp = p; } }
+  return { d: best, p: bp };
+}
+/* Reiter „Abstellorte“: wo die LKW hinkommen. Pro Fahrer: Fall (frei / kommt entgegen), Vorschlag oder Hilfe,
+   ungefährer LKW-Standort (frei = Wohnort, entgegen = auf dem Weg zur nächsten Anschlussstelle, 20 km davor).
+   Häufungen dieser Standorte zeigen, wo sich mehrere Fahrer einen Abstellort teilen könnten. */
+const PL_KAT = [
+  ["fv", "Frei + Vorschlag", "#16a34a", true], ["fh", "Frei, Hilfe nötig", "#16a34a", false],
+  ["ev", "Entgegen + Vorschlag", "#ea580c", true], ["eh", "Entgegen, Hilfe nötig", "#ea580c", false],
+  ["ok", "Abstellort bestätigt / Vertrag", "#0369a1", true], ["of", "Noch nicht gefragt", "#94a3b8", true], ["pr", "Standort prüfen / außerhalb", "#ca8a04", true]];
+const PL = Object.fromEntries(PL_KAT.map(([k, t, c, voll]) => [k, { t, c, voll }]));
+function plKat(v, e) {
+  const s = String(v.status || "").toLowerCase();
+  if (/^vertrag unterschrieben$|^abstellort bestätigt$/.test(s)) return "ok";
+  if (s === "abstellort frei, vorschlag da") return "fv";
+  if (s === "abstellort frei, hilfe nötig") return "fh";
+  if (s === "kommt entgegen, vorschlag da") return "ev";
+  if (s === "kommt entgegen, hilfe nötig") return "eh";
+  if (/^standort prüfen$/.test(s) || e.art === "aus" || e.art === "nop") return "pr";
+  // telefonisch Qualifizierte behalten „Qualifiziert“: ihre Antwort auf die Nachfrage steht in der Beschreibung
+  const a = v.abst;
+  if (a && a.fall === "frei") return a.vorschlag ? "fv" : "fh";
+  if (a && a.fall === "entgegen") return a.vorschlag ? "ev" : "eh";
+  if (a && /passt_nicht|aus|unbekannt/.test(a.fall)) return "pr";
+  return "of";
+}
+function plDaten(key) {
+  return (QL || []).filter((v) => key === "alle" || v.region === key).map((v) => {
+    const k = koord(v.plz, v.ort), p = PLZ[v.plz], lat = k.lat, lon = k.lon;
+    const e = abPruef(lat, lon), kat = plKat(v, e);
+    let lkw = lat != null ? [lat, lon] : null, nah = null;
+    if (lat != null && e.art === "ab") { nah = abNah(lat, lon); const f = Math.max(0, Math.min(1, (nah.d - AB_FREI) / nah.d)); lkw = [lat + (nah.p[0] - lat) * f, lon + (nah.p[1] - lon) * f]; }
+    return { ...v, lat, lon, e, kat, nah, lkw, ortStatt: k.ortStatt, plzOrt: k.plzOrt, ortName: v.ort || (p ? p[2] : "") || (v.plz ? "PLZ " + v.plz : "unbekannt"),
+      vorschlag: v.abst?.vorschlag || "", hilfe: !!v.abst?.hilfe || /hilfe nötig/i.test(v.status || "") };
+  });
+}
+function renderPlanung() {
+  if (!QL) { $("main").innerHTML = '<div class="msg err">Liste der Qualifizierten konnte nicht geladen werden.</div>'; return; }
+  const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
+  const D = plDaten("alle"), n = (k) => D.filter((v) => v.kat === k).length;
+  const kach = (k) => `<div class="card kpi" style="border-top:4px solid ${PL[k].c};padding:12px"><div class="l">${PL[k].t}</div><div class="v" style="color:${PL[k].c}">${n(k)}</div></div>`;
+  // mögliche gemeinsame Abstellgebiete: LKW-Standorte im Umkreis von 15 km (ohne „prüfen“)
+  const pts = D.filter((v) => v.lkw && v.kat !== "pr").map((v) => ({ ...v, lat: v.lkw[0], lon: v.lkw[1], km: v.e.dA ?? null }));
+  const gebiete = cluster(pts, 15);
+  const kat = (v) => `<span class="amp"><i style="background:${PL[v.kat].voll ? PL[v.kat].c : "#fff"};border:2px solid ${PL[v.kat].c};width:11px;height:11px"></i>${esc(PL[v.kat].t)}</span>`;
+  const wo = (v) => `${esc(v.plz)} ${esc(v.ortName)}${ortStattT(v)}`;
+  const dist = (v) => v.e.dA != null ? `${kmA(v.e.dA)}${v.e.art === "ab" ? `, kommt ca. ${Math.round(v.e.dA - AB_FREI)} km entgegen` : ""}` : "–";
+  const gZeile = (gb, i) => { const h = gb.pts.filter((p) => p.hilfe && ["fh", "eh"].includes(p.kat)).length, vs = gb.pts.filter((p) => p.vorschlag);
+    return `<tr><td><b>${i + 1}</b></td><td>${esc(gb.orte.slice(0, 4).join(", "))}${gb.orte.length > 4 ? " …" : ""}<br><span class="note" style="margin:0">${[...new Set(gb.pts.map((p) => regName(p.region)))].map(esc).join(", ")}</span></td>
+      <td class="n"><b>${gb.n}</b></td><td class="n">${h ? `<b style="color:#b45309">${h}</b>` : "0"}</td><td>${vs.map((p) => `${esc(p.name)}: ${esc(p.vorschlag)}`).join("<br>") || '<span class="note" style="margin:0">noch kein Vorschlag</span>'}</td>
+      <td>${gb.pts.map((p) => esc(p.name)).join(", ")}</td></tr>`; };
+  const ordK = Object.fromEntries(PL_KAT.map(([k], i) => [k, i]));
+  const liste = D.slice().sort((a, b) => ordK[a.kat] - ordK[b.kat] || regName(a.region).localeCompare(regName(b.region), "de") || String(a.plz).localeCompare(String(b.plz)));
+  const fZeile = (v) => `<tr><td>${esc(v.name)}</td><td>${kat(v)}</td><td>${wo(v)}</td><td><span class="dot" style="background:${COL[v.region] || "#999"}"></span> ${esc(regName(v.region))}</td><td class="n">${dist(v)}</td>
+    <td>${v.vorschlag ? esc(v.vorschlag) : v.hilfe ? '<span style="color:#b45309">möchte Hilfe</span>' : v.kat === "of" ? '<span class="note" style="margin:0">noch nicht gefragt</span>' : ""}</td><td>${esc(startText(v))}</td><td>${esc(v.erreichbar)}</td></tr>`;
+  $("main").innerHTML = `
+  ${umstellBox()}
+  <div class="card" style="margin-bottom:14px"><div style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap">
+    <div><h2>Abstellorte planen</h2><p class="sub" style="margin:0">Alle qualifizierten Fahrer mit ihrem Abstellort-Fall. Ausgefüllt = Fahrer hat einen Vorschlag oder der Abstellort ist bestätigt, Ring = braucht Hilfe bei der Suche.
+      Bei „kommt entgegen“ zeigt die gestrichelte Linie die Richtung zur nächsten Autobahn, das Quadrat den ungefähren LKW-Standort (20 km vor der Anschlussstelle).</p></div>
+    <button class="pri noprint" id="plX">Excel</button></div></div>
+  <div class="grid kpis7">${PL_KAT.map(([k]) => kach(k)).join("")}</div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h2>Karte</h2><div id="map" style="height:520px"></div>
+      <div class="legend">${PL_KAT.map(([k]) => `<span><i class="dot" style="background:${PL[k].voll ? PL[k].c : "#fff"};box-shadow:inset 0 0 0 2px ${PL[k].c}"></i>${esc(PL[k].t)}</span>`).join("")}<span><i class="dot" style="background:#111827;border-radius:2px"></i>ungefährer LKW-Standort</span><span><i class="dot" style="background:transparent;box-shadow:inset 0 0 0 2px #7c3aed"></i>mögliches gemeinsames Abstellgebiet</span></div></div>
+    <div class="card"><h2>Mögliche gemeinsame Abstellgebiete</h2><p class="sub">LKW-Standorte, die höchstens 15 km auseinander liegen. Dort lohnt sich ein gemeinsamer Platz.</p>
+      <div style="overflow-x:auto;max-height:470px;overflow-y:auto"><table><thead><tr><th>#</th><th>Gebiet</th><th class="n">Fahrer</th><th class="n">Hilfe nötig</th><th>Vorschläge</th><th>Fahrer</th></tr></thead>
+      <tbody>${gebiete.filter((x) => x.n >= 2).map(gZeile).join("") || '<tr><td colspan="6" class="note">Noch keine Häufung.</td></tr>'}</tbody></table></div>
+      <p class="note">Einzelne Fahrer ohne Nachbarn stehen unten in der Liste.</p></div></div>
+  <div class="card" style="margin-top:14px"><h2>Alle Fahrer nach Abstellort-Fall <span class="note" style="margin:0;font-weight:500">${D.length}</span></h2>
+    <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Fall</th><th>Wohnort</th><th>Region</th><th class="n">zur Autobahn</th><th>Vorschlag / Hilfe</th><th>Start</th><th>Erreichbar</th></tr></thead>
+    <tbody>${liste.map(fZeile).join("") || '<tr><td colspan="8" class="note">Noch niemand qualifiziert.</td></tr>'}</tbody></table></div>
+    <p class="note">Der LKW-Standort ist eine Schätzung in Luftlinie und dient nur der Planung. Telefonisch Qualifizierte behalten in LeadTable „Qualifiziert“, ihr Fall kommt aus der Antwort auf die Abstellort-Nachfrage.</p></div>`;
+  $("plX").onclick = async () => { const b = $("plX"); b.disabled = true; try { await plExcel(liste, gebiete); } catch (e) { alert(e.message); } b.disabled = false; };
+  baseMap([51.2, 9.6], 6);
+  if (!map) return;
+  const regs = abRegionen();
+  for (const r of regs) altKreis(r);
+  for (const r of regs) for (const z of zP(r.ziel)) window.L.circle([z.lat, z.lon], { radius: (z.radius || r.ziel.radius || 60) * 1000, color: COL[r.key], weight: 1.5, fill: false, dashArray: "6 6", interactive: false }).addTo(map);
+  gebiete.filter((x) => x.n >= 2).forEach((gb, i) => {
+    const rad = Math.max(4000, ...gb.pts.map((p) => km(gb.lat, gb.lon, p.lat, p.lon) * 1000 + 2500));
+    window.L.circle([gb.lat, gb.lon], { radius: rad, color: "#7c3aed", weight: 2, fillColor: "#7c3aed", fillOpacity: .06 }).addTo(map).bindTooltip(`<b>Gebiet ${i + 1}</b>: ${gb.n} Fahrer<br>${esc(gb.orte.slice(0, 4).join(", "))}`);
+  });
+  for (const v of D.filter((x) => x.lat != null)) {
+    const k = PL[v.kat];
+    if (v.e.art === "ab" && v.lkw && v.kat !== "pr") {
+      window.L.polyline([[v.lat, v.lon], v.lkw], { color: k.c, weight: 2, dashArray: "4 5", opacity: .9, interactive: false }).addTo(map);
+      window.L.rectangle([[v.lkw[0] - .012, v.lkw[1] - .018], [v.lkw[0] + .012, v.lkw[1] + .018]], { color: "#111827", weight: 1, fillColor: "#111827", fillOpacity: .85 }).addTo(map)
+        .bindTooltip(`ungefährer LKW-Standort für <b>${esc(v.name)}</b>`);
+    }
+    window.L.circleMarker([v.lat, v.lon], { radius: 7, color: k.c, weight: 3, fillColor: k.voll ? k.c : "#fff", fillOpacity: 1 }).addTo(map)
+      .bindTooltip(`<b>${esc(v.name)}</b><br>${esc(v.plz)} ${esc(v.ortName)}<br>${esc(k.t)}${v.e.dA != null ? " · " + Math.round(v.e.dA) + " km zur Autobahn" : ""}${v.vorschlag ? "<br>Vorschlag: " + esc(v.vorschlag) : ""}`);
+  }
+  const b = window.L.latLngBounds(regs.flatMap((r) => zP(r.ziel).map((z) => [z.lat, z.lon])));
+  D.filter((x) => x.lat != null && x.kat !== "pr").forEach((v) => b.extend([v.lat, v.lon]));
+  if (b.isValid()) map.fitBounds(b.pad(0.08));
+}
+async function plExcel(liste, gebiete) {
+  await xlsxLaden();
+  const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
+  const gNr = new Map(); gebiete.filter((x) => x.n >= 2).forEach((gb, i) => gb.pts.forEach((p) => gNr.set(p.id, i + 1)));
+  const rows = liste.map((v) => ({ Fall: PL[v.kat].t, Name: v.name, "Status LeadTable": standName(v.status), PLZ: v.plz, Ort: v.ortName, Region: regName(v.region),
+    "km zur Autobahn": v.e.dA != null ? Math.round(v.e.dA) : "", "kommt entgegen (km)": v.e.art === "ab" && v.e.dA != null ? Math.round(v.e.dA - AB_FREI) : "",
+    "Vorschlag Abstellort": v.vorschlag, "Hilfe nötig": v.hilfe ? "ja" : "", "Gemeinsames Gebiet": gNr.get(v.id) || "", Start: startText(v), "Am besten erreichbar": v.erreichbar }));
+  const ws = XLSX.utils.json_to_sheet(rows); ws["!cols"] = [26, 24, 26, 8, 22, 18, 12, 14, 36, 10, 12, 26, 20].map((w) => ({ wch: w }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Abstellorte");
+  XLSX.writeFile(wb, `Transa_Abstellorte_${new Date().toLocaleDateString("en-CA")}.xlsx`);
 }
 
 async function load() {
@@ -458,10 +680,11 @@ function prep() {
   const reg = Object.fromEntries(DATA.regionen.map((r) => [r.key, r]));
   const leads = DATA.leads.filter((l) => !TEST_IDS.has(l.id) && new Date(l.datum).getTime() >= ab).map((l) => {
     const p = PLZ[l.plz]; const zr = reg[l.region]?.ziel;
-    const o = { ...l, lat: p ? p[0] : null, lon: p ? p[1] : null, plzOrt: p ? p[2] : "" };
     const ortOk = l.ort && !/^(ruhr|ruhrgebiet|nordwest|nordost|suedwest|südwest|suedost|südost|rheinmain|rhein-main|mitte|osten|westen|norden|sueden|süden|ost|west|nord|süd|sued)$/i.test(l.ort);
+    const k = koord(l.plz, ortOk ? l.ort : "");
+    const o = { ...l, lat: k.lat, lon: k.lon, plzOrt: p ? p[2] : "", ortStatt: k.ortStatt };
     o.ortName = (ortOk ? l.ort : "") || o.plzOrt || (l.plz ? "PLZ " + l.plz : "unbekannt");
-    o.km = p && zr ? zKm(zr, p[0], p[1]) : null;
+    o.km = k.lat != null && zr ? zKm(zr, k.lat, k.lon) : null;
     return o;
   });
   const kosten = DATA.kosten.filter((k) => new Date(k.tag + "T12:00:00").getTime() >= ab - 864e5 / 2);
@@ -521,7 +744,7 @@ function stats(L, K, r) {
 }
 
 function tabs() {
-  const t = [["alle", "Alle Regionen", null], ...DATA.regionen.map((r) => [r.key, r.name, COL[r.key]]), ["standorte", "🛣️ Abgleich", null]];
+  const t = [["alle", "Alle Regionen", null], ...DATA.regionen.map((r) => [r.key, r.name, COL[r.key]]), ["planung", "📍 Abstellorte", null], ["standorte", "🛣️ Abgleich", null]];
   $("tabs").innerHTML = t.map(([k, n, c]) => `<button data-t="${k}" class="${k === TAB ? "on" : ""}">${c ? `<span class="dot" style="background:${c}"></span>` : ""}${esc(n)}</button>`).join("");
   $("tabs").querySelectorAll("button").forEach((b) => b.onclick = () => { TAB = b.dataset.t; render(); });
 }
@@ -529,10 +752,10 @@ function tabs() {
 function render() {
   tabs();
   const { reg, leads, kosten } = prep();
-  $("stand").textContent = "Stand " + new Date(DATA.stand).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " Uhr · " + $("zeit").selectedOptions[0].text + " · Meta-Zielgebiet je Region " + (DATA.regionen[0]?.ziel?.radius || 60) + " km";
+  $("stand").textContent = "Stand " + new Date(DATA.stand).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " Uhr · " + $("zeit").selectedOptions[0].text + " · Meta-Zielgebiete live aus Meta";
   if (map) { map.remove(); map = null; }
   ST_LEADS = leads;
-  if (TAB === "standorte") renderStandorte(); else if (TAB === "alle") renderAlle(reg, leads, kosten); else renderRegion(reg[TAB], leads.filter((l) => l.region === TAB), kosten.filter((k) => k.region === TAB));
+  if (TAB === "planung") renderPlanung(); else if (TAB === "standorte") renderStandorte(); else if (TAB === "alle") renderAlle(reg, leads, kosten); else renderRegion(reg[TAB], leads.filter((l) => l.region === TAB), kosten.filter((k) => k.region === TAB));
 }
 
 function hbars(rows) {
@@ -546,6 +769,11 @@ function verteil(L, key, order) {
 }
 const SCHOEN = { klasse1: "ADR Klasse 1 (Tank)", basis: "ADR Basis", keinen: "kein ADR", spaeter: "später", "laeuft bald ab": "läuft bald ab", ja: "ja", nein: "nein" };
 const schoen = (k) => SCHOEN[k] ?? String(k).replace(/Maerz/g, "März").replace(/ae/g, "ä").replace(/oe(?=[a-z])/g, "ö").replace(/ue(?=[a-z])/g, "ü");
+function autobahnBalken(L) {
+  const M = L.filter((l) => l.lat != null).map((l) => abKm(l.lat, l.lon));
+  return [[0, 5, "unter 5 km"], [5, 20, "5–20 km"], [20, 30, "20–30 km"], [30, 40, "30–40 km"], [40, 9999, "über 40 km"]]
+    .map(([a, z, t]) => [t, M.filter((d) => d >= a && d < z).length, z <= AB_FREI ? "#16a34a" : "#f79009"]);
+}
 function entfernung(L, rad) {
   // small target areas (A6 corridor: 20 km per pin) get finer steps
   const b = rad <= 30 ? [[0, 10], [10, rad], [rad, rad + 20], [rad + 20, 9999]] : [[0, 20], [20, 40], [40, rad], [rad, rad + 30], [rad + 30, 9999]];
@@ -570,8 +798,14 @@ function baseMap(center, zoom) {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 13, attribution: "© OpenStreetMap" }).addTo(map);
   return map;
 }
+function altKreis(r) { // altes Zielgebiet nach einer Umstellung, grau gestrichelt
+  if (!map || !r.zielAlt) return;
+  window.L.circle([r.zielAlt.lat, r.zielAlt.lon], { radius: (r.zielAlt.radius || 60) * 1000, color: "#98a2b3", weight: 1.5, fill: false, dashArray: "2 6" }).addTo(map)
+    .bindTooltip(`${esc(r.name)}: bis ${esc(r.umstellung.seit)} ${esc(r.zielAlt.name)} ${r.zielAlt.radius || 60} km`);
+}
 function addRegion(r, L, opts = {}) {
   if (!map) return;
+  altKreis(r);
   const c = COL[r.key];
   if (r.ziel) {
     for (const z of zP(r.ziel)) {
@@ -601,8 +835,10 @@ function renderAlle(reg, leads, kosten) {
   if (gKm) finds.push(`${pct(gIn, gKm)} der Bewerber wohnen innerhalb des Meta-Radius, ${gKm - gIn} außerhalb.`);
   if (allCl.length) finds.push(`Häufungen (mehrere Bewerber im Umkreis von 15 km): ${allCl.slice(0, 5).map((c) => `<b>${esc(c.orte[0].replace(/ \(\d+\)$/, ""))}</b> (${c.n})`).join(", ")}.`);
   $("main").innerHTML = `
+  ${umstellBox()}
   ${regelBox(true)}
   <div class="grid kpis">${kpiRow("alle")}</div>
+  ${zielCard()}
   <div class="grid two" style="margin-top:14px">
     <div class="card"><h2>Woher kommen die Bewerber?</h2><p class="sub">Punkt = Bewerber (Wohnort laut PLZ): Füllung = Stand im Ablauf, Rand = Region. Wärme = Häufung, gestrichelt = Meta-Zielgebiet.</p><div id="map"></div>
       ${qLegend()}<div class="legend">${DATA.regionen.map((r) => `<span><i class="dot" style="background:${COL[r.key]}"></i>${esc(r.name)}</span>`).join("")}</div></div>
@@ -654,16 +890,19 @@ function renderRegion(r, L, K) {
   const fern = L.filter((l) => l.km != null && l.km > rad + 30).sort((a, b) => b.km - a.km);
   if (fern.length) finds.push(`Weit außerhalb (mehr als ${rad + 30} km): ${fern.slice(0, 5).map((l) => `${esc(l.ortName)} (${Math.round(l.km)} km)`).join(", ")}.`);
   $("main").innerHTML = `
+  ${umstellBox(r.key)}
   <div class="grid kpis">${kpiRow(r.key)}</div>
   <div class="grid two" style="margin-top:14px">
     <div class="card"><h2>Herkunft der Bewerber · ${esc(r.name)}</h2><p class="sub">${r.ziel ? `Meta-Zielgebiet: ${rad} km um ${esc(r.ziel.name)} (gestrichelt).` : "Zielgebiet aus Meta nicht verfügbar."} Punkt = Bewerber, Füllung = Stand im Ablauf, Wärme = Häufung.</p><div id="map"></div>${qLegend()}</div>
     <div class="card"><h2>Auf einen Blick</h2><ul class="finds">${finds.map((f) => `<li>${f}</li>`).join("") || "<li>Noch keine Bewerbungen im Zeitraum.</li>"}</ul>
-      <h2 style="margin-top:18px">Entfernung zum Mittelpunkt bzw. zur nächsten Nadel</h2>${hbars(entfernung(L, rad))}
-      <p class="note">Orange = außerhalb des Meta-Radius. ${L.filter((l) => l.lat == null).length ? L.filter((l) => l.lat == null).length + " Bewerber ohne gültige PLZ." : ""}</p></div>
+      <h2 style="margin-top:18px">Entfernung zur Autobahn</h2>${hbars(autobahnBalken(L))}
+      <p class="note">Grün = Abstellort frei, orange = Fahrer kommt entgegen. Im Meta-Umkreis wohnen ${pct(s.inR, s.mitKm)} (${s.inR} von ${s.mitKm}). ${L.filter((l) => l.lat == null).length ? L.filter((l) => l.lat == null).length + " Bewerber ohne gültige PLZ." : ""}</p></div>
   </div>
   <div class="card" style="margin-top:14px"><h2>Häufungen (Umkreis 15 km)</h2><p class="sub">Bewerber, die nah beieinander wohnen, zusammengefasst. Hilft zu sehen, ob ein Gebiet besonders gut zieht.</p>
-    <div style="overflow-x:auto"><table><thead><tr><th>Gebiet / Orte</th><th class="n">Bewerber</th><th class="n">km zum Mittelpunkt</th><th>Anteil</th></tr></thead>
-    <tbody>${cl.map((x) => `<tr><td>${esc(x.orte.join(", "))}<br><span class="note" style="margin:0">PLZ ${[...new Set(x.pts.map((p) => p.plz))].join(", ")}</span></td><td class="n"><b>${x.n}</b>${x.pts.some((p) => qOf(p) !== "neu") ? `<br><span class="note" style="margin:0"><span style="color:#16a34a">${x.pts.filter((p) => ["q", "online"].includes(qOf(p))).length} q</span> · <span style="color:#dc2626">${x.pts.filter((p) => qOf(p) === "n").length} n</span></span>` : ""}</td><td class="n">${Math.round(x.km)}${x.km > rad ? ' <span style="color:#f79009">●</span>' : ""}</td><td><div class="bar"><i style="width:${x.n / Math.max(1, L.length) * 100}%;background:${c}"></i></div></td></tr>`).join("") || '<tr><td colspan="4" class="note">Keine Bewerber mit PLZ.</td></tr>'}</tbody></table></div></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Gebiet / Orte</th><th class="n">Bewerber</th><th>Meta-Umkreis</th><th>zur Autobahn</th><th>Anteil</th></tr></thead>
+    <tbody>${cl.map((x) => `<tr><td>${esc(x.orte.join(", "))}<br><span class="note" style="margin:0">PLZ ${[...new Set(x.pts.map((p) => p.plz))].join(", ")}</span></td><td class="n"><b>${x.n}</b>${(() => { const q = x.pts.filter((p) => ["q", "online"].includes(qOf(p))).length, nn = x.pts.filter((p) => qOf(p) === "n").length; return q || nn ? `<br><span class="note" style="margin:0">${q ? `<span style="color:#16a34a">${q} qualifiziert</span>` : ""}${q && nn ? " · " : ""}${nn ? `<span style="color:#dc2626">${nn} nicht</span>` : ""}</span>` : ""; })()}</td>
+      <td>${x.km <= rad ? '<span style="color:#16a34a;font-weight:600">✓ drin</span>' : `<span style="color:#b45309;font-weight:600">${Math.round(x.km - rad)} km außerhalb</span>`}</td>
+      <td>${(() => { const d = x.pts.reduce((s, p) => s + abKm(p.lat, p.lon), 0) / x.n; return d <= AB_FREI ? `<span style="color:#16a34a">frei</span> <span class="note" style="margin:0">(${kmA(d)})</span>` : `<span style="color:#b45309">kommt ca. ${Math.round(d - AB_FREI)} km entgegen</span>`; })()}</td><td><div class="bar"><i style="width:${x.n / Math.max(1, L.length) * 100}%;background:${c}"></i></div></td></tr>`).join("") || '<tr><td colspan="5" class="note">Keine Bewerber mit PLZ.</td></tr>'}</tbody></table></div></div>
   <div class="grid two" style="margin-top:14px">
     <div class="card"><h2>Bewerbungen je Tag</h2><p class="sub">${esc(r.name)}</p>${daysChart(L, K)}</div>
     <div class="card"><h2>Qualität laut Formular</h2>
