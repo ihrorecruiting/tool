@@ -982,6 +982,7 @@
         <button data-f="rueckruf">Rückruf</button>
         <button data-f="neu">Neu</button>
         <button data-f="ne">Nicht erreicht</button>
+        <button data-f="imail" title="Detail-Mail ist raus, der Bewerber hat noch nicht geklickt („Info verschickt“, „Erinnerungsmail verschickt“). Steht nicht unter „Alle“.">Mail raus, kein Klick <span class="segn" id="imN"></span></button>
         <button data-f="ptplan" title="Alle mit Status „Probetag vereinbaren“ – Termin noch abstimmen">Probetag planen <span class="segn" id="ptN"></span></button>
         <button class="tr-only" data-f="jetzt" title="Online-Vorgespräch ausgefüllt und Abstellort passt – „Abstellort frei …“, „Kommt entgegen …“ oder noch „Online-Vorqualifiziert“: jetzt anrufen">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
         <button class="tr-only" hidden data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
@@ -1625,6 +1626,8 @@ function trSortList(L) {
     (trSort === "alter" ? ts(a.l) - ts(b.l) : trSort === "neu" ? ts(b.l) - ts(a.l) : (rang(a.pa) - rang(b.pa)) || ts(a.l) - ts(b.l)));
   return w.map((x) => x.l);
 }
+const MAIL_WARTE = ["infoverschickt", "erinnerungsmailverschickt"];
+const isMailWarte = (l) => MAIL_WARTE.includes(norm(l.status));
 function filtered() {
   if (!searchRes && QST[qf]) { let Q = trqList(qf); if (campF) Q = Q.filter((l) => l.kampagne === campF); return Q; }
   let L = searchRes ?? (qf === "ptplan" ? (W.probetag_planen || []) : W.arbeitsliste);
@@ -1634,6 +1637,9 @@ function filtered() {
     if (qf === "rueckruf") L = L.filter((l) => statusKind(l.status) === "rueckruf");
     if (qf === "neu") L = L.filter((l) => statusKind(l.status) === "neu");
     if (qf === "ne") L = L.filter((l) => statusKind(l.status) === "ne");
+    // Mail-Automatik (06.11.2026): wer die Detail-Mail noch nicht bestätigt hat, steht nicht unter „Alle“, nur unter „Mail raus, kein Klick“
+    if (qf === "alle") L = L.filter((l) => !isMailWarte(l) || (l.followup_at && new Date(l.followup_at) <= now));
+    if (qf === "imail") L = L.filter(isMailWarte);
   }
   if (campF) L = L.filter((l) => l.kampagne === campF);
   if (trListMode()) L = trSortList(L);
@@ -1747,7 +1753,8 @@ function setBereich(b) {
 $("berSeg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setBereich(b.dataset.b); });
 function renderWork() {
   {
-    $("kQueue").textContent = W.arbeitsliste_gesamt;
+    const imn = W.arbeitsliste.filter(isMailWarte).length; $("imN").textContent = imn || ""; $("imN").hidden = !imn;
+    $("kQueue").textContent = W.arbeitsliste_gesamt - imn;
     const ptn = (W.probetag_planen || []).length; $("ptN").textContent = ptn || ""; $("ptN").hidden = !ptn;
     const tfs = tfSplit(); renderTf();
     const due = W.arbeitsliste.filter((l) => l.followup_at && new Date(l.followup_at) <= new Date()).length;
