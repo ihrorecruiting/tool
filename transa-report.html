@@ -9,7 +9,7 @@
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <style>
 :root{--bg:#f4f5f7;--card:#fff;--ink:#16181d;--muted:#667085;--line:#e4e7ec;--acc:#7c3aed;--acc2:#ede9fe;--ok:#12b76a;--warn:#f79009;--bad:#f04438;
-  --r-fulda:#0ea5e9;--r-ruhr:#7c3aed;--r-rheinmain:#0d9488;--r-osnabrueck:#92400e;--r-halle:#c026d3}
+  --r-fulda:#0ea5e9;--r-ruhr:#7c3aed;--r-rheinmain:#0d9488;--r-osnabrueck:#92400e;--r-halle:#c026d3;--r-a6:#ea580c}
 *{box-sizing:border-box}
 html,body{overflow-x:hidden;max-width:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
@@ -124,12 +124,16 @@ const PLZ = {"01067":[51.0575,13.7171,"Dresden"],"01069":[51.0391,13.7377,"Dresd
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const KEY = "ihro_cockpit_conn";
-const COL = { fulda: "#0ea5e9", ruhr: "#7c3aed", rheinmain: "#0d9488", osnabrueck: "#92400e", halle: "#c026d3" };
+const COL = { fulda: "#0ea5e9", ruhr: "#7c3aed", rheinmain: "#0d9488", osnabrueck: "#92400e", halle: "#c026d3", a6: "#ea580c" };
 const eur = (v) => v == null || !isFinite(v) ? "–" : v.toLocaleString("de-DE", { minimumFractionDigits: v < 100 ? 2 : 0, maximumFractionDigits: v < 100 ? 2 : 0 }) + " €";
 const pct = (a, b) => b ? Math.round(a / b * 100) + " %" : "–";
 const fmtD = (iso) => new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
 function conn() { try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; } }
 function km(a, b, c, d) { const R = 6371, r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); }
+// Meta target area of a region: one centre (ziel) or several pins (ziel.punkte, A6 corridor since 06.11.2026)
+const zP = (z) => z ? (Array.isArray(z.punkte) && z.punkte.length ? z.punkte : [z]) : [];
+// distance measured like for one centre: below z.radius = inside any pin
+const zKm = (z, lat, lon) => Math.min(...zP(z).map((p) => km(p.lat, p.lon, lat, lon) - (p.radius || z.radius || 60))) + (z.radius || 60);
 
 let DATA = null, TAB = "alle", map = null, VQ = null, QL = null, AB = null;
 /* Abgelehnt / abgesagt mit Grund (Dennis, 04.11.2026). Grund: K.o. aus dem Telefonat, sonst die Nein-Antworten aus dem
@@ -195,7 +199,7 @@ function kpiRow(key) {
     kpi("Kosten je Bewerbung", nH ? eur(kH / nH) : "–", `heute · Durchschnitt ${L.length ? eur(kost / L.length) : "–"}`);
 }
 /* Online vorqualifiziert: Zeile für Liste und Excel */
-const VQ_REG = [["fulda", /fulda|hersfeld/i], ["ruhr", /ruhr/i], ["rheinmain", /rhein[\s-]*main/i], ["osnabrueck", /osnabr/i], ["halle", /halle|leipzig/i]];
+const VQ_REG = [["fulda", /fulda|hersfeld/i], ["ruhr", /ruhr/i], ["rheinmain", /rhein[\s-]*main/i], ["osnabrueck", /osnabr/i], ["halle", /halle|leipzig/i], ["a6", /\ba6\b|korridor/i]];
 const REGWORT = /^(ruhr|ruhrgebiet|nordwest|nordost|suedwest|südwest|suedost|südost|rheinmain|rhein-main|mitte|osten|westen|norden|sueden|süden|ost|west|nord|süd|sued)$/i;
 function vqRow(l) {
   const a = {}; for (const x of (l.answers || [])) a[String(x.q).toLowerCase()] = String(x.a ?? "").trim();
@@ -297,13 +301,22 @@ function abKm(lat, lon) {
   if (best === 1e9) for (const p of AB_AS) { const d = km(lat, lon, p[0], p[1]); if (d < best) best = d; }
   AB_CACHE.set(k, best); return best;
 }
+// A6 corridor (T_Transa A6, since 06.11.2026): Meta only reports its pins once the campaign has costs, until then the
+// five pins from the ad set (20 km each) stand in, so the rule check and the maps work from the first applicant on
+const A6_PINS = [[49.3837, 8.5415], [49.3194, 8.5746], [49.2187, 9.0166], [49.2046, 9.4728], [49.1788, 9.9259]];
+function zielErsatz() {
+  for (const r of DATA.regionen) if (r.key === "a6" && !r.ziel) {
+    const punkte = A6_PINS.map(([lat, lon]) => ({ name: "Nadel", lat, lon, radius: 20 }));
+    r.ziel = { ...punkte[0], name: "5 Standorte", radius: 20, punkte };
+  }
+}
 const abRegionen = () => DATA.regionen.filter((r) => r.ziel && !AB_AUS.includes(r.key));
 function abPruef(lat, lon) {
   if (lat == null) return { art: "nop" };
   let reg = null, dR = 1e9;
-  for (const r of abRegionen()) { const d = km(r.ziel.lat, r.ziel.lon, lat, lon) - (r.ziel.radius || 60); if (d < dR) { dR = d; reg = r; } }
+  for (const r of abRegionen()) { const d = zKm(r.ziel, lat, lon) - (r.ziel.radius || 60); if (d < dR) { dR = d; reg = r; } }
   if (!reg) return { art: "aus" };
-  const dM = km(reg.ziel.lat, reg.ziel.lon, lat, lon), dA = abKm(lat, lon);
+  const dM = zKm(reg.ziel, lat, lon), dA = abKm(lat, lon);
   if (dM > (reg.ziel.radius || 60)) return { art: "aus", reg, dM, dA };
   return { art: dA <= AB_FREI ? "frei" : "ab", reg, dM, dA };
 }
@@ -364,19 +377,21 @@ function renderStandorte() {
   if (!map) return;
   const cv = window.L.canvas({ padding: 0.3 });
   for (const r of regs) {
-    const R = r.ziel.radius || 60, k = Math.cos(r.ziel.lat * Math.PI / 180), st = 3 / 111;
-    for (let la = r.ziel.lat - R / 111; la <= r.ziel.lat + R / 111; la += st) for (let lo = r.ziel.lon - R / 111 / k; lo <= r.ziel.lon + R / 111 / k; lo += st / k) {
-      if (km(r.ziel.lat, r.ziel.lon, la, lo) > R || abKm(la, lo) <= AB_FREI) continue;
+    for (const z of zP(r.ziel)) {
+    const R = z.radius || r.ziel.radius || 60, k = Math.cos(z.lat * Math.PI / 180), st = 3 / 111;
+    for (let la = z.lat - R / 111; la <= z.lat + R / 111; la += st) for (let lo = z.lon - R / 111 / k; lo <= z.lon + R / 111 / k; lo += st / k) {
+      if (km(z.lat, z.lon, la, lo) > R || abKm(la, lo) <= AB_FREI) continue;
       window.L.rectangle([[la - st / 2, lo - st / 2 / k], [la + st / 2, lo + st / 2 / k]], { renderer: cv, stroke: false, fillColor: "#fde68a", fillOpacity: .75, interactive: false }).addTo(map);
     }
-    window.L.circle([r.ziel.lat, r.ziel.lon], { radius: R * 1000, color: COL[r.key], weight: 2, fill: false, interactive: false }).addTo(map);
+    window.L.circle([z.lat, z.lon], { radius: R * 1000, color: COL[r.key], weight: 2, fill: false, interactive: false }).addTo(map);
+    }
   }
   for (const a of AB_AS) window.L.circleMarker(a, { renderer: cv, radius: 1.2, stroke: false, fillColor: "#475569", fillOpacity: .7, interactive: false }).addTo(map);
   const pts = D.filter((v) => v.lat != null);
   for (const v of pts) window.L.circleMarker([v.lat, v.lon], { radius: 6, color: "#fff", weight: 1.5, fillColor: AB_FARBE[v.e.art], fillOpacity: 1 }).addTo(map)
     .bindTooltip(`${v.name ? "<b>" + esc(v.name) + "</b><br>" : ""}${esc(v.plz)} ${esc(v.ort)}<br>${v.e.dA != null ? Math.round(v.e.dA) + " km zur Autobahn · " : ""}${esc(abHinweis(v.e) || AB_TXT[v.e.art])}`);
-  const bnd = window.L.latLngBounds(regs.map((r) => [r.ziel.lat, r.ziel.lon]));
-  regs.forEach((r) => bnd.extend(window.L.circle([r.ziel.lat, r.ziel.lon], { radius: (r.ziel.radius || 60) * 1000 }).getBounds()));
+  const bnd = window.L.latLngBounds(regs.flatMap((r) => zP(r.ziel).map((z) => [z.lat, z.lon])));
+  regs.forEach((r) => zP(r.ziel).forEach((z) => bnd.extend(window.L.circle([z.lat, z.lon], { radius: (z.radius || r.ziel.radius || 60) * 1000 }).getBounds())));
   map.fitBounds(bnd.pad(0.05));
 }
 async function stExcel(D) {
@@ -400,7 +415,7 @@ async function load() {
     const d = await r.json().catch(() => ({}));
     if (r.status === 401) { localStorage.removeItem(KEY); $("cErr").textContent = "Schlüssel stimmt nicht."; $("conn").classList.add("show"); return; }
     if (!r.ok) throw new Error(d.error || "Fehler " + r.status);
-    DATA = d;
+    DATA = d; zielErsatz();
     // Liste „Online vorqualifiziert“ für die Dispo (mit Namen; aus der Function transa-gespraech)
     try {
       const r2 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Online-Vorqualifiziert", "Qualifiziert"] }) });
@@ -429,7 +444,7 @@ function prep() {
     const o = { ...l, lat: p ? p[0] : null, lon: p ? p[1] : null, plzOrt: p ? p[2] : "" };
     const ortOk = l.ort && !/^(ruhr|ruhrgebiet|nordwest|nordost|suedwest|südwest|suedost|südost|rheinmain|rhein-main|mitte|osten|westen|norden|sueden|süden|ost|west|nord|süd|sued)$/i.test(l.ort);
     o.ortName = (ortOk ? l.ort : "") || o.plzOrt || (l.plz ? "PLZ " + l.plz : "unbekannt");
-    o.km = p && zr ? km(zr.lat, zr.lon, p[0], p[1]) : null;
+    o.km = p && zr ? zKm(zr, p[0], p[1]) : null;
     return o;
   });
   const kosten = DATA.kosten.filter((k) => new Date(k.tag + "T12:00:00").getTime() >= ab - 864e5 / 2);
@@ -515,7 +530,8 @@ function verteil(L, key, order) {
 const SCHOEN = { klasse1: "ADR Klasse 1 (Tank)", basis: "ADR Basis", keinen: "kein ADR", spaeter: "später", "laeuft bald ab": "läuft bald ab", ja: "ja", nein: "nein" };
 const schoen = (k) => SCHOEN[k] ?? String(k).replace(/Maerz/g, "März").replace(/ae/g, "ä").replace(/oe(?=[a-z])/g, "ö").replace(/ue(?=[a-z])/g, "ü");
 function entfernung(L, rad) {
-  const b = [[0, 20], [20, 40], [40, rad], [rad, rad + 30], [rad + 30, 9999]];
+  // small target areas (A6 corridor: 20 km per pin) get finer steps
+  const b = rad <= 30 ? [[0, 10], [10, rad], [rad, rad + 20], [rad + 20, 9999]] : [[0, 20], [20, 40], [40, rad], [rad, rad + 30], [rad + 30, 9999]];
   return b.map(([a, z]) => [z === 9999 ? `über ${a} km` : `${a}–${z} km`, L.filter((l) => l.km != null && l.km >= a && l.km < z).length, z > rad ? "#f79009" : null]);
 }
 
@@ -541,9 +557,11 @@ function addRegion(r, L, opts = {}) {
   if (!map) return;
   const c = COL[r.key];
   if (r.ziel) {
-    window.L.circle([r.ziel.lat, r.ziel.lon], { radius: r.ziel.radius * 1000, color: c, weight: 2, fillOpacity: .04, dashArray: "6 6" }).addTo(map)
-      .bindTooltip(`${r.name}: ${r.ziel.radius} km um ${r.ziel.name}`);
-    window.L.circleMarker([r.ziel.lat, r.ziel.lon], { radius: 4, color: c, fillColor: c, fillOpacity: 1 }).addTo(map);
+    for (const z of zP(r.ziel)) {
+      window.L.circle([z.lat, z.lon], { radius: (z.radius || r.ziel.radius) * 1000, color: c, weight: 2, fillOpacity: .04, dashArray: "6 6" }).addTo(map)
+        .bindTooltip(`${r.name}: ${r.ziel.radius} km um ${r.ziel.name}`);
+      window.L.circleMarker([z.lat, z.lon], { radius: 4, color: c, fillColor: c, fillOpacity: 1 }).addTo(map);
+    }
   }
   const pts = L.filter((l) => l.lat != null);
   if (window.L.heatLayer && pts.length) window.L.heatLayer(pts.map((p) => [p.lat, p.lon, 1]), { radius: opts.heat || 28, blur: 22, maxZoom: 10, minOpacity: .3, gradient: { 0.3: "#f1f5f9", 0.6: "#cbd5e1", 0.85: "#94a3b8", 1: "#475569" } } /* nur Grautöne – die Punktfarben stehen für den Stand im Ablauf */).addTo(map);
@@ -623,7 +641,7 @@ function renderRegion(r, L, K) {
   <div class="grid two" style="margin-top:14px">
     <div class="card"><h2>Herkunft der Bewerber · ${esc(r.name)}</h2><p class="sub">${r.ziel ? `Meta-Zielgebiet: ${rad} km um ${esc(r.ziel.name)} (gestrichelt).` : "Zielgebiet aus Meta nicht verfügbar."} Punkt = Bewerber, Füllung = Stand im Ablauf, Wärme = Häufung.</p><div id="map"></div>${qLegend()}</div>
     <div class="card"><h2>Auf einen Blick</h2><ul class="finds">${finds.map((f) => `<li>${f}</li>`).join("") || "<li>Noch keine Bewerbungen im Zeitraum.</li>"}</ul>
-      <h2 style="margin-top:18px">Entfernung zum Mittelpunkt</h2>${hbars(entfernung(L, rad))}
+      <h2 style="margin-top:18px">Entfernung zum Mittelpunkt bzw. zur nächsten Nadel</h2>${hbars(entfernung(L, rad))}
       <p class="note">Orange = außerhalb des Meta-Radius. ${L.filter((l) => l.lat == null).length ? L.filter((l) => l.lat == null).length + " Bewerber ohne gültige PLZ." : ""}</p></div>
   </div>
   <div class="card" style="margin-top:14px"><h2>Häufungen (Umkreis 15 km)</h2><p class="sub">Bewerber, die nah beieinander wohnen, zusammengefasst. Hilft zu sehen, ob ein Gebiet besonders gut zieht.</p>
@@ -645,10 +663,9 @@ function renderRegion(r, L, K) {
   if (!map) return;
 
   const pts = L.filter((l) => l.lat != null).map((l) => [l.lat, l.lon]);
-  if (r.ziel) pts.push([r.ziel.lat, r.ziel.lon]);
-  const circle = r.ziel ? window.L.circle([r.ziel.lat, r.ziel.lon], { radius: rad * 1000 }).addTo(map) : null;
+  for (const z of zP(r.ziel)) pts.push([z.lat, z.lon]);
   const bounds = window.L.latLngBounds(pts.length ? pts : [[51.2, 9.6]]);
-  if (circle) { bounds.extend(circle.getBounds()); map.removeLayer(circle); }
+  for (const z of zP(r.ziel)) bounds.extend(window.L.latLng(z.lat, z.lon).toBounds((z.radius || rad) * 2000));
   map.fitBounds(bounds.pad(0.08));
 }
 
