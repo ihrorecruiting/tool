@@ -979,7 +979,7 @@
         <button data-f="neu">Neu</button>
         <button data-f="ne">Nicht erreicht</button>
         <button data-f="ptplan" title="Alle mit Status „Probetag vereinbaren“ – Termin noch abstimmen">Probetag planen <span class="segn" id="ptN"></span></button>
-        <button class="tr-only" data-f="jetzt" title="Online-Vorgespräch ausgefüllt und passt – Status „Online-Vorqualifiziert“ oder „Standort passt“: jetzt anrufen">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
+        <button class="tr-only" data-f="jetzt" title="Online-Vorgespräch ausgefüllt und Abstellort passt – „Abstellort frei …“, „Kommt entgegen …“ oder noch „Online-Vorqualifiziert“: jetzt anrufen">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
         <button class="tr-only" data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
         <button class="tr-only" data-f="nq" title="Transa-Bewerber mit Status „Nicht qualifiziert“ – über „Alle Kampagnen“ je Region">Nicht qualifiziert <span class="segn" id="nqN"></span></button>
         <button class="tr-only" data-f="abs" title="Transa-Bewerber mit Status „Absage durch Bewerber“">Absage <span class="segn" id="absN"></span></button>
@@ -1543,18 +1543,23 @@ function miniHtml(l, right) {
 // Transa: Listen „Qualifiziert“ / „Nicht qualifiziert“ (Status aus LeadTable, mit Punkten aus dem Gespräch)
 let TRQ = null;
 // Seit 04.11.2026 Online-Vorgespräch (fahrer.talentjagd.de/vorgespraech): Make setzt die Stände, Dennis ruft „Online-Vorqualifiziert“ an
-// Seit 06.11.2026 Abstellort im Vorgespräch: „Standort passt“ gehört zu „Jetzt anrufen“, „Standort prüfen“ (außerhalb/PLZ unbekannt) hat eine eigene Liste
-const QST = { jetzt: ["Online-Vorqualifiziert", "Standort passt"], spr: "Standort prüfen", aa: "Abstellort-Anfrage verschickt", akr: "Keine Reaktion auf Abstellort", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Qualifizierung", erinn: "Erinnerungsmail verschickt", kr: "Keine Reaktion auf Vor-Quali", abs: "Absage durch Bewerber", tp: "Talentpool bestätigt" };
-const QTITEL = { jetzt: "Jetzt anrufen", spr: "Standort prüfen", aa: "Abstellort-Anfrage verschickt", akr: "Keine Reaktion auf Abstellort-Anfrage", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Mail raus – wartet auf Vorgespräch", erinn: "Erinnerung verschickt", kr: "Keine Reaktion auf Vorgespräch", abs: "Absage durch Bewerber", tp: "Talentpool" };
+// Seit 06.11.2026 Abstellort im Vorgespräch, endgültige Status von Dennis: „Abstellort frei, Vorschlag da / Hilfe nötig“ und
+// „Kommt entgegen, Vorschlag da / Hilfe nötig“ gehören zu „Jetzt anrufen“, „Standort prüfen“ (außerhalb/PLZ unbekannt/kein Auto) hat eine eigene Liste
+const ABST_ST = ["Abstellort frei, Vorschlag da", "Abstellort frei, Hilfe nötig", "Kommt entgegen, Vorschlag da", "Kommt entgegen, Hilfe nötig"];
+const QST = { jetzt: [...ABST_ST, "Online-Vorqualifiziert", "Standort passt"], ab: "Abstellort bestätigt", vu: "Vertrag unterschrieben", afv: ABST_ST[0], afh: ABST_ST[1], kev: ABST_ST[2], keh: ABST_ST[3], ovq: "Online-Vorqualifiziert", spr: "Standort prüfen", aa: "Abstellort-Anfrage verschickt", akr: "Keine Reaktion auf Abstellort", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Qualifizierung", erinn: "Erinnerungsmail verschickt", kr: "Keine Reaktion auf Vor-Quali", abs: "Absage durch Bewerber", tp: "Talentpool bestätigt" };
+const QTITEL = { jetzt: "Jetzt anrufen", ab: "Abstellort bestätigt", vu: "Vertrag unterschrieben", afv: "Abstellort frei, Vorschlag da", afh: "Abstellort frei, Hilfe nötig", kev: "Kommt entgegen, Vorschlag da", keh: "Kommt entgegen, Hilfe nötig", ovq: "Online vorqualifiziert (alt)", spr: "Standort prüfen", aa: "Abstellort-Anfrage verschickt", akr: "Keine Reaktion auf Abstellort-Anfrage", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Mail raus – wartet auf Vorgespräch", erinn: "Erinnerung verschickt", kr: "Keine Reaktion auf Vorgespräch", abs: "Absage durch Bewerber", tp: "Talentpool" };
 const stN = (s) => String(s || "").trim().toLowerCase();
 const trqList = (f) => { const w = [].concat(QST[f]).map(stN); return (TRQ || []).filter((l) => w.includes(stN(l.status))); };
 let TRSTAND = null;
 const STAND = [ // Reihenfolge und Farben wie im Transa-Report
   { f: "neu", st: "Unbearbeitet", t: "Neu", c: "#ffffff" }, { f: "mail", st: "Qualifizierung", t: "Mail raus", c: "#facc15" },
   { f: "erinn", st: "Erinnerungsmail verschickt", t: "Erinnerung", c: "#f97316" }, { f: "kr", st: "Keine Reaktion auf Vor-Quali", t: "Keine Reaktion", c: "#111827" },
-  { f: "jetzt", st: "Online-Vorqualifiziert", t: "Online vorqualifiziert", c: "#2563eb" }, { f: "jetzt", st: "Standort passt", t: "Standort passt", c: "#0ea5e9" },
+  { f: "afv", st: "Abstellort frei, Vorschlag da", t: "Frei + Vorschlag", c: "#16a34a" }, { f: "afh", st: "Abstellort frei, Hilfe nötig", t: "Frei, Hilfe nötig", c: "#4ade80" },
+  { f: "kev", st: "Kommt entgegen, Vorschlag da", t: "Entgegen + Vorschlag", c: "#ea580c" }, { f: "keh", st: "Kommt entgegen, Hilfe nötig", t: "Entgegen, Hilfe nötig", c: "#fb923c" },
+  { f: "ovq", st: "Online-Vorqualifiziert", t: "Online vorqualifiziert (alt)", c: "#2563eb" },
   { f: "spr", st: "Standort prüfen", t: "Standort prüfen", c: "#eab308" }, { f: "aa", st: "Abstellort-Anfrage verschickt", t: "Abstellort gefragt", c: "#a5b4fc" },
   { f: "akr", st: "Keine Reaktion auf Abstellort", t: "Abstellort: keine Reaktion", c: "#374151" }, { f: "qual", st: "Qualifiziert", t: "Qualifiziert", c: "#16a34a" },
+  { f: "ab", st: "Abstellort bestätigt", t: "Abstellort bestätigt", c: "#15803d" }, { f: "vu", st: "Vertrag unterschrieben", t: "Vertrag unterschrieben", c: "#0369a1" },
   { f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" },
   { f: "abs", st: "Absage durch Bewerber", t: "Absage", c: "#6b7280" }, { f: "tp", st: "Talentpool bestätigt", t: "Talentpool", c: "#8b5cf6" }];
 function renderStand() {
@@ -1659,7 +1664,7 @@ function renderTrq(L) {
   const reg = (l) => String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "") || "ohne Region";
   const wo = (l) => { const f = trAnswersMap({ answers: l.answers || [] }); const o = [f.wohnort, f.ort].find((x) => x && !REGWORT.test(x)) || ""; return [f.plz, o].filter(Boolean).join(" "); };
   const leer = { jetzt: "Gerade niemand zum Anrufen – sobald jemand das Online-Vorgespräch passend ausfüllt, steht er hier", qual: "Noch niemand qualifiziert", nq: "Noch niemand als nicht qualifiziert eingestuft",
-    mail: "Niemand wartet gerade auf das Vorgespräch", spr: "Niemand zum Prüfen", aa: "Keine offene Abstellort-Anfrage", akr: "Niemand ohne Reaktion auf die Abstellort-Anfrage", erinn: "Keine offenen Erinnerungen", kr: "Niemand ohne Reaktion", abs: "Noch keine Absagen durch Bewerber", tp: "Noch niemand im Talentpool" }[qf] || "Niemand";
+    mail: "Niemand wartet gerade auf das Vorgespräch", spr: "Niemand zum Prüfen", aa: "Keine offene Abstellort-Anfrage", ab: "Noch kein Abstellort bestätigt", vu: "Noch kein Vertrag unterschrieben", akr: "Niemand ohne Reaktion auf die Abstellort-Anfrage", erinn: "Keine offenen Erinnerungen", kr: "Niemand ohne Reaktion", abs: "Noch keine Absagen durch Bewerber", tp: "Noch niemand im Talentpool" }[qf] || "Niemand";
   if (!TRQ) $("queue").innerHTML = `<div class="sk"><i></i><i></i></div>`;
   else if (!L.length) $("queue").innerHTML = `<div class="empty">${leer}${campF ? " in dieser Region" : ""}.</div>`;
   else if (qf === "jetzt") {

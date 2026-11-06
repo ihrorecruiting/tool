@@ -137,6 +137,11 @@ const zP = (z) => z ? (Array.isArray(z.punkte) && z.punkte.length ? z.punkte : [
 const zKm = (z, lat, lon) => Math.min(...zP(z).map((p) => km(p.lat, p.lon, lat, lon) - (p.radius || z.radius || 60))) + (z.radius || 60);
 
 let DATA = null, TAB = "alle", map = null, VQ = null, QL = null, AB = null;
+// LeadTable-Status (endgültig seit 06.11.2026, Dennis): nach dem Online-Vorgespräch steht der Abstellort-Fall im Status
+const ABST_ST = ["Abstellort frei, Vorschlag da", "Abstellort frei, Hilfe nötig", "Kommt entgegen, Vorschlag da", "Kommt entgegen, Hilfe nötig"];
+const ONLINE_ST = /^(online-vorqualifiziert|standort passt|standort prüfen|abstellort frei, .+|kommt entgegen, .+)$/i;
+const standName = (s) => /^qualifiziert$/i.test(s) ? "telefonisch qualifiziert" : /^online-vorqualifiziert$/i.test(s) ? "online vorqualifiziert" : String(s || "");
+const standFarbe = (s) => /^abstellort frei/i.test(s) ? "#16a34a" : /^kommt entgegen/i.test(s) ? "#ea580c" : /^standort prüfen/i.test(s) ? "#ca8a04" : /bestätigt|vertrag/i.test(s) ? "#15803d" : "#2563eb";
 /* Abgelehnt / abgesagt mit Grund (Dennis, 04.11.2026). Grund: K.o. aus dem Telefonat, sonst die Nein-Antworten aus dem
    letzten Online-Vorgespräch in der LeadTable-Beschreibung (Make schreibt dort „Frage: Antwort“-Zeilen hinein). */
 const AB_ART = { "nicht qualifiziert": "nicht qualifiziert", "absage durch bewerber": "Absage durch Bewerber", "talentpool bestätigt": "Talentpool (Start später)" };
@@ -193,7 +198,7 @@ function kpiRow(key) {
   const nH = L.filter((l) => bDay(l.datum) === heute).length, n7 = L.filter((l) => bDay(l.datum) >= d7).length;
   const kost = K.reduce((s, k) => s + k.kosten, 0), kH = K.filter((k) => k.tag === heute).reduce((s, k) => s + k.kosten, 0);
   const Q = (QL || []).filter((v) => key === "alle" || v.region === key), qH = Q.filter((v) => v.seit && bDay(v.seit) === heute).length;
-  const qOn = Q.filter((v) => /online/i.test(v.status)).length, nq = L.filter((l) => /^nicht qualifiziert$/i.test(String(l.status || "").trim())).length;
+  const qOn = Q.filter((v) => ONLINE_ST.test(v.status)).length, nq = L.filter((l) => /^nicht qualifiziert$/i.test(String(l.status || "").trim())).length;
   return kpi("Bewerbungen gesamt", L.length, key === "alle" ? "alle 5 Regionen" : "seit Kampagnenstart") + kpi("Bewerbungen heute", nH, "seit 0 Uhr") + kpi("Bewerbungen 7 Tage", n7, "inkl. heute") +
     kpi("Qualifiziert", `${QL ? Q.length : "–"}${QL && qH ? ` <span style="font-size:15px;color:#16a34a">+${qH} heute</span>` : ""}`, QL ? `${qOn} online · ${Q.length - qOn} von dir · ${nq} nicht qualifiziert` : "nicht geladen") +
     kpi("Werbekosten", eur(kost), `heute ${eur(kH)} · Meta`) +
@@ -241,7 +246,7 @@ function vqCard(key) {
   if (!QL) return `<div class="card" style="margin-top:14px"><h2>Qualifiziert</h2><p class="note">Liste konnte nicht geladen werden.</p></div>`;
   const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
   const L = qListe(key), cols = key === "alle" ? 9 : 8;
-  const standT = (v) => /talentpool/i.test(v.status) ? `<span style="color:#6b7280;font-weight:600">Talentpool bestätigt</span>` : /online/i.test(v.status) ? `<span style="color:#2563eb;font-weight:600">online vorqualifiziert</span>` : `<span style="color:#16a34a;font-weight:600">telefonisch qualifiziert</span>${v.klasse ? ` <span class="note" style="margin:0">${esc(v.klasse)}</span>` : ""}`;
+  const standT = (v) => /talentpool/i.test(v.status) ? `<span style="color:#6b7280;font-weight:600">Talentpool bestätigt</span>` : /^qualifiziert$/i.test(v.status) ? `<span style="color:#16a34a;font-weight:600">telefonisch qualifiziert</span>${v.klasse ? ` <span class="note" style="margin:0">${esc(v.klasse)}</span>` : ""}` : `<span style="color:${standFarbe(v.status)};font-weight:600">${esc(standName(v.status))}</span>${v.klasse ? ` <span class="note" style="margin:0">${esc(v.klasse)}</span>` : ""}`;
   const ortT = (v) => { const p = PLZ[v.plz]; return v.ort || (p ? p[2] : ""); };
   const zeile = (v) => `<tr><td>${esc(v.name)}${v.hinweis ? ` <span title="${esc(v.hinweis)}" style="color:#dc2626;font-weight:700">⚠</span>` : ""}</td><td>${standT(v)}</td><td>${esc(v.plz)}</td><td>${esc(ortT(v))}</td>${key === "alle" ? `<td><span class="dot" style="background:${COL[v.region] || "#999"}"></span> ${esc(regName(v.region))}</td>` : ""}<td>${esc(v.erreichbar)}</td><td>${esc(v.erfahrung)}</td><td>${esc(startText(v))}</td><td class="n">${fmtD(v.seit)}</td></tr>`;
   const bloecke = SG.map(([k, n]) => [k, n, L.filter((v) => startGrp(v) === k)]).filter(([, , g]) => g.length);
@@ -264,7 +269,7 @@ async function vqExcel(key) {
   await xlsxLaden();
   const regName = (k) => DATA.regionen.find((r) => r.key === k)?.name || "ohne Region";
   const L = qListe(key);
-  const rows = L.map((v) => ({ Start: SG_NAME[startGrp(v)], Name: v.name, Stand: /talentpool/i.test(v.status) ? "Talentpool bestätigt" : /online/i.test(v.status) ? "online vorqualifiziert" : "telefonisch qualifiziert", "Klasse (Telefonat)": v.klasse, PLZ: v.plz, Ort: v.ort || (PLZ[v.plz] ? PLZ[v.plz][2] : ""), Region: regName(v.region), "Am besten erreichbar": v.erreichbar,
+  const rows = L.map((v) => ({ Start: SG_NAME[startGrp(v)], Name: v.name, Stand: /talentpool/i.test(v.status) ? "Talentpool bestätigt" : standName(v.status), "Klasse (Telefonat)": v.klasse, PLZ: v.plz, Ort: v.ort || (PLZ[v.plz] ? PLZ[v.plz][2] : ""), Region: regName(v.region), "Am besten erreichbar": v.erreichbar,
     Erfahrung: v.erfahrung, "Start (Angabe)": startText(v), ADR: v.adr, "Qualifiziert am": v.seit ? new Date(v.seit).toLocaleDateString("de-DE") : "", Hinweis: v.hinweis }));
   const ws = XLSX.utils.json_to_sheet(rows);
   ws["!cols"] = [20, 24, 22, 16, 8, 22, 18, 20, 16, 30, 10, 14, 40].map((w) => ({ wch: w }));
@@ -334,7 +339,7 @@ function abAntwort(v) {
 function abDaten() {
   const namen = new Map([...(QL || []), ...(AB || [])].map((v) => [v.id, v]));
   const quelle = AB_MODE === "qual"
-    ? (QL || []).map((v) => { const p = PLZ[v.plz]; return { id: v.id, name: v.name, plz: v.plz, ort: v.ort || (p ? p[2] : ""), lat: p ? p[0] : null, lon: p ? p[1] : null, region: v.region, stand: /^qualifiziert$/i.test(v.status) ? "telefonisch qualifiziert" : /^standort/i.test(v.status) ? v.status : "online vorqualifiziert", start: startText(v), erreichbar: v.erreichbar || "", abst: v.abst }; })
+    ? (QL || []).map((v) => { const p = PLZ[v.plz]; return { id: v.id, name: v.name, plz: v.plz, ort: v.ort || (p ? p[2] : ""), lat: p ? p[0] : null, lon: p ? p[1] : null, region: v.region, stand: standName(v.status), start: startText(v), erreichbar: v.erreichbar || "", abst: v.abst }; })
     : ST_LEADS.map((l) => ({ id: l.id, name: namen.get(l.id)?.name || "", plz: l.plz, ort: l.ortName, lat: l.lat, lon: l.lon, region: l.region, stand: QNAME[qOf(l)], datum: l.datum, start: "", erreichbar: "" }));
   return quelle.map((v) => ({ ...v, e: abPruef(v.lat, v.lon) }));
 }
@@ -430,10 +435,10 @@ async function load() {
     DATA = d; zielErsatz();
     // Liste „Online vorqualifiziert“ für die Dispo (mit Namen; aus der Function transa-gespraech)
     try {
-      const r2 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Online-Vorqualifiziert", "Qualifiziert", "Standort passt", "Standort prüfen"] }) });
+      const r2 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Online-Vorqualifiziert", "Qualifiziert", "Standort passt", "Standort prüfen", ...ABST_ST, "Abstellort bestätigt", "Vertrag unterschrieben"] }) });
       const d2 = await r2.json().catch(() => ({}));
       QL = r2.ok ? (d2.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b/i.test(l.name || "")).map((l) => ({ ...vqRow(l), status: String(l.status || "").trim() })) : null;
-      VQ = QL ? QL.filter((v) => /^(online-vorqualifiziert|standort passt|standort prüfen)$/i.test(v.status)) : null;
+      VQ = QL ? QL.filter((v) => ONLINE_ST.test(v.status)) : null;
     } catch { VQ = null; QL = null; }
     try {
       const r3 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Nicht qualifiziert", "Absage durch Bewerber", "Talentpool bestätigt"], mitText: true }) });
@@ -491,9 +496,9 @@ const qOf = (l) => {
   if (s === "qualifizierung") return "mail";
   if (s === "erinnerungsmail verschickt") return "erinn";
   if (s === "keine reaktion auf vor-quali") return "still";
-  if (/^online[- ]vorqualifiziert$/.test(s)) return "online";
+  if (/^online[- ]vorqualifiziert$|^abstellort frei, |^kommt entgegen, |^standort passt$/.test(s)) return "online";
   if (/nicht qualifiziert|absage|abgesagt|kein interesse|ungeeignet/.test(s)) return "n";
-  if (/^qualifiziert$|termin|angebot|vorgestellt|zusage|eingestellt|vertrag/.test(s)) return "q";
+  if (/^qualifiziert$|^abstellort bestätigt$|termin|angebot|vorgestellt|zusage|eingestellt|vertrag/.test(s)) return "q";
   return "bearb";
 };
 const qDot = (k) => `<i class="dot" style="background:${QF[k]};${k === "neu" ? "box-shadow:inset 0 0 0 2px #98a2b3" : ""}"></i>`;
