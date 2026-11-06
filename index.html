@@ -2285,7 +2285,7 @@ const TR_DEF = {
 };
 const TR_STATI = ["Qualifiziert", "Nicht qualifiziert"];
 const TR_DANKE = "Guten Tag,\n\nvielen Dank für das nette Gespräch! Wie besprochen bekommen Sie in Kürze eine E-Mail mit den weiteren Infos zum Projekt.\n\nBei Fragen erreichen Sie mich jederzeit hier per WhatsApp oder telefonisch unter 0175 1009 008.\n\nViele Grüße\nDennis Mende, Talentjagd";
-const TR_REG = [["fulda", "Fulda/Bad Hersfeld", /fulda|hersfeld/i], ["ruhr", "Ruhrgebiet", /ruhr/i], ["rheinmain", "Rhein-Main", /rhein[\s-]*main/i], ["osnabrueck", "Raum Osnabrück", /osnabr/i], ["halle", "Halle/Leipzig", /halle|leipzig/i]];
+const TR_REG = [["fulda", "Fulda/Bad Hersfeld", /fulda|hersfeld/i], ["ruhr", "Ruhrgebiet", /ruhr/i], ["rheinmain", "Rhein-Main", /rhein[\s-]*main/i], ["osnabrueck", "Raum Osnabrück", /osnabr/i], ["halle", "Halle/Leipzig", /halle|leipzig/i], ["a6", "A6-Korridor", /\ba6\b|korridor/i]];
 const trRegion = (k) => (TR_REG.find((r) => r[2].test(k || "")) || [null, "Allgemein"])[1];
 let TR = null, trTick = null, trCfg = null;
 const isTransa = (l) => l && berL(l) === "transa";
