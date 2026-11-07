@@ -1800,7 +1800,7 @@ function renderIm() {
   const leer = { interesse: "Noch niemand hat auf „Interesse“ geklickt.", absage: "Keine Absagen per Klick.", offen: "Alle haben reagiert.", alle: "Keine Info-Mails." };
   $("imList").innerHTML = (imF === "interesse" && ruf ? `<div class="hintline" style="margin:0 4px 6px">${ruf} warten auf deinen Anruf</div>` : "") +
     (X.length ? X.map((l) => {
-      const r = l.reaktion === "interesse" ? `<span class="pill go">Interesse ${zeit(l.reaktion_at)}</span>` : l.reaktion === "absage" ? `<span class="pill stop">Absage ${zeit(l.reaktion_at)}</span>`
+      const r = l.reaktion === "interesse" ? `<span class="pill go">Interesse ${zeit(l.reaktion_at)}</span>` : l.reaktion === "absage" ? `<span class="pill stop">Absage ${zeit(l.reaktion_at)}</span>${l.absage_grund ? `<span class="age" title="Absagegrund aus der Info-Mail">${esc(l.absage_grund)}</span>` : ""}`
         : `<span class="pill">${l.erinnert_at ? "Erinnerung raus" : "Info " + zeit(l.info_at)}</span>`;
       const jetzt = l.reaktion && norm(l.status) !== norm(l.reaktion === "interesse" ? "Möchte Rückruf" : "Absage durch Bewerber") ? `<span class="age">jetzt: ${esc(l.status || "")}</span>` : "";
       return miniHtml(l, r + jetzt);
