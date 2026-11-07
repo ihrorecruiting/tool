@@ -1847,7 +1847,7 @@ function renderCard(r) {
     <div class="contact">
       ${l.phone ? `<a class="tel" id="telLink" href="${telHref(l.phone)}" title="Anrufen (Leertaste)">${ICON.phone}${esc(l.phone)}<kbd>␣</kbd></a>` : `<span class="empty">Keine Telefonnummer</span>`}
       ${l.phone ? `<div class="menu" id="waMenu"><button class="btn" id="waBtn">${ICON.wa}WhatsApp</button><div class="menu-list">
-        <button data-i="danke">Danke + Kontaktdaten</button>${wa.map((t, i) => `<button data-i="${i}">${esc(t.titel)}</button>`).join("")}<button data-i="-1">Ohne Vorlage</button></div></div>` : ""}
+        ${isTransa(l) ? `<button data-i="vg">Link zum Vorgespräch</button>` : ""}<button data-i="danke">Danke + Kontaktdaten</button>${wa.map((t, i) => `<button data-i="${i}">${esc(t.titel)}</button>`).join("")}<button data-i="-1">Ohne Vorlage</button></div></div>` : ""}
       ${l.email ? `<a class="btn" href="mailto:${esc(l.email)}">${ICON.mail}E-Mail</a>` : ""}
       <button class="btn" id="dispBtn">${ICON.truck}Disponent fragen</button>
       <button class="btn" id="terminBtn">${ICON.cal}Termin</button>
@@ -1912,6 +1912,7 @@ function renderCard(r) {
   $("nextLead").addEventListener("click", nextLead);
   bindHireBox();
   $("calledBtn").addEventListener("click", () => openCall(cur));
+  if (isTransa(l) && l.phone) vgLaden(l.lead_id);
   if (isTransa(l)) { // Transa: Anruf öffnet zusätzlich das Gesprächsfenster (Telefon wählt trotzdem)
     if ($("telLink")) $("telLink").addEventListener("click", () => openTr(cur, true));
     if ($("mTel")) $("mTel").addEventListener("click", () => openTr(cur, true));
@@ -1955,6 +1956,7 @@ function renderCard(r) {
     $("waBtn").addEventListener("click", (e) => { e.stopPropagation(); $("waMenu").classList.toggle("open"); });
     $("waMenu").querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.i === "danke") { sendDanke(cur); $("waMenu").classList.remove("open"); return; }
+      if (b.dataset.i === "vg") { sendVgLink(cur); $("waMenu").classList.remove("open"); return; }
       const i = Number(b.dataset.i), text = i >= 0 ? fill(wa[i].text, cur) : "";
       window.open(`https://wa.me/${waNumber(cur.phone)}${text ? "?text=" + encodeURIComponent(text) : ""}`, "_blank");
       $("waMenu").classList.remove("open");
@@ -2313,6 +2315,24 @@ const TR_DEF = {
   ],
 };
 const TR_STATI = ["Qualifiziert", "Nicht qualifiziert"];
+// ---------- Link zum Online-Vorgespräch per WhatsApp (Transa, 07.11.2026) ----------
+// Den Prüfcode rechnet die Function transa-gespraech (Aktion transa_vg_link, Salz nur als Secret) – nie im Cockpit.
+const vgCache = {};
+function vgLaden(id) {
+  if (vgCache[id] && !vgCache[id].err) return;
+  vgCache[id] = { laedt: true };
+  api("transa_vg_link", { id }).then((r) => { vgCache[id] = { link: r.link, vorname: r.vorname }; }).catch((e) => { vgCache[id] = { err: e.message }; });
+}
+const TR_VG_WA = "Hallo {vorname}, hier ist Dennis von TALENTJAGD. Danke für deine Bewerbung als LKW-Fahrer im Fernverkehr!\n\nHier ist dein Link zum Vorgespräch (2 Minuten). Damit prüfen wir, wo dein LKW stehen kann:\n{link}\n\nViele Grüße\nDennis";
+function sendVgLink(l) {
+  const v = vgCache[l.lead_id];
+  if (!v || v.laedt) { toast("Link wird noch geladen – bitte gleich nochmal tippen", true); vgLaden(l.lead_id); return; }
+  if (v.err) { toast("Link konnte nicht erstellt werden: " + v.err, true); delete vgCache[l.lead_id]; vgLaden(l.lead_id); return; }
+  const vn = v.vorname || String(l.name || "").trim().split(/\s+/)[0] || "";
+  const text = TR_VG_WA.replace("{vorname}", vn).replace("Hallo , ", "Hallo, ").replace("{link}", v.link);
+  window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  api("lead_note", { id: l.lead_id, text: "Link zum Online-Vorgespräch per WhatsApp geschickt" }).catch(() => {});
+}
 const TR_DANKE = "Guten Tag,\n\nvielen Dank für das nette Gespräch! Wie besprochen bekommen Sie in Kürze eine E-Mail mit den weiteren Infos zum Projekt.\n\nBei Fragen erreichen Sie mich jederzeit hier per WhatsApp oder telefonisch unter 0175 1009 008.\n\nViele Grüße\nDennis Mende, Talentjagd";
 const TR_REG = [["fulda", "Fulda/Bad Hersfeld", /fulda|hersfeld/i], ["ruhr", "Ruhrgebiet", /ruhr/i], ["rheinmain", "Rhein-Main", /rhein[\s-]*main/i], ["osnabrueck", "Raum Osnabrück", /osnabr/i], ["halle", "Halle/Leipzig", /halle|leipzig/i], ["a6", "A6-Korridor", /\ba6\b|korridor/i]];
 const trRegion = (k) => (TR_REG.find((r) => r[2].test(k || "")) || [null, "Allgemein"])[1];
