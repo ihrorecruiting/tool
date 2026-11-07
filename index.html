@@ -358,6 +358,11 @@
   .trstand button.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue-ink)}
   .trwarn{color:var(--stop-ink);font-weight:700}
   .lidiv.reg{color:var(--ink2)}
+  .imkpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px}
+  .imkpi button{border:0;border-radius:12px;background:var(--fill2);padding:10px 6px;text-align:center;color:var(--ink);cursor:pointer}
+  .imkpi button b{display:block;font-size:22px;line-height:1.1}.imkpi button span{font-size:11.5px;color:var(--muted);font-weight:600}
+  .imkpi button.on{box-shadow:0 0 0 2px var(--accent,#0a84ff) inset}
+  .imkpi button.int b{color:#16a34a}.imkpi button.abs b{color:#dc2626}
   .neusum{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.neusum .pill{cursor:default}
   .neutag{margin:12px 4px 4px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .neutag:first-child{margin-top:0}
@@ -1010,6 +1015,11 @@
       <div class="ph"><h2>Termine</h2><span class="note" id="tfNote"></span></div>
       <div id="tfList"></div>
     </section>
+    <section class="panel" id="imPanel" hidden>
+      <div class="ph"><h2>Info-Mails</h2><span class="note" id="imNote">letzte 7 Tage</span></div>
+      <div class="imkpi" id="imKpi"></div>
+      <div class="mini" id="imList"></div>
+    </section>
     <section class="panel">
       <div class="ph"><h2>Neue Bewerber</h2><span class="note" id="neuNote">die letzten 10</span></div>
       <div class="seg" id="neuSeg" style="margin:-4px 0 10px"><button data-z="heute">Heute</button><button data-z="auto" id="neuAuto">Seit gestern</button><button data-z="7">7 Tage</button></div>
@@ -1337,13 +1347,13 @@ function toast(msg, err) {
 }
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + fn, opt = {
     method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
   // Am Handy reißt die Verbindung kurz ab (Funkloch, Wechsel LTE/5G/WLAN, App aus dem Hintergrund) – Safari meldet dann „Load failed“.
   // Lesende Abfragen werden still wiederholt, beim Speichern kommt eine verständliche Meldung.
-  const lesend = /^(work|stats|overview|overview_getrennt|heute_bereiche|neue_seit|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
+  const lesend = /^(work|stats|overview|overview_getrennt|heute_bereiche|neue_seit|info_mails|push_log|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
   let r;
   for (let i = 0; ; i++) {
     try { r = await fetch(url, opt); break; }
@@ -1704,7 +1714,7 @@ function renderTrq(L) {
   sel.innerHTML = `<option value="">Alle Kampagnen</option>` + camps.map((c) => `<option ${c === keep ? "selected" : ""}>${esc(c)}</option>`).join("");
 }
 function renderSide() {
-  renderNeu();
+  renderNeu(); if (typeof renderIm === "function") renderIm();
   $("planned").innerHTML = W.geplant.length ? W.geplant.map((l) => miniHtml(l, `<span class="age warm">${when(l.followup_at)}</span>`)).join("") : `<div class="empty">Keine geplant.</div>`;
   const remind = new Set((W.probetag_erinnern || []).filter((l) => !l.probetag_erinnert_at).map((l) => l.lead_id));
   $("trialsNote").textContent = remind.size ? `${remind.size} ${remind.size === 1 ? "Erinnerung" : "Erinnerungen"} fällig` : "anstehend";
@@ -1772,6 +1782,32 @@ function renderNeu() {
 }
 $("neuSeg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || b.dataset.z === NEUZ) return; NEUZ = b.dataset.z; store.set("tc_neuz", NEUZ); neuAlle = false; renderNeu(); loadNeu(); });
 $("newest").addEventListener("click", (e) => { if (e.target.closest("#neuMehr")) { e.stopPropagation(); neuAlle = !neuAlle; renderNeu(); } });
+// ---------- Info-Mails (07.11.2026) ----------
+// Wer hat die Info-Mail bekommen, wer hat per Klick reagiert (Interesse → „Möchte Rückruf“, anders überlegt → „Absage durch Bewerber“), wer noch nicht.
+let IM = null, imF = store.get("tc_imf") || "interesse";
+async function loadIm() { try { IM = (await api("info_mails", { tage: 7 })).leads || []; } catch { IM = null; } renderIm(); }
+function renderIm() {
+  if (!$("imPanel")) return;
+  const L = (IM || []).filter((l) => berL(l) === BER);
+  $("imPanel").hidden = !L.length;
+  if (!L.length) return;
+  const g = { alle: L, interesse: L.filter((l) => l.reaktion === "interesse"), absage: L.filter((l) => l.reaktion === "absage"), offen: L.filter((l) => !l.reaktion && l.wartet) };
+  const ruf = g.interesse.filter((l) => /rueckruf/.test(norm(l.status))).length;
+  const k = (f, n, t, c) => `<button data-imf="${f}" class="${c} ${imF === f ? "on" : ""}"><b>${n}</b><span>${t}</span></button>`;
+  $("imKpi").innerHTML = k("alle", L.length, "verschickt", "") + k("interesse", g.interesse.length, "Interesse", "int") + k("absage", g.absage.length, "Absage", "abs") + k("offen", g.offen.length, "ohne Antwort", "");
+  const X = g[imF] || L;
+  const zeit = (x) => x ? `${tagLabel(x) === "Heute" ? "" : tagLabel(x) === "Gestern" ? "gestern " : tagLabel(x).replace(/^[A-Za-zäöü]+, /, "") + " "}${uhr(x)}` : "";
+  const leer = { interesse: "Noch niemand hat auf „Interesse“ geklickt.", absage: "Keine Absagen per Klick.", offen: "Alle haben reagiert.", alle: "Keine Info-Mails." };
+  $("imList").innerHTML = (imF === "interesse" && ruf ? `<div class="hintline" style="margin:0 4px 6px">${ruf} warten auf deinen Anruf</div>` : "") +
+    (X.length ? X.map((l) => {
+      const r = l.reaktion === "interesse" ? `<span class="pill go">Interesse ${zeit(l.reaktion_at)}</span>` : l.reaktion === "absage" ? `<span class="pill stop">Absage ${zeit(l.reaktion_at)}</span>`
+        : `<span class="pill">${l.erinnert_at ? "Erinnerung raus" : "Info " + zeit(l.info_at)}</span>`;
+      const jetzt = l.reaktion && norm(l.status) !== norm(l.reaktion === "interesse" ? "Möchte Rückruf" : "Absage durch Bewerber") ? `<span class="age">jetzt: ${esc(l.status || "")}</span>` : "";
+      return miniHtml(l, r + jetzt);
+    }).join("") : `<div class="empty">${leer[imF]}</div>`);
+}
+$("imKpi").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; imF = b.dataset.imf; store.set("tc_imf", imF); renderIm(); });
+$("imList").addEventListener("click", (e) => { const b = e.target.closest(".li"); if (b) openLead(b.dataset.id); });
 async function loadWork() {
   try {
     if (!configured()) return;
@@ -1779,7 +1815,7 @@ async function loadWork() {
     if (!window._wvAt || Date.now() - window._wvAt > 300000) { window._wvAt = Date.now(); try { await api("wiedervorlagen"); } catch {} }
     WALL = await api("work");
     for (const x of NEUE_STATUS) if (!(WALL.status_liste || []).some((y) => norm(y) === norm(x))) (WALL.status_liste = WALL.status_liste || []).push(x);
-    applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu();
+    applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu(); loadIm();
   } catch (e) { if (e.message !== "Nicht eingerichtet") toast(e.message, true); }
 }
 // ---------- Bereiche: Ihro / Transa / HeyRecruit ----------
