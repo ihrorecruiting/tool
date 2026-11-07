@@ -358,6 +358,10 @@
   .trstand button.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue-ink)}
   .trwarn{color:var(--stop-ink);font-weight:700}
   .lidiv.reg{color:var(--ink2)}
+  .neusum{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.neusum .pill{cursor:default}
+  .neutag{margin:12px 4px 4px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .neutag:first-child{margin-top:0}
+  .neumehr{display:block;width:100%;margin-top:8px;border:0;background:var(--fill2);border-radius:10px;padding:8px;font-weight:600;color:var(--ink2)}
   .lidiv{margin:14px 4px 6px;font-size:12.5px;font-weight:700;color:#991b1b;display:flex;flex-direction:column;gap:2px}
   .lidiv span{font-weight:500;color:var(--ink2);font-size:12px}
   #trSort{margin-top:8px}
@@ -1007,7 +1011,9 @@
       <div id="tfList"></div>
     </section>
     <section class="panel">
-      <div class="ph"><h2>Neue Bewerber</h2><span class="note">die letzten 10</span></div>
+      <div class="ph"><h2>Neue Bewerber</h2><span class="note" id="neuNote">die letzten 10</span></div>
+      <div class="seg" id="neuSeg" style="margin:-4px 0 10px"><button data-z="heute">Heute</button><button data-z="auto" id="neuAuto">Seit gestern</button><button data-z="7">7 Tage</button></div>
+      <div id="neuSum" class="neusum"></div>
       <div class="mini" id="newest"><div class="sk"><i></i><i></i><i></i></div></div>
     </section>
     <section class="panel">
@@ -1331,13 +1337,13 @@ function toast(msg, err) {
 }
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche)$/.test(action) ? "items-edit" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + fn, opt = {
     method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
   // Am Handy reißt die Verbindung kurz ab (Funkloch, Wechsel LTE/5G/WLAN, App aus dem Hintergrund) – Safari meldet dann „Load failed“.
   // Lesende Abfragen werden still wiederholt, beim Speichern kommt eine verständliche Meldung.
-  const lesend = /^(work|stats|overview|overview_getrennt|heute_bereiche|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
+  const lesend = /^(work|stats|overview|overview_getrennt|heute_bereiche|neue_seit|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
   let r;
   for (let i = 0; ; i++) {
     try { r = await fetch(url, opt); break; }
@@ -1698,7 +1704,7 @@ function renderTrq(L) {
   sel.innerHTML = `<option value="">Alle Kampagnen</option>` + camps.map((c) => `<option ${c === keep ? "selected" : ""}>${esc(c)}</option>`).join("");
 }
 function renderSide() {
-  $("newest").innerHTML = W.neueste.length ? W.neueste.map((l) => miniHtml(l, `${pillFor(l.status)}${ageBadge(l) || `<span class="age">${rel(l.lead_created_at)}</span>`}`)).join("") : `<div class="empty">Noch keine.</div>`;
+  renderNeu();
   $("planned").innerHTML = W.geplant.length ? W.geplant.map((l) => miniHtml(l, `<span class="age warm">${when(l.followup_at)}</span>`)).join("") : `<div class="empty">Keine geplant.</div>`;
   const remind = new Set((W.probetag_erinnern || []).filter((l) => !l.probetag_erinnert_at).map((l) => l.lead_id));
   $("trialsNote").textContent = remind.size ? `${remind.size} ${remind.size === 1 ? "Erinnerung" : "Erinnerungen"} fällig` : "anstehend";
@@ -1709,6 +1715,63 @@ function renderSide() {
     return miniHtml(l, right);
   }).join("") : `<div class="empty">Keine.</div>`;
 }
+// ---------- Neue Bewerber seit … (07.11.2026) ----------
+// Früher: die 10 neuesten über alle Bereiche, danach auf den Bereich gefiltert – an Tagen mit vielen Transa-Bewerbern blieben für Ihro nur 2 übrig.
+// Jetzt: alle Bewerber seit Beginn des Zeitraums (items-edit „neue_seit“), je Bereich, nach Tag gruppiert, mit aktuellem Status.
+// „Seit letztem Arbeitstag“: montags (und am Wochenende) alles seit Freitag 0 Uhr, sonst seit gestern 0 Uhr.
+let NEU = null, NEUZ = store.get("tc_neuz") || "auto", neuAlle = false;
+const WTAG = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"], WTAG_LANG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+function neuStart(z = NEUZ) {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  if (z === "heute") return d;
+  if (z === "7") { d.setDate(d.getDate() - 6); return d; }
+  d.setDate(d.getDate() - 1);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+  return d;
+}
+function neuAutoLabel() {
+  const d = neuStart("auto"), g = new Date(); g.setHours(0, 0, 0, 0); g.setDate(g.getDate() - 1);
+  return +d === +g ? "Seit gestern" : `Seit ${WTAG[d.getDay()]}.`;
+}
+async function loadNeu() {
+  try { const r = await api("neue_seit", { seit: neuStart().toISOString() }); NEU = { z: NEUZ, leads: r.leads || [] }; }
+  catch (e) { NEU = null; }
+  renderNeu();
+}
+function tagLabel(x) {
+  const d = new Date(x); d.setHours(0, 0, 0, 0);
+  const h = new Date(); h.setHours(0, 0, 0, 0);
+  const diff = Math.round((h - d) / 864e5);
+  return diff === 0 ? "Heute" : diff === 1 ? "Gestern" : `${WTAG_LANG[d.getDay()]}, ${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.`;
+}
+const uhr = (x) => new Date(x).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+function renderNeu() {
+  if (!$("newest")) return;
+  $("neuAuto").textContent = neuAutoLabel();
+  $("neuSeg").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.z === NEUZ));
+  if (!NEU || NEU.z !== NEUZ) { // noch nicht geladen: alte Liste zeigen
+    $("neuNote").textContent = "wird geladen …"; $("neuSum").innerHTML = "";
+    $("newest").innerHTML = (W && W.neueste && W.neueste.length) ? W.neueste.map((l) => miniHtml(l, `${pillFor(l.status)}${ageBadge(l) || `<span class="age">${rel(l.lead_created_at)}</span>`}`)).join("") : `<div class="sk"><i></i><i></i><i></i></div>`;
+    return;
+  }
+  const L = NEU.leads.filter((l) => berL(l) === BER).sort((a, b) => String(b.lead_created_at).localeCompare(String(a.lead_created_at)));
+  const zt = NEUZ === "heute" ? "heute" : NEUZ === "7" ? "in 7 Tagen" : neuAutoLabel().toLowerCase();
+  $("neuNote").textContent = `${L.length} ${zt}`;
+  const cnt = new Map(); for (const l of L) cnt.set(l.status || "ohne Status", (cnt.get(l.status || "ohne Status") || 0) + 1);
+  $("neuSum").innerHTML = [...cnt.entries()].sort((a, b) => b[1] - a[1]).map(([s, n]) => pillFor(s).replace(">", `>${n} × `)).join("");
+  if (!L.length) { $("newest").innerHTML = `<div class="empty">Keine neuen Bewerber ${zt}.</div>`; return; }
+  const MAX = 12, zeig = neuAlle ? L : L.slice(0, MAX);
+  let h = "", tag = "";
+  for (const l of zeig) {
+    const t = tagLabel(l.lead_created_at);
+    if (t !== tag && NEUZ !== "heute") { h += `<div class="neutag">${esc(t)} · ${L.filter((x) => tagLabel(x.lead_created_at) === t).length}</div>`; tag = t; }
+    h += miniHtml(l, `${pillFor(l.status)}${ageBadge(l) || `<span class="age">${uhr(l.lead_created_at)}</span>`}`);
+  }
+  if (L.length > MAX) h += `<button class="neumehr" id="neuMehr">${neuAlle ? "weniger zeigen" : `alle ${L.length} zeigen`}</button>`;
+  $("newest").innerHTML = h;
+}
+$("neuSeg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || b.dataset.z === NEUZ) return; NEUZ = b.dataset.z; store.set("tc_neuz", NEUZ); neuAlle = false; renderNeu(); loadNeu(); });
+$("newest").addEventListener("click", (e) => { if (e.target.closest("#neuMehr")) { e.stopPropagation(); neuAlle = !neuAlle; renderNeu(); } });
 async function loadWork() {
   try {
     if (!configured()) return;
@@ -1716,7 +1779,7 @@ async function loadWork() {
     if (!window._wvAt || Date.now() - window._wvAt > 300000) { window._wvAt = Date.now(); try { await api("wiedervorlagen"); } catch {} }
     WALL = await api("work");
     for (const x of NEUE_STATUS) if (!(WALL.status_liste || []).some((y) => norm(y) === norm(x))) (WALL.status_liste = WALL.status_liste || []).push(x);
-    applyBereich(); renderWork(); loadTrq(); loadTra();
+    applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu();
   } catch (e) { if (e.message !== "Nicht eingerichtet") toast(e.message, true); }
 }
 // ---------- Bereiche: Ihro / Transa / HeyRecruit ----------
