@@ -149,6 +149,17 @@
   body[data-ber="transa"] .trkpis{display:grid}
   .trkpis .v small.nq{color:var(--stop-ink)}
   .trkpis .s b{color:var(--ink);font-weight:700}
+  body[data-ber="transa"] .trkpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .trkpis .s.st{flex-direction:column;gap:2px}
+  .trkpis .hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.3}
+  .trfun{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+  .trfun .r{display:grid;grid-template-columns:78px minmax(0,1fr) 34px;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
+  .trfun .bar{height:8px;border-radius:5px;background:rgba(120,120,128,.16);overflow:hidden}
+  .trfun .bar i{display:block;height:100%;border-radius:5px;background:var(--go,#34C759)}
+  .trfun .r b{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .trfun .seg2{display:flex;gap:4px;margin:0 0 2px}
+  .trfun .seg2 button{border:0;background:rgba(120,120,128,.12);color:var(--ink2);border-radius:8px;padding:2px 8px;font:inherit;font-size:11.5px;cursor:pointer}
+  .trfun .seg2 button.on{background:var(--ink);color:#fff}
   .kpi{border-radius:22px;padding:14px 18px 15px;min-width:0;position:relative}
   .kpi .l{font-size:13px;color:var(--ink2);font-weight:600}
   .kpi .v{font-family:var(--round);font-weight:700;font-size:40px;line-height:1;margin-top:8px;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
@@ -797,7 +808,7 @@
     .kpi .v{font-size:26px!important}.kpi .l{font-size:12px}.kpi .s{font-size:11.5px!important}
     .kpi .ring{display:none}
     .kpis:not(.trkpis)>.kpi:nth-child(5){display:none}
-    .trkpis>.kpi:nth-child(5){grid-column:1/-1}
+    .trkpis>.kpi:nth-child(5),.trkpis>.kpi:nth-child(6){grid-column:1/-1}
     input.inp,select.inp,textarea.inp,.search input{font-size:16px!important}
     .tabs-top{display:none}
     .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;padding:6px 6px calc(6px + env(safe-area-inset-bottom));
@@ -975,7 +986,8 @@
     <div class="kpi"><div class="l">Online-Vorgespräch beantwortet</div><div class="v" id="tkQuote">–</div><div class="meter"><i id="tkMeter"></i></div><div class="s" id="tkQuoteS"></div></div>
     <div class="kpi"><div class="l">Qualifiziert / nicht qualifiziert</div><div class="v" id="tkQual">–</div><div class="s" id="tkQualS"></div></div>
     <div class="kpi"><div class="l">Anrufe heute (Qualifizierte)</div><div class="v" id="tkAnr">–</div><div class="s" id="tkAnrS"></div></div>
-    <div class="kpi"><div class="l">Kosten je Bewerbung heute</div><div class="v" id="tkCpl">–</div><div class="s" id="tkCplS"></div></div>
+    <div class="kpi"><div class="l">Kosten je Bewerbung heute</div><div class="v" id="tkCpl">–</div><div class="s" id="tkCplS"></div><div class="hint" id="tkCplH"></div></div>
+    <div class="kpi"><div class="l">Online-Vorgespräch Schritte</div><div class="trfun" id="tkFun"><div class="s">–</div></div></div>
   </div>
 </section>
 
@@ -1484,14 +1496,39 @@ function renderTrKpi() {
   $("tkMeter").style.width = (v.quote || 0) + "%";
   $("tkQuoteS").innerHTML = `<span><b>${v.beantwortet}</b> von <b>${v.eingeladen}</b> Mails beantwortet</span><span>${v.wartend} warten${v.keine_reaktion ? ` · ${v.keine_reaktion} ohne Reaktion` : ""}</span>`;
   $("tkQual").innerHTML = `${q.online + q.telefon}<small class="nq"> / ${q.nicht}</small>`;
-  $("tkQualS").innerHTML = `<span><b>${q.online}</b> online vorqualifiziert</span><span><b>${q.telefon}</b> nach Telefonat</span>`;
+  // Seit 06.11. landen Antworten in den Abstellort-Status; „Online-Vorqualifiziert (alt)“ und am Telefon Qualifizierte haben noch keine Abstellort-Antwort
+  const abFrei = (q.abst_frei || 0) + (q.abst_entgegen || 0) + (q.abst_bestaetigt || 0), abPr = (q.standort_pruefen || 0) + (q.standort_passt || 0);
+  const abOff = q.abst_offen != null ? q.abst_offen : (q.online - abFrei - abPr + q.telefon);
+  $("tkQualS").className = "s st";
+  $("tkQualS").innerHTML = `<span><b>${abFrei}</b> Abstellort frei${q.abst_entgegen ? ` (davon ${q.abst_entgegen} kommt entgegen)` : ""}</span><span><b>${abPr}</b> Standort prüfen</span>`
+    + `<span title="${q.online_alt ?? "?"} online vorqualifiziert (alt) + ${q.telefon} am Telefon qualifiziert – für die Abstellort-Nachfrage-Mail"><b>${abOff}</b> Abstellort offen (${q.online_alt ?? "?"} alt + ${q.telefon} Telefon)</span>`;
   const t = HB ? HB.transa : null;
   $("tkAnr").textContent = t ? t.anrufe : "–";
-  $("tkAnrS").innerHTML = (t ? `<span class="dot go"><span>${t.erreicht} erreicht</span></span><span class="dot stop"><span>${t.nicht} nicht</span></span>` : "") + `<span>${q.online ? `<b>${q.online}</b> warten auf Anruf` : "niemand wartet auf Anruf"}</span>`;
+  $("tkAnrS").innerHTML = (t ? `<span class="dot go"><span>${t.erreicht} erreicht</span></span><span class="dot stop"><span>${t.nicht} nicht</span></span>` : "") + `<span>${abFrei ? `<b>${abFrei}</b> mit Abstellort frei – bereit fürs Angebot` : "noch niemand mit Abstellort frei"}</span>`;
   $("tkCpl").textContent = eur(c.cpl_heute);
   $("tkCplS").innerHTML = `<span>7 Tage: <b>${eur(c.cpl_d7)}</b></span><span>Wochenende: <b>${eur(c.cpl_we)}</b></span>`;
+  $("tkCplH").textContent = "Ab 08.11. nur Bewerber mit Fernverkehr + CE – Kosten je Bewerbung davor nicht vergleichbar.";
+  renderTrFun();
   $("tkCpl").title = `Werbekosten heute ${eur(c.heute)}, 7 Tage ${eur(c.d7)}, Wochenende ${c.wochenende.map((d) => d.slice(8, 10) + "." + d.slice(5, 7) + ".").join("–")} ${eur(c.we)}`;
 }
+// Trichter aus dem anonymen Zähler (vg_zaehler): Vorgespräch und – falls die Seite es meldet – Bewerbungsformular
+let TRF_Z = "heute";
+const TRF_SCHRITTE = { vorgespraech: [["geoeffnet", "geöffnet"], ["gestartet", "gestartet"], ["plz", "PLZ"], ["abstellort", "Abstellort"], ["abgeschickt", "abgeschickt"]],
+  bewerbung: [["geoeffnet", "geöffnet"], ["fernverkehr_nein", "Fernverkehr nein"], ["ce_nein", "CE nein"], ["abgeschickt", "abgeschickt"]] };
+function renderTrFun() {
+  const f = TRK && TRK.trichter, el = $("tkFun"); if (!el) return;
+  if (!f || f.fehler) { el.innerHTML = `<div class="s">${f && f.fehler ? "nicht geladen: " + esc(f.fehler) : "noch keine Daten"}</div>`; return; }
+  const seg = `<div class="seg2">${[["heute", "Heute"], ["d7", "7 Tage"], ["gesamt", "Gesamt"]].map(([k, l]) => `<button type="button" data-z="${k}" class="${k === TRF_Z ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  const block = (art, titel) => {
+    const d = (f[art] || {})[TRF_Z] || {}, sch = TRF_SCHRITTE[art], max = Math.max(1, ...sch.map(([k]) => d[k] || 0));
+    if (!sch.some(([k]) => d[k])) return art === "vorgespraech" ? `<div class="s">${titel}: noch niemand${TRF_Z === "heute" ? " heute" : ""}</div>` : "";
+    return `<div class="s" style="margin-top:4px"><b>${titel}</b></div>` + sch.map(([k, l]) => `<div class="r"><span>${l}</span><span class="bar"><i style="width:${Math.round(100 * (d[k] || 0) / max)}%"></i></span><b>${d[k] || 0}</b></div>`).join("");
+  };
+  el.innerHTML = seg + block("vorgespraech", "Vorgespräch") + block("nachfrage", "Abstellort-Nachfrage") + block("bewerbung", "Bewerbungsformular")
+    + `<div class="hint">anonym gezählt${f.seit ? " seit " + f.seit.slice(8, 10) + "." + f.seit.slice(5, 7) + "." : ""}</div>`;
+}
+document.addEventListener("click", (e) => { const b = e.target.closest("#tkFun .seg2 button"); if (!b) return; TRF_Z = b.dataset.z; renderTrFun(); });
+TRF_SCHRITTE.nachfrage = TRF_SCHRITTE.vorgespraech;
 function renderKpiBer() {
   if (!STATS || typeof BER === "undefined") return;
   if (BER === "transa") { if (TRK) renderTrKpi(); loadTrKpi(); }

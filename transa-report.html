@@ -239,7 +239,7 @@ function kpiRow(key) {
   return kpi("Bewerbungen gesamt", L.length, key === "alle" ? "alle Regionen, seit Start" : "seit Kampagnenstart") + kpi("Bewerbungen heute", nH, "seit 0 Uhr") + kpi("Bewerbungen 7 Tage", n7, "inkl. heute") +
     kpi("Qualifiziert", `${QL ? Q.length : "–"}${QL && qH ? ` <span style="font-size:15px;color:#16a34a">+${qH} heute</span>` : ""}`, QL ? `${qOn} online · ${Q.length - qOn} von dir · ${nq} nicht qualifiziert` : "nicht geladen") +
     kpi("Werbekosten", eur(kost), `heute ${eur(kH)} · Meta`) +
-    kpi("Kosten je Bewerbung", nH ? eur(kH / nH) : "–", `heute · Durchschnitt ${L.length ? eur(kost / L.length) : "–"}`);
+    kpi("Kosten je Bewerbung", nH ? eur(kH / nH) : "–", `heute · Durchschnitt ${L.length ? eur(kost / L.length) : "–"}<br><span title="Seit 08.11.2026 sendet das Formular nur noch, wer Fernverkehr fahren will und den CE-Führerschein hat. Die Kosten je Bewerbung sind deshalb ab dann höher und mit den Tagen davor nicht direkt vergleichbar.">ab 08.11. nur Fernverkehr + CE ⓘ</span>`);
 }
 /* Online vorqualifiziert: Zeile für Liste und Excel */
 const VQ_REG = [["fulda", /fulda|hersfeld/i], ["ruhr", /ruhr/i], ["rheinmain", /rhein[\s-]*main/i], ["osnabrueck", /osnabr/i], ["halle", /halle|leipzig/i], ["a6", /\ba6\b|korridor/i]];
@@ -368,7 +368,10 @@ function abKm(lat, lon) {
 // A6 corridor (T_Transa A6, since 06.11.2026): Meta only reports its pins once the campaign has costs, until then the
 // five pins from the ad set (20 km each) stand in, so the rule check and the maps work from the first applicant on
 const A6_PINS = [[49.3837, 8.5415], [49.3194, 8.5746], [49.2187, 9.0166], [49.2046, 9.4728], [49.1788, 9.9259]];
+// Anzeigename je Region (Dennis, 08.11.2026): auf fahrer.talentjagd.de heißt Rhein-Main „Rhein-Main und Rhein-Neckar“ (Schlüssel bleibt rheinmain)
+const REG_NAME = { rheinmain: "Rhein-Main und Rhein-Neckar" };
 function zielErsatz() {
+  for (const r of DATA.regionen) if (REG_NAME[r.key]) r.name = REG_NAME[r.key];
   for (const r of DATA.regionen) { const n = ZIEL_NEU[r.key]; if (!n) continue;
     const meta = r.ziel, schon = meta && km(meta.lat, meta.lon, n.lat, n.lon) < 3;
     r.zielAlt = schon ? null : meta;
