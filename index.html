@@ -153,7 +153,7 @@
   .trkpis .s.st{flex-direction:column;gap:2px}
   .trkpis .hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.3}
   .trfun{display:flex;flex-direction:column;gap:4px;margin-top:8px}
-  .trfun .r{display:grid;grid-template-columns:78px minmax(0,1fr) 34px;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
+  .trfun .r{display:grid;grid-template-columns:132px minmax(0,1fr) 34px;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
   .trfun .bar{height:8px;border-radius:5px;background:rgba(120,120,128,.16);overflow:hidden}
   .trfun .bar i{display:block;height:100%;border-radius:5px;background:var(--go,#34C759)}
   .trfun .r b{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -1514,7 +1514,7 @@ function renderTrKpi() {
 // Trichter aus dem anonymen Zähler (vg_zaehler): Vorgespräch und – falls die Seite es meldet – Bewerbungsformular
 let TRF_Z = "heute";
 const TRF_SCHRITTE = { vorgespraech: [["geoeffnet", "geöffnet"], ["gestartet", "gestartet"], ["plz", "PLZ"], ["abstellort", "Abstellort"], ["abgeschickt", "abgeschickt"]],
-  bewerbung: [["geoeffnet", "geöffnet"], ["fernverkehr_nein", "Fernverkehr nein"], ["ce_nein", "CE nein"], ["abgeschickt", "abgeschickt"]] };
+  bewerbung: [["geoeffnet", "geöffnet"], ["gestartet", "gestartet"], ["fernverkehr_nein", "Ende: Fernverkehr nein"], ["ce_nein", "Ende: CE nein"], ["abgeschickt", "abgeschickt"]] };
 function renderTrFun() {
   const f = TRK && TRK.trichter, el = $("tkFun"); if (!el) return;
   if (!f || f.fehler) { el.innerHTML = `<div class="s">${f && f.fehler ? "nicht geladen: " + esc(f.fehler) : "noch keine Daten"}</div>`; return; }
