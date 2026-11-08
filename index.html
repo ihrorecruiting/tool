@@ -1640,7 +1640,10 @@ function vgInfo(l) {
 function abKurz(l) {
   const a = l.abstellort; if (!a) return "";
   const t = { frei: "Abstellort frei", entgegen: "kommt entgegen", passt_nicht: "⚠ Abstellort passt nicht", aus: "⚠ außerhalb der Region", unbekannt: "⚠ PLZ unbekannt" }[a.fall] || "Abstellort: " + a.text;
-  return t + (a.km ? ` (${a.km} km zur Autobahn)` : "") + (a.vorschlag ? ", Vorschlag: " + a.vorschlag : a.hilfe ? ", möchte Hilfe" : "");
+  // „Standort prüfen“ hat zwei Gründe (08.11.2026): außerhalb der Region (mit km) oder kein eigenes Auto – beides direkt zeigen
+  const aus = a.fall === "aus" ? (a.text.match(/ca\. (\d+) km außerhalb/) || [])[1] : null;
+  const ohneAuto = /eigenes auto:\s*nein/i.test(String(l.description || "")) ? " · ⚠ kein eigenes Auto" : "";
+  return (aus ? `⚠ ${aus} km außerhalb der Region` : t) + (a.km ? ` (${a.km} km zur Autobahn)` : "") + (a.vorschlag ? ", Vorschlag: " + a.vorschlag : a.hilfe ? ", möchte Hilfe" : "") + ohneAuto;
 }
 async function loadTrq() {
   if (BER !== "transa") return;

@@ -247,14 +247,14 @@ const REGWORT = /^(ruhr|ruhrgebiet|nordwest|nordost|suedwest|südwest|suedost|s�
 function vqRow(l) {
   const a = {}; for (const x of (l.answers || [])) a[String(x.q).toLowerCase()] = String(x.a ?? "").trim();
   const d = String(l.description || "").split(/\n/);
-  let err = "", vgStart = "";
-  for (const z of d) { const m = z.match(/am besten erreichbar\s*:\s*(.+)/i); if (m) err = m[1].trim(); const s = z.match(/^\s*start\s*:\s*(.+)/i); if (s) vgStart = s[1].trim(); }
+  let err = "", vgStart = "", auto = "";
+  for (const z of d) { const au = z.match(/^\s*eigenes auto\s*:\s*(.+)/i); if (au) auto = au[1].trim(); const m = z.match(/am besten erreichbar\s*:\s*(.+)/i); if (m) err = m[1].trim(); const s = z.match(/^\s*start\s*:\s*(.+)/i); if (s) vgStart = s[1].trim(); }
   const warn = [...new Set(d.filter((z) => /⚠|bitte prüfen/i.test(z)).map((z) => z.trim()))].join(" | ");
   const reg = (VQ_REG.find(([, re]) => re.test(l.kampagne || "")) || ["allgemein"])[0];
   // the postcode from the Online-Vorgespräch (Abstellort step) is newer than the one from the application and wins (06.11.2026)
   const ab = l.abstellort || null;
   return { id: l.lead_id, name: l.name || "", abst: ab, plz: ab?.plz || (a.plz || "").replace(/\D/g, "").slice(0, 5), ort: [a.wohnort, a.ort].find((o) => o && !REGWORT.test(o)) || "", region: reg,
-    kampagne: l.kampagne || "", seit: l.last_status_change || l.lead_created_at, klasse: l.gespraech && !l.gespraech.entwurf ? [l.gespraech.klasse, l.gespraech.punkte != null ? l.gespraech.punkte + " P." : ""].filter(Boolean).join(" · ") : "", erreichbar: err, erfahrung: a.erfahrung || "", start: a.start || "", vgStart: vgStart === "–" ? "" : vgStart, adr: a.adr || "", hinweis: warn };
+    kampagne: l.kampagne || "", seit: l.last_status_change || l.lead_created_at, klasse: l.gespraech && !l.gespraech.entwurf ? [l.gespraech.klasse, l.gespraech.punkte != null ? l.gespraech.punkte + " P." : ""].filter(Boolean).join(" · ") : "", erreichbar: err, erfahrung: a.erfahrung || "", start: a.start || "", vgStart: vgStart === "–" ? "" : vgStart, adr: a.adr || "", hinweis: warn, auto };
 }
 /* Startmonat (Dennis, 04.11.2026): Liste und Excel nach Beginn Januar / Februar / später (Talentpool) ordnen.
    Vorrang hat die Antwort im Online-Vorgespräch („Start: Ab Januar“ in der LeadTable-Beschreibung), sonst die Angabe aus der Bewerbung. */
@@ -399,7 +399,8 @@ function abAntwort(v) {
   const a = v.abst; if (!a) return '<span class="note" style="margin:0">noch nicht gefragt</span>';
   const t = { frei: "frei wählbar", entgegen: "kommt entgegen: ja", passt_nicht: "⚠ passt nicht", aus: "⚠ außerhalb", unbekannt: "⚠ PLZ unbekannt" }[a.fall] || a.text;
   const z = a.vorschlag ? "Vorschlag: " + a.vorschlag : a.hilfe ? "möchte Hilfe" : "";
-  return esc(t) + (z ? `<br><span class="note" style="margin:0">${esc(z)}</span>` : "");
+  const ohneAuto = /^nein/i.test(v.auto || "") ? '<br><b style="color:#b45309;font-size:12px">kein eigenes Auto</b>' : "";
+  return esc(t) + (z ? `<br><span class="note" style="margin:0">${esc(z)}</span>` : "") + ohneAuto;
 }
 function abDaten() {
   const namen = new Map([...(QL || []), ...(AB || [])].map((v) => [v.id, v]));
@@ -478,6 +479,83 @@ function renderStandorte() {
   const bnd = window.L.latLngBounds(regs.flatMap((r) => zP(r.ziel).map((z) => [z.lat, z.lon])));
   regs.forEach((r) => zP(r.ziel).forEach((z) => bnd.extend(window.L.latLng(z.lat, z.lon).toBounds((z.radius || r.ziel.radius || 60) * 2000))));
   map.fitBounds(bnd.pad(0.05));
+}
+/* Priorität nach Herrn Ihro (Mail vom 06.11.2026): Fahrer aus dem üblichen Ihro-Einsatzgebiet zuerst, Osnabrück ist schwierig
+   (dort keine anderen Fahrer und Verkehre). Ihro-Einsatzgebiet = Umkreis IHRO_R km um die Ihro-Standorte unten (Annahme von Dennis/Claude,
+   08.11.2026 – ein neuer Standort ist eine Zeile). Stufen: A Ihro-Gebiet · B Transa-Region passt · C Osnabrück · D außerhalb / ohne PLZ. */
+const IHRO_R = 50;
+const IHRO_ORTE = [["Neuenstein (Zentrale)", "74632"], ["Neckarsulm", "74172"], ["Stuttgart Hafen", "70327"], ["Sulz am Neckar", "72172"], ["Sinsheim / Kraichgau", "74889"], ["Lampertheim", "68623"]]
+  .map(([name, plz]) => ({ name, lat: PLZ[plz][0], lon: PLZ[plz][1] }));
+const PRIO = { A: ["A", "Ihro-Einsatzgebiet", "#16a34a"], B: ["B", "Transa-Region passt", "#2563eb"], C: ["C", "Osnabrück (schwierig)", "#b45309"], D: ["D", "außerhalb / ohne PLZ", "#9ca3af"] };
+let PR_MODE = "qual";
+function ihroNah(lat, lon) {
+  if (lat == null) return null;
+  let best = null; for (const o of IHRO_ORTE) { const d = km(o.lat, o.lon, lat, lon); if (!best || d < best.d) best = { ...o, d }; }
+  return best;
+}
+// order inside a priority: Abstellort answered first, then online qualified, by phone, then the rest
+const prStufe = (s) => { s = String(s || "").toLowerCase(); return /^abstellort frei|^kommt entgegen|bestätigt|vertrag/.test(s) ? 0 : /^online|^standort/.test(s) ? 1 : /^qualifiziert$/.test(s) ? 2 : /qualifizierung|erinnerung/.test(s) ? 3 : 4; };
+function prDaten() {
+  const namen = new Map([...(QL || []), ...(AB || [])].map((v) => [v.id, v]));
+  const quelle = PR_MODE === "qual"
+    ? (QL || []).map((v) => { const k = koord(v.plz, v.ort); return { ...v, ort: v.ort || k.ort, lat: k.lat, lon: k.lon, ortStatt: k.ortStatt, plzOrt: k.plzOrt, stand: v.status, startT: startText(v) }; })
+    : ST_LEADS.filter((l) => qOf(l) !== "n").map((l) => { const n = namen.get(l.id) || {}; return { ...n, id: l.id, name: n.name || "", plz: l.plz, ort: l.ortName, lat: l.lat, lon: l.lon, ortStatt: l.ortStatt, plzOrt: l.plzOrt, region: l.region, stand: l.status || "neu", kampagne: l.kampagne, startT: n.id ? startText(n) : schoen(l.start || "") }; });
+  return quelle.map((v) => {
+    const e = abPruef(v.lat, v.lon), ih = ihroNah(v.lat, v.lon);
+    const p = ih && ih.d <= IHRO_R ? "A" : (e.art === "frei" || e.art === "ab") ? (e.reg?.key === "osnabrueck" ? "C" : "B") : "D";
+    return { ...v, e, ih, p };
+  }).sort((a, b) => a.p.localeCompare(b.p) || prStufe(a.stand) - prStufe(b.stand) || (a.p === "A" ? a.ih.d - b.ih.d : (a.e.dA ?? 999) - (b.e.dA ?? 999)));
+}
+// why "Standort prüfen": outside the region and/or no own car (from the LeadTable description)
+function prGrund(v) {
+  const g = [];
+  if (v.e.art === "aus" && v.e.reg) g.push(`außerhalb, ca. ${Math.max(1, Math.round(v.e.dM - (v.e.reg.ziel.radius || 60)))} km`);
+  if (v.e.art === "nop") g.push("PLZ fehlt/unbekannt");
+  if (/^nein/i.test(v.auto || "")) g.push("kein eigenes Auto");
+  return g.join(" · ");
+}
+function renderPrio() {
+  if (PR_MODE === "qual" && !QL) { $("main").innerHTML = '<div class="msg err">Liste der Qualifizierten konnte nicht geladen werden.</div>'; return; }
+  const D = prDaten(), wer = PR_MODE === "qual" ? "Qualifizierte" : "Bewerber (ohne Absagen)";
+  const n = (p) => D.filter((v) => v.p === p).length;
+  const kach = (k) => `<div class="card kpi" style="border-top:4px solid ${PRIO[k][2]}"><div class="l">${PRIO[k][0]} · ${PRIO[k][1]}</div><div class="v" style="color:${PRIO[k][2]}">${n(k)}</div><div class="s">${{ A: `bis ${IHRO_R} km um einen Ihro-Standort`, B: "Regel 1 + 2 erfüllt, nicht Osnabrück", C: "passt nach Regel, aber kein Ihro-Verkehr", D: "nachfragen oder Talentpool" }[k]}</div></div>`;
+  const zeile = (v) => `<tr><td><span style="background:${PRIO[v.p][2]};color:#fff;border-radius:6px;padding:1px 7px;font-weight:700">${v.p}</span></td>
+    <td>${esc(v.name) || '<span class="note" style="margin:0">– (Name erst nach Antwort)</span>'}</td><td>${esc(v.stand)}</td><td>${esc(v.plz)} ${esc(v.ort)}${ortStattT(v)}</td>
+    <td>${v.ih ? `${esc(v.ih.name)} <span class="note" style="margin:0">${Math.round(v.ih.d)} km</span>` : "–"}</td>
+    <td><span class="amp"><i style="background:${AB_FARBE[v.e.art]}"></i>${esc(abHinweis(v.e) || AB_TXT[v.e.art])}</span></td>
+    <td>${v.abst !== undefined ? abAntwort(v) : '<span class="note" style="margin:0">–</span>'}</td><td>${esc(v.startT || "")}</td><td>${esc(DATA.regionen.find((r) => r.key === v.region)?.name || "")}</td></tr>`;
+  const kopf = `<tr><th>Prio</th><th>Name</th><th>Stand (LeadTable)</th><th>Wohnort</th><th>nächster Ihro-Standort</th><th>Transa-Regel (Region/Autobahn)</th><th>Antwort Fahrer</th><th>Start</th><th>Kampagne</th></tr>`;
+  $("main").innerHTML = `
+  <div class="card" style="border-left:5px solid #16a34a;margin-bottom:14px;background:#f0fdf4"><b>Vorgabe Herr Ihro (06.11.2026):</b> Fahrer aus dem üblichen Ihro-Einsatzgebiet zuerst. Osnabrück ist schwierig, dort gibt es keine anderen Fahrer und Verkehre.
+    <div class="note" style="margin-top:6px">Ihro-Einsatzgebiet = bis ${IHRO_R} km Luftlinie um ${IHRO_ORTE.map((o) => esc(o.name)).join(", ")}. Fehlt ein Standort, wird er ergänzt.</div></div>
+  <div class="card" style="margin-bottom:14px"><div style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap">
+    <div><h2>Priorität der Bewerber</h2><p class="sub">${D.length} ${wer}. Reihenfolge: A vor B vor C vor D, innerhalb einer Stufe zuerst die mit Abstellort-Antwort, dann online und telefonisch Qualifizierte.</p></div>
+    <div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap"><button id="prQ" class="${PR_MODE === "qual" ? "pri" : ""}">Qualifizierte</button><button id="prA" class="${PR_MODE === "alle" ? "pri" : ""}">Alle Bewerber</button><button id="prX">Excel</button></div></div></div>
+  <div class="grid kpis4">${["A", "B", "C", "D"].map(kach).join("")}</div>
+  <div class="card" style="margin-top:14px"><h2>Karte</h2><div id="map" style="height:460px"></div>
+    <div class="legend">${["A", "B", "C", "D"].map((k) => `<span><i class="dot" style="background:${PRIO[k][2]}"></i>${PRIO[k][0]} ${PRIO[k][1]}</span>`).join("")}<span><i class="dot" style="background:#fff;box-shadow:inset 0 0 0 2px #16a34a"></i>Ihro-Standort mit ${IHRO_R} km</span></div></div>
+  ${["A", "B", "C", "D"].map((k) => { const L = D.filter((v) => v.p === k); return `<div class="card" style="margin-top:14px"><h2><span class="dot" style="background:${PRIO[k][2]}"></span> ${PRIO[k][0]} · ${PRIO[k][1]} <span class="note" style="margin:0;font-weight:500">${L.length}</span></h2>
+    <div style="overflow-x:auto"><table><thead>${kopf}</thead><tbody>${L.map(zeile).join("") || '<tr><td colspan="9" class="note">Niemand.</td></tr>'}</tbody></table></div></div>`; }).join("")}
+  <p class="note">Entfernungen Luftlinie ab PLZ-Mittelpunkt. „Transa-Regel“ wie im Reiter Abgleich (Regel 1: Meta-Umkreis, Regel 2: 20 km zur Autobahn).</p>`;
+  $("prQ").onclick = () => { PR_MODE = "qual"; render(); }; $("prA").onclick = () => { PR_MODE = "alle"; render(); };
+  $("prX").onclick = async () => { const b = $("prX"); b.disabled = true; try { await prExcel(D); } catch (e) { alert(e.message); } b.disabled = false; };
+  baseMap([50.2, 8.9], 6);
+  if (!map) return;
+  for (const o of IHRO_ORTE) {
+    window.L.circle([o.lat, o.lon], { radius: IHRO_R * 1000, color: "#16a34a", weight: 1.5, fillOpacity: .05 }).addTo(map).bindTooltip(`Ihro: ${esc(o.name)} (${IHRO_R} km)`);
+    window.L.circleMarker([o.lat, o.lon], { radius: 5, color: "#fff", weight: 2, fillColor: "#16a34a", fillOpacity: 1 }).addTo(map).bindTooltip(`Ihro: ${esc(o.name)}`);
+  }
+  for (const v of D.filter((x) => x.lat != null).slice().reverse())
+    window.L.circleMarker([v.lat, v.lon], { radius: v.p === "A" ? 8 : 6, color: "#fff", weight: 1.5, fillColor: PRIO[v.p][2], fillOpacity: 1 }).addTo(map)
+      .bindTooltip(`<b>${PRIO[v.p][0]} · ${esc(v.name || v.ort)}</b><br>${esc(v.stand)}<br>${esc(v.plz)} ${esc(v.ort)}${v.ih ? ` · ${Math.round(v.ih.d)} km bis ${esc(v.ih.name)}` : ""}`);
+}
+async function prExcel(D) {
+  await xlsxLaden();
+  const rows = D.map((v) => ({ Prio: v.p + " " + PRIO[v.p][1], Name: v.name, Stand: v.stand, PLZ: v.plz, Ort: v.ort, "nächster Ihro-Standort": v.ih?.name || "", "km Ihro": v.ih ? Math.round(v.ih.d) : "",
+    "Transa-Regel": abHinweis(v.e) || AB_TXT[v.e.art], Hinweis: prGrund(v), "Antwort Fahrer": v.abst?.text || "", Start: v.startT || "", Kampagne: v.kampagne || "" }));
+  const ws = XLSX.utils.json_to_sheet(rows); ws["!cols"] = [26, 24, 26, 8, 22, 22, 8, 34, 26, 40, 18, 26].map((w) => ({ wch: w }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Priorität");
+  XLSX.writeFile(wb, `Transa_Prioritaet_${PR_MODE === "qual" ? "Qualifizierte" : "alle"}_${new Date().toLocaleDateString("en-CA")}.xlsx`);
 }
 async function stExcel(D) {
   await xlsxLaden();
@@ -661,13 +739,13 @@ async function load() {
     try {
       const r2 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Online-Vorqualifiziert", "Qualifiziert", "Standort passt", "Standort prüfen", ...ABST_ST, "Abstellort bestätigt", "Vertrag unterschrieben"] }) });
       const d2 = await r2.json().catch(() => ({}));
-      QL = r2.ok ? (d2.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b/i.test(l.name || "")).map((l) => ({ ...vqRow(l), status: String(l.status || "").trim() })) : null;
+      QL = r2.ok ? (d2.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b|^dennis mende$/i.test(String(l.name || "").trim())).map((l) => ({ ...vqRow(l), status: String(l.status || "").trim() })) : null;
       VQ = QL ? QL.filter((v) => ONLINE_ST.test(v.status)) : null;
     } catch { VQ = null; QL = null; }
     try {
       const r3 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Nicht qualifiziert", "Absage durch Bewerber", "Talentpool bestätigt"], mitText: true }) });
       const d3 = await r3.json().catch(() => ({}));
-      AB = r3.ok ? (d3.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b/i.test(l.name || "")).map(abRow) : null;
+      AB = r3.ok ? (d3.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b|^dennis mende$/i.test(String(l.name || "").trim())).map(abRow) : null;
     } catch { AB = null; }
     render();
   } catch (e) { $("main").innerHTML = '<div class="msg err">Konnte nicht laden: ' + esc(e.message) + '</div>'; }
@@ -675,7 +753,8 @@ async function load() {
 
 /* Testeinträge (eigene Testbewerbungen) zählen im Report nicht */
 const TEST_IDS = new Set(["6ae83c5ca286e77282f27196", "6ae31d16f5aeb9f5a81e9491", "6ae2101e24e78f012e4d8007", "6aeae29339f68c19b9832cb0",
-  "6aedc0e9c05978b08b168b87", "6aedc451c38a53f3760d80cf", "6aedc7a23ca49457fa3cf125"]); // Dennis' Tests 06.11. (A6)
+  "6aedc0e9c05978b08b168b87", "6aedc451c38a53f3760d80cf", "6aedc7a23ca49457fa3cf125", // Dennis' Tests 06.11. (A6)
+  "6aeeda87433be0980e288710", "6aede308cfd6ba4846590a8e"]); // Dennis' Tests Abstellort (Löwenstein, Öhringen), gefunden 08.11.
 
 /* Bewerber mit Koordinaten, Entfernung zum Mittelpunkt der Kampagne, Zeitraum-Filter */
 function prep() {
@@ -747,7 +826,7 @@ function stats(L, K, r) {
 }
 
 function tabs() {
-  const t = [["alle", "Alle Regionen", null], ...DATA.regionen.map((r) => [r.key, r.name, COL[r.key]]), ["planung", "📍 Abstellorte", null], ["standorte", "🛣️ Abgleich", null]];
+  const t = [["alle", "Alle Regionen", null], ...DATA.regionen.map((r) => [r.key, r.name, COL[r.key]]), ["planung", "📍 Abstellorte", null], ["standorte", "🛣️ Abgleich", null], ["prio", "⭐ Priorität Ihro", null]];
   $("tabs").innerHTML = t.map(([k, n, c]) => `<button data-t="${k}" class="${k === TAB ? "on" : ""}">${c ? `<span class="dot" style="background:${c}"></span>` : ""}${esc(n)}</button>`).join("");
   $("tabs").querySelectorAll("button").forEach((b) => b.onclick = () => { TAB = b.dataset.t; render(); });
 }
@@ -758,7 +837,7 @@ function render() {
   $("stand").textContent = "Stand " + new Date(DATA.stand).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " Uhr · " + $("zeit").selectedOptions[0].text + " · Meta-Zielgebiete live aus Meta";
   if (map) { map.remove(); map = null; }
   ST_LEADS = leads;
-  if (TAB === "planung") renderPlanung(); else if (TAB === "standorte") renderStandorte(); else if (TAB === "alle") renderAlle(reg, leads, kosten); else renderRegion(reg[TAB], leads.filter((l) => l.region === TAB), kosten.filter((k) => k.region === TAB));
+  if (TAB === "prio") renderPrio(); else if (TAB === "planung") renderPlanung(); else if (TAB === "standorte") renderStandorte(); else if (TAB === "alle") renderAlle(reg, leads, kosten); else renderRegion(reg[TAB], leads.filter((l) => l.region === TAB), kosten.filter((k) => k.region === TAB));
 }
 
 function hbars(rows) {
