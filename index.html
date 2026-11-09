@@ -374,7 +374,8 @@
   .trstand button.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue-ink)}
   .trwarn{color:var(--stop-ink);font-weight:700}
   .lidiv.reg{color:var(--ink2)}
-  .imkpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px}
+  .imkpi{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 0 12px}
+  .imkpi button{padding:10px 2px}.imkpi button span{display:block;line-height:1.2;font-size:10.5px}
   .imkpi button{border:0;border-radius:12px;background:var(--fill2);padding:10px 6px;text-align:center;color:var(--ink);cursor:pointer}
   .imkpi button b{display:block;font-size:22px;line-height:1.1}.imkpi button span{font-size:11.5px;color:var(--muted);font-weight:600}
   .imkpi button.on{box-shadow:0 0 0 2px var(--accent,#0a84ff) inset}
@@ -1941,18 +1942,19 @@ function renderIm() {
   const L = (IM || []).filter((l) => berL(l) === BER);
   $("imPanel").hidden = !L.length;
   if (!L.length) return;
-  const g = { alle: L, interesse: L.filter((l) => l.reaktion === "interesse"), absage: L.filter((l) => l.reaktion === "absage"), offen: L.filter((l) => !l.reaktion && l.wartet) };
+  // 09.11.2026: Die vier Gruppen ergeben zusammen „verschickt“ – wer ohne Klick von Dennis weiterbearbeitet wurde (z. B. WhatsApp), steht unter „von dir bearbeitet“
+  const g = { alle: L, interesse: L.filter((l) => l.reaktion === "interesse"), absage: L.filter((l) => l.reaktion === "absage"), hand: L.filter((l) => !l.reaktion && !l.wartet), offen: L.filter((l) => !l.reaktion && l.wartet) };
   const ruf = g.interesse.filter((l) => /rueckruf/.test(norm(l.status))).length;
   const k = (f, n, t, c) => `<button data-imf="${f}" class="${c} ${imF === f ? "on" : ""}"><b>${n}</b><span>${t}</span></button>`;
-  $("imKpi").innerHTML = k("alle", L.length, "verschickt", "") + k("interesse", g.interesse.length, "Interesse", "int") + k("absage", g.absage.length, "Absage", "abs") + k("offen", g.offen.length, "ohne Antwort", "");
+  $("imKpi").innerHTML = k("alle", L.length, "verschickt", "") + k("interesse", g.interesse.length, "Interesse", "int") + k("absage", g.absage.length, "Absage", "abs") + k("hand", g.hand.length, "von dir weiter", "") + k("offen", g.offen.length, "ohne Antwort", "");
   const X = g[imF] || L;
   const zeit = (x) => x ? `${tagLabel(x) === "Heute" ? "" : tagLabel(x) === "Gestern" ? "gestern " : tagLabel(x).replace(/^[A-Za-zäöü]+, /, "") + " "}${uhr(x)}` : "";
-  const leer = { interesse: "Noch niemand hat auf „Interesse“ geklickt.", absage: "Keine Absagen per Klick.", offen: "Alle haben reagiert.", alle: "Keine Info-Mails." };
+  const leer = { interesse: "Noch niemand hat auf „Interesse“ geklickt.", absage: "Keine Absagen per Klick.", hand: "Noch niemand von dir weiterbearbeitet.", offen: "Alle haben reagiert.", alle: "Keine Info-Mails." };
   $("imList").innerHTML = (imF === "interesse" && ruf ? `<div class="hintline" style="margin:0 4px 6px">${ruf} warten auf deinen Anruf</div>` : "") +
     (X.length ? X.map((l) => {
       const r = l.reaktion === "interesse" ? `<span class="pill go">Interesse ${zeit(l.reaktion_at)}</span>` : l.reaktion === "absage" ? `<span class="pill stop">Absage ${zeit(l.reaktion_at)}</span>${l.absage_grund ? `<span class="age" title="Absagegrund aus der Info-Mail">${esc(l.absage_grund)}</span>` : ""}`
         : `<span class="pill">${l.erinnert_at ? "Erinnerung raus" : "Info " + zeit(l.info_at)}</span>`;
-      const jetzt = l.reaktion && norm(l.status) !== norm(l.reaktion === "interesse" ? "Möchte Rückruf" : "Absage durch Bewerber") ? `<span class="age">jetzt: ${esc(l.status || "")}</span>` : "";
+      const jetzt = !l.reaktion && !l.wartet ? `<span class="age">jetzt: ${esc(l.status || "")}</span>` : l.reaktion && norm(l.status) !== norm(l.reaktion === "interesse" ? "Möchte Rückruf" : "Absage durch Bewerber") ? `<span class="age">jetzt: ${esc(l.status || "")}</span>` : "";
       return miniHtml(l, r + jetzt);
     }).join("") : `<div class="empty">${leer[imF]}</div>`);
 }
