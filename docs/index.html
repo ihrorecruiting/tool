@@ -1953,8 +1953,8 @@ let LF = null, trMapObj = null; const trAbDraft = {};
 function leaflet() {
   if (LF) return LF;
   LF = new Promise((ok, no) => {
-    const c = document.createElement("link"); c.rel = "stylesheet"; c.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(c);
-    const sc = document.createElement("script"); sc.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; sc.onload = () => ok(window.L); sc.onerror = () => { LF = null; no(new Error("Karte nicht erreichbar")); };
+    const c = document.createElement("link"); c.rel = "stylesheet"; c.href = "lib/leaflet/leaflet.css"; document.head.appendChild(c);
+    const sc = document.createElement("script"); sc.src = "lib/leaflet/leaflet.js"; sc.onload = () => ok(window.L); sc.onerror = () => { LF = null; no(new Error("Karte nicht erreichbar")); };
     document.head.appendChild(sc);
   });
   return LF;
