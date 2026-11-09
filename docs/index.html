@@ -196,6 +196,8 @@
   .tb-stufen{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
   .tb-st{border:.5px solid var(--sep-strong);border-radius:18px;padding:12px 14px;background:var(--field)}
   .tb-st.haupt{border:1.5px solid #16a34a;background:rgba(22,163,74,.07)}
+  .tb-st{cursor:pointer;transition:box-shadow .15s} .tb-st:hover{box-shadow:0 0 0 2px var(--blue-tint)}
+  .tb-st.an{box-shadow:0 0 0 2px var(--blue);background:var(--blue-tint)}
   .tb-st h3{margin:0 0 2px;font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink2);display:flex;justify-content:space-between;gap:8px}
   .tb-st h3 b{font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
   .tb-st .hint{font-size:11.5px;color:var(--ink3,#8a8f98);margin:0 0 8px}
@@ -1701,7 +1703,8 @@ const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_
 Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro"], wav: ST_WA, wau: ST_AUS });
 // Diese Status holt das Cockpit für Transa (alle Stufen inkl. Anruf-Ergebnisse)
 const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON])];
-Object.assign(QTITEL, { jetzt: "Bereit fürs Angebot", bf: "Bereit fürs Angebot – Abstellort frei", be: "Bereit fürs Angebot – kommt entgegen", wa: "Wohnort außerhalb der Region",
+Object.assign(QST, { st_offen: [], st_gespr: [], st_pruef: [], st_erg: [] });
+Object.assign(QTITEL, { st_offen: "Vorgespräch offen – alle", st_gespr: "Im Gespräch – alle", st_pruef: "Prüfen – alle", st_erg: "Ergebnis – alle", jetzt: "Bereit fürs Angebot", bf: "Bereit fürs Angebot – Abstellort frei", be: "Bereit fürs Angebot – kommt entgegen", wa: "Wohnort außerhalb der Region",
   pz: "PLZ unklar – bitte prüfen", of_frei: "Vorgespräch offen – Abstellort frei (laut PLZ)", of_ent: "Vorgespräch offen – kommt entgegen (laut PLZ)",
   of_aus: "Vorgespräch offen – Wohnort außerhalb", of_pz: "Vorgespräch offen – PLZ unklar",
   ne: "Im Gespräch – nicht erreicht", kon: "Im Gespräch – Rückruf, Bedenkzeit, in Kontakt", ang: "Im Gespräch – Angebot oder Details raus" });
@@ -1716,6 +1719,8 @@ function trSortTopf(L, f) {
 const trqList = (f) => {
   if (!TRQ) return [];
   if (f === "jetzt") return TRQ.filter((l) => ["bf", "be"].includes(trTopf(l)));
+  if (/^st_/.test(f)) { const st = TB_STUFEN.find((x) => TB_GANZ[x.k] === f); if (!st) return [];
+    const ids = new Set(); const out = []; for (const k of st.f) for (const l of trqList(k)) if (!ids.has(l.lead_id)) { ids.add(l.lead_id); out.push(l); } return out; }
   if (TOPF[f]) return TRQ.filter((l) => trTopf(l) === f);
   const w = [].concat(QST[f]).map(stN); return TRQ.filter((l) => w.includes(stN(l.status)));
 };
@@ -1776,6 +1781,9 @@ const TB_STUFEN = [
   { k: "pruef", t: "Prüfen", hint: "„ja“, aber Wohnort außerhalb oder PLZ unklar", f: ["wa", "pz"] },
   { k: "erg", t: "Ergebnis", hint: "abgeschlossen", f: ["ab", "vu", "nq", "abs", "tp"] }];
 const tbX = (f) => STAND.find((x) => x.f === f) || { f, t: f, c: "#999" };
+// Klick auf einen ganzen Kasten (09.11.2026): alle Bewerber dieser Stufe; „Bereit fürs Angebot“ = „jetzt“
+const TB_GANZ = { offen: "st_offen", bereit: "jetzt", gespr: "st_gespr", pruef: "st_pruef", erg: "st_erg" };
+const tbStufeVon = (f) => TB_STUFEN.find((st) => TB_GANZ[st.k] === f || st.f.includes(f) || (st.f2 || []).includes(f));
 const TB_KURZ = { mail: "Mail raus", erinn: "Erinnerung", kr: "Keine Reaktion" };
 let tbScroll = 0;
 function tbWohnort(l) { const f = trAnswersMap({ answers: (l.answers && l.answers.length ? l.answers : TRA[l.lead_id]) || [] }); const o = [f.wohnort, f.ort].find((x) => x && !REGWORT.test(x)) || ""; return { plz: f.plz || "", ort: o.replace(/ \(aus PLZ\)$/, "") }; }
@@ -1806,7 +1814,8 @@ function renderTrBoard() {
   const chip = (k, kurz) => { const x = tbX(k), n = cnt(k); return `<button type="button" data-tb="${k}" class="${f === k ? "on" : ""}${n === 0 && f !== k ? " z" : ""}" title="${esc(x.st || "")}"><i style="background:${x.c}"></i>${esc(kurz || x.t)} <b>${n ?? "…"}</b></button>`; };
   const stufen = TB_STUFEN.map((st) => {
     const sum = TRQ ? st.f.reduce((a, k) => a + cnt(k), 0) : "…";
-    return `<div class="tb-st${st.haupt ? " haupt" : ""}"><h3>${st.t} <b>${sum}</b></h3><p class="hint">${st.hint}</p><div class="tb-chips">${st.f.map((k) => chip(k, TB_KURZ[k])).join("")}</div>`
+    const an = tbStufeVon(f) === st;
+    return `<div class="tb-st${st.haupt ? " haupt" : ""}${an ? " an" : ""}" data-tbst="${TB_GANZ[st.k]}" role="button" tabindex="0" title="Alle anzeigen: ${esc(st.t)}"><h3>${st.t} <b>${sum}</b></h3><p class="hint">${st.hint}</p><div class="tb-chips">${st.f.map((k) => chip(k, TB_KURZ[k])).join("")}</div>`
       + (st.f2 ? `<div class="unter">${st.unter}</div><div class="tb-chips">${st.f2.map((k) => chip(k)).join("")}</div>` : "") + `</div>`;
   }).join("");
   let L = TRQ ? trqList(f) : []; if (campF) L = L.filter((l) => l.kampagne === campF);
@@ -1925,6 +1934,8 @@ $("feed").addEventListener("keydown", (e) => { const ev = e.target.closest(".ev[
 function trZurListe() { selId = null; cur = null; renderTrBoard(); renderQueue(); requestAnimationFrame(() => window.scrollTo({ top: tbScroll })); }
 $("trBoard").addEventListener("click", (e) => {
   const c = e.target.closest("[data-tb]");
+  const box = !c && e.target.closest("[data-tbst]");
+  if (box) { qf = box.dataset.tbst; store.set("tc_trbrd", qf); $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderTrBoard(); renderStand(); renderQueue(); return; }
   if (c) { qf = c.dataset.tb; store.set("tc_trbrd", qf); $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderTrBoard(); renderStand(); renderQueue(); return; }
   if (e.target.closest("#tbOv")) { $("trOvBtn").click(); return; }
   if (e.target.closest("#tbWa")) { waSerieStart(); return; }
