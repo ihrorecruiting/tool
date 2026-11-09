@@ -951,6 +951,9 @@
   [data-theme="dark"] .modal{background:rgba(34,34,38,.98)}
   .panel:focus-within,.glass:focus-within{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(255,255,255,.95)}
   [data-theme="dark"] .panel:focus-within,[data-theme="dark"] .glass:focus-within{background:rgba(40,40,46,.97)}
+.abchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+.abchip{border:.5px solid var(--sep2, rgba(60,60,67,.26));background:transparent;color:inherit;border-radius:999px;padding:5px 11px;font:500 13px/1.2 inherit;cursor:pointer}
+@media (hover:hover){.abchip:hover{background:rgba(0,122,255,.08)}}
 </style>
 </head>
 <body>
@@ -1986,6 +1989,7 @@ function trAbBlock(l) {
     <div class="trab-row"><input class="inp" id="trAbIn" autocomplete="off" placeholder="z. B. Autohof Bünde, Parkplatz Industriegebiet Nord …" value="${esc(trAbDraft[l.lead_id] ?? "")}">
       <button class="btn" type="button" id="trAbSave" title="Zeile „Abstellort (Telefonat …)“ unten an die LeadTable-Beschreibung anhängen">In Beschreibung</button>
       <button class="btn go" type="button" id="trAbOk" title="In die Beschreibung schreiben und Status „Abstellort vorgeschlagen“ setzen – Hr. Baumann sieht ihn dann auf seiner Freigabe-Seite">+ Abstellort vorschlagen</button></div>
+    ${abChips("trAbIn")}
     ${vor ? `<div class="trab-hint">Vorschlag aus dem Vorgespräch: <b>${esc(vor)}</b> <button type="button" class="linkbtn" id="trAbVor">übernehmen</button></div>` : ""}
   </div>`;
 }
@@ -3105,12 +3109,22 @@ function trRender() {
   $("trLive").innerHTML = ko ? `<b style="color:var(--stop-ink)">K.o.: ${esc(s.ko.join(", "))}</b>` : `<b>${s.pts} Punkte · Klasse ${s.klasse}</b> <span${s.offen.length ? ' style="color:var(--beacon-ink);font-weight:600"' : ""}>${s.offen.length ? (s.offen.length === 1 ? "Frage " + s.offen[0] + " noch offen" : "Fragen " + s.offen.join(", ") + " noch offen") : esc(trZiel(s))}</span>`;
   trBind();
 }
+// Schnellauswahl Abstellort (Dennis, 09.11.2026): wenn der Fahrer noch keinen konkreten Platz nennt
+const AB_SCHNELL = ["Frei wählbar, direkt an der Autobahn-Auffahrt", "Braucht Hilfe bei der Suche"];
+const abChips = (id) => `<div class="abchips">${AB_SCHNELL.map((t) => `<button type="button" class="abchip" data-abchip="${id}" data-v="${esc(t)}">${esc(t)}</button>`).join("")}</div>`;
+function abChipSetzen(inp, v) {
+  const alt = inp.value.trim(), rest = alt.split(" · ").filter((x) => x && !AB_SCHNELL.includes(x));
+  inp.value = alt.split(" · ").includes(v) ? rest.join(" · ") : [v, ...rest].join(" · ");
+  inp.dispatchEvent(new Event("input", { bubbles: true }));
+}
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-abchip]"); if (!b) return; const i = $(b.dataset.abchip); if (i) { abChipSetzen(i, b.dataset.v); i.focus(); } });
 function trLfAbBox(l, s) {
   const t = (TRQ || []).find((x) => x.lead_id === l.lead_id) || l, a = abFall(t);
   const lage = a ? tbAbst(t).replace(/<br>/g, " · ") : `<span class="warn">keine PLZ</span>`;
   const vor = a && a.vorschlag && a.vorschlag !== trAbTxt() ? a.vorschlag : "";
   return `<div class="trlab">Abstellort <span class="hintline" style="margin:0">${lage}</span></div>
     <input class="inp" id="trLfAb" autocomplete="off" placeholder="Möglicher Abstellort aus dem Gespräch, z. B. Autohof Sinsheim" value="${esc(TR.txt.abstellort || "")}">
+    ${abChips("trLfAb")}
     <p class="hintline" style="margin:4px 0 12px">${vor ? `Aus dem Vorgespräch: <b>${esc(vor)}</b> <button type="button" class="linkbtn" id="trLfAbVor" data-v="${esc(vor)}">übernehmen</button> · ` : ""}Mit Abstellort wird der Bewerber „Abstellort vorgeschlagen“ – Hr. Baumann gibt ihn frei, dann geht der Vertrag raus. Ohne Abstellort bleibt er „Qualifiziert“.</p>`;
 }
 function trQ(q, i) {
