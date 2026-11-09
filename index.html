@@ -2344,7 +2344,10 @@ let BER = "ihro", WALL = null;
 function applyBereich() {
   if (!WALL) return;
   const f = (arr) => (arr || []).filter((x) => berL(x) === BER);
-  W = { ...WALL, arbeitsliste: f(WALL.arbeitsliste), neueste: f(WALL.neueste), probetage: f(WALL.probetage), geplant: f(WALL.geplant),
+  // Abgeschlossene Bewerber nie in „Heute anrufen“, auch wenn noch eine alte Wiedervorlage fällig ist
+  // (z. B. Absage direkt in LeadTable gesetzt – der Webhook löscht die Wiedervorlage nicht), 09.11.2026
+  const zu = (x) => /^(absage|nicht qualifiziert|eingestellt|talentpool bestätigt|no-?show|wohnort außerhalb umkreis|vertrag unterschrieben)/i.test(String(x.status || "").trim());
+  W = { ...WALL, arbeitsliste: f(WALL.arbeitsliste).filter((x) => !zu(x)), neueste: f(WALL.neueste), probetage: f(WALL.probetage), geplant: f(WALL.geplant),
     probetag_planen: f(WALL.probetag_planen), probetag_erinnern: f(WALL.probetag_erinnern), termine_nah: (WALL.termine_nah || []).filter((t) => berL(t.lead || t) === BER) };
   W.arbeitsliste_gesamt = W.arbeitsliste.length;
   const n = (b) => (WALL.arbeitsliste || []).filter((l) => berL(l) === b).length, ni = n("ihro"), nt = n("transa"), nh = n("heyrecruit");
