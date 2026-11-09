@@ -1711,7 +1711,7 @@ const ihFahrt = (km) => Math.round(km * 1.3 / 5) * 5; // Faustregel: Luftlinie m
 function ihKm(a, b) { const r = 6371, p1 = a[0] * Math.PI / 180, p2 = b[0] * Math.PI / 180, dp = p2 - p1, dl = (b[1] - a[1]) * Math.PI / 180;
   const h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2; return 2 * r * Math.asin(Math.sqrt(h)); }
 function ihDist(id) {
-  const o = ORTE[id]; if (!o) return null;
+  const o = ORTE[id]; if (!o || (o.ort && !o.gesucht)) return null; // noch nicht gesucht: „wird gesucht“ statt „nicht gefunden“
   if (o.lat == null) return { o, own: null, alt: null, eff: null };
   const d = {}; for (const [k, pts] of Object.entries(IH_START)) d[k] = Math.min(...pts.map((p) => ihKm([o.lat, o.lon], p)));
   const own = o.tour ? d[o.tour] : null;
@@ -1736,7 +1736,8 @@ async function loadOrte() {
     Object.assign(ORTE, r.orte || {});
     renderQueue();
     if (cur && ORTE[cur.lead_id] && $("ihBlock")) $("ihBlock").outerHTML = ihBlock(cur);
-    if (r.offen) setTimeout(() => { ihLaden = 0; loadOrte(); }, 1500); else ihLaden = 0;
+    // Neue Orte sucht die Funktion in Sechserpaketen; höchstens 10 Runden je Laden, damit nichts endlos weiterläuft
+    if (r.offen && (loadOrte.runden = (loadOrte.runden || 0) + 1) < 10) setTimeout(() => { ihLaden = 0; loadOrte(); }, 1500); else { ihLaden = 0; loadOrte.runden = 0; }
   } catch { ihLaden = 0; }
 }
 const ihVor = (l) => String(l.name || "").trim().split(/\s+/)[0] || "";
