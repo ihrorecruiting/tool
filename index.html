@@ -2428,6 +2428,14 @@ const PRIMARY = [ST_BEDENK, ST_NACHGEF, "Tendenz gut", "Tendenz Absage", "Probet
 // Transa hat eine eigene Statusvorlage (seit 02.11.2026): Nachfassen/Nachgefasst getrennt nach Telefonat und Angebot
 const TR_NACHGEF_ST = ["Nachgefasst nach Telefonat", "Nachgefasst nach Angebot"], TR_NF_ST = ["Nachfassen nach Telefonat", "Nachfassen nach Angebot"], TR_KEINE = "Keine Reaktion auf Nachgefasst";
 const PRIMARY_TR = [ST_BEDENK, ...TR_NACHGEF_ST, "Details verschickt", "Angebot verschickt", "Möchte Rückruf"];
+// Transa-Statusvorlage in LeadTable (Stand 09.11.2026), Reihenfolge wie der Ablauf – für „Anderer Status …“ in der Bewerberkarte
+const TR_VORLAGE = ["Unbearbeitet", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Per Whatsapp bearbeitet",
+  "Online-Vorqualifiziert ", ...ABST_ST, "Standort passt", "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort",
+  "in Kontakt", "Möchte Rückruf", ST_BEDENK, "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat",
+  "Abstellort vorgeschlagen", "Abstellort bestätigt", "Freigabe abgelehnt",
+  "Details verschickt", "Angebot verschickt", "Nachfassen nach Angebot", "Nachgefasst nach Angebot", "Keine Reaktion auf Nachgefasst",
+  "Termin", "Mündliche Zusage", "Vertrag unterschrieben", "Eingestellt", "Talentpool-Angebot", "Talentpool bestätigt",
+  "Wohnort außerhalb Umkreis", "Nicht qualifiziert", "Absage durch Bewerber", "Absage Ihro", "No-Show"];
 const primFor = (l) => (berL(l) === "transa" ? PRIMARY_TR : PRIMARY);
 const isTrNachgef = (s) => TR_NACHGEF_ST.some((x) => norm(x) === norm(s)), isTrNf = (s) => TR_NF_ST.some((x) => norm(x) === norm(s));
 const isBedenk = (s) => norm(s).startsWith("bedenkzeit"), isNachgef = (s) => norm(s) === "nachgefasst", isNfBitte = (s) => norm(s) === "nachfassenbitte";
@@ -2468,7 +2476,7 @@ function renderCard(r) {
   const l = r.lead, k = statusKind(l.status);
   const due = l.followup_at && new Date(l.followup_at) <= new Date();
   const seen = [...W.arbeitsliste, ...W.neueste, ...W.probetage, ...W.geplant].map((x) => x.status).filter(Boolean);
-  const all = []; for (const s of [...(W.status_liste || []), "Termin gebucht", "Unterlagen erhalten", ...seen]) if (!all.some((a) => norm(a) === norm(s))) all.push(s);
+  const all = []; for (const s of (berL(l) === "transa" ? [...TR_VORLAGE, l.status] : [...(W.status_liste || []), "Termin gebucht", "Unterlagen erhalten", ...seen])) if (s && !all.some((a) => norm(a) === norm(s))) all.push(s);
   const PRIM = primFor(l);
   const others = all.filter((s) => !PRIM.some((p) => norm(p) === norm(s)) && !/^nichterreicht/.test(norm(s)));
   const wa = (W.wa_vorlagen || []);
