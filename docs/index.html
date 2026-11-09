@@ -1687,9 +1687,10 @@ const ST_OFFEN = ["Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktio
 const ST_QUALI = [...ABST_ST, "Online-Vorqualifiziert", "Standort passt", "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort"].map(stN);
 function abFall(l) { const a = l.abstellort; if (a && a.fall) return { ...a, quelle: "vg" }; const p = TRPLZ[l.lead_id]; return p ? { ...p, quelle: "plz" } : null; }
 // Nach dem Anruf (Ergebnis-Knöpfe in der Karte) bleibt der Bewerber sichtbar: Stufe „Im Gespräch“
-const TR_NE = ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3"];
-const TR_ANG = ["Angebot verschickt", "Details verschickt", "Nachgefasst nach Angebot", "Termin", "Termin gebucht"];
-const TR_KON = ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Möchte Rückruf", "Nachgefasst nach Telefonat", "Nachgefasst", "Nachfassen bitte", "Talentpool-Angebot"];
+// Statusvorlage „Transa“ in LeadTable (Stand 09.11.2026) – alle Anruf-Ergebnisse müssen hier vorkommen, sonst fällt der Bewerber aus dem Board
+const TR_NE = ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3", "Keine Reaktion auf Nachgefasst"];
+const TR_ANG = ["Angebot verschickt", "Details verschickt", "Nachfassen nach Angebot", "Nachgefasst nach Angebot", "Termin", "Termin gebucht", "Vorstellungsgespr. NEUENSTEIN"];
+const TR_KON = ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Möchte Rückruf", "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat", "Nachgefasst", "Nachfassen bitte", "Talentpool-Angebot"];
 const TRG = { ne: TR_NE.map(stN), ang: TR_ANG.map(stN), kon: TR_KON.map(stN) };
 function trTopf(l) {
   const s = stN(l.status), a = abFall(l), f = a ? a.fall : "";
@@ -1700,7 +1701,7 @@ function trTopf(l) {
   return "";
 }
 const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1 };
-Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro"], wav: ST_WA, wau: ST_AUS });
+Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro", "No-Show"], vu: ["Vertrag unterschrieben", "Mündliche Zusage", "Eingestellt"], wav: ST_WA, wau: ST_AUS });
 // Diese Status holt das Cockpit für Transa (alle Stufen inkl. Anruf-Ergebnisse)
 const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON])];
 Object.assign(QST, { st_offen: [], st_gespr: [], st_pruef: [], st_erg: [] });
