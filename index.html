@@ -1677,16 +1677,16 @@ const stN = (s) => String(s || "").trim().toLowerCase();
 // sonst aus der PLZ der Bewerbung (Function transa-abstellort, gleiche Regel und Daten wie das Vorgespräch auf fahrer.talentjagd.de).
 // LeadTable-Status bleiben unverändert; „Qualifiziert“ (Telefon), „Online-Vorqualifiziert (alt)“ und „Standort prüfen“ verteilen sich auf die Töpfe.
 let TRPLZ = {}, TRPLZ_AT = 0;
-// „WhatsApp verschickt“ (09.11.2026): Vorab-WhatsApp an Offene – bleibt bei den Offenen, die Erinnerungs-Mails (Make 8369082) hören damit auf
+// „Per Whatsapp bearbeitet“ (09.11.2026, gleicher Status wie bei Ihro): Vorab-WhatsApp an Offene – bleibt bei den Offenen, die Erinnerungs-Mails (Make 8369082) hören damit auf
 // „Wohnort außerhalb Umkreis“ (09.11.2026): Wohnort außerhalb des Meta-Umkreises (60 km, A6 5 × 20 km) – steht immer unter „Prüfen“
-const ST_WA = "WhatsApp verschickt", ST_AUS = "Wohnort außerhalb Umkreis";
+const ST_WA = "Per Whatsapp bearbeitet", ST_AUS = "Wohnort außerhalb Umkreis";
 const ST_OFFEN = ["Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet", ST_WA].map(stN);
 const ST_QUALI = [...ABST_ST, "Online-Vorqualifiziert", "Standort passt", "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort"].map(stN);
 function abFall(l) { const a = l.abstellort; if (a && a.fall) return { ...a, quelle: "vg" }; const p = TRPLZ[l.lead_id]; return p ? { ...p, quelle: "plz" } : null; }
 // Nach dem Anruf (Ergebnis-Knöpfe in der Karte) bleibt der Bewerber sichtbar: Stufe „Im Gespräch“
 const TR_NE = ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3"];
 const TR_ANG = ["Angebot verschickt", "Details verschickt", "Nachgefasst nach Angebot", "Termin", "Termin gebucht"];
-const TR_KON = ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Möchte Rückruf", "Nachgefasst nach Telefonat", "Nachgefasst", "Nachfassen bitte", "Per Whatsapp bearbeitet", "Talentpool-Angebot"];
+const TR_KON = ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Möchte Rückruf", "Nachgefasst nach Telefonat", "Nachgefasst", "Nachfassen bitte", "Talentpool-Angebot"];
 const TRG = { ne: TR_NE.map(stN), ang: TR_ANG.map(stN), kon: TR_KON.map(stN) };
 function trTopf(l) {
   const s = stN(l.status), a = abFall(l), f = a ? a.fall : "";
@@ -1832,7 +1832,7 @@ const WA_LISTEN = ["jetzt", "bf", "be", "of_frei", "of_ent"], AUS_LISTEN = ["wa"
 function tbAktion(f, L) {
   if (!TRQ) return "";
   if (WA_LISTEN.includes(f)) { const n = L.filter((l) => l.phone && !trWaGesendet(l)).length;
-    return n ? `<button class="btn sm go" type="button" id="tbWa" title="Je Bewerber öffnet sich WhatsApp mit fertigem Text. Danach: Notiz in LeadTable, Wiedervorlage am nächsten Werktag 9 Uhr, Offene bekommen den Status „WhatsApp verschickt“ (keine Erinnerungs-Mails mehr).">${ICON.wa} WhatsApp-Serie (${n})</button>` : `<span class="ok" style="font-size:12.5px">alle mit WhatsApp ✓</span>`; }
+    return n ? `<button class="btn sm go" type="button" id="tbWa" title="Je Bewerber öffnet sich WhatsApp mit fertigem Text. Danach: Notiz in LeadTable, Wiedervorlage am nächsten Werktag 9 Uhr, Offene bekommen den Status „Per Whatsapp bearbeitet“ (keine Erinnerungs-Mails mehr).">${ICON.wa} WhatsApp-Serie (${n})</button>` : `<span class="ok" style="font-size:12.5px">alle mit WhatsApp ✓</span>`; }
   if (AUS_LISTEN.includes(f)) { const n = L.filter((l) => stN(l.status) !== stN(ST_AUS)).length;
     return n ? `<button class="btn sm" type="button" id="tbAus" title="Setzt in LeadTable den Status „${ST_AUS}“ und schreibt eine Notiz mit PLZ und Entfernung. Offene bekommen danach keine Erinnerungs-Mails mehr.">Alle auf „${ST_AUS}“ (${n})</button>` : "";}
   return "";
@@ -1868,7 +1868,7 @@ async function waSerieZeigen() {
     <h3>${esc(l.name || "Ohne Namen")}</h3><p class="trab-hint">${esc(w.ort || "")} ${esc(w.plz || "")} · ${esc(l.phone || "")} · ${offen ? "Vorgespräch noch offen" : "hat schon „ja“ gesagt"}</p>
     <textarea class="inp" id="wsText" rows="7">${offen ? "Link zum Vorgespräch wird geholt …" : esc(waSerieText(l))}</textarea>
     <div class="row" style="gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn" data-ws="skip">Überspringen</button><button class="btn go" data-ws="send" id="wsSend" ${offen ? "disabled" : ""}>${ICON.wa} In WhatsApp öffnen, dann weiter</button></div>
-    <p class="trab-hint">Danach: Notiz in LeadTable, Wiedervorlage am nächsten Werktag 9 Uhr${offen ? ", Status „WhatsApp verschickt“ (keine Erinnerungs-Mails mehr)" : ""}.</p></div>`;
+    <p class="trab-hint">Danach: Notiz in LeadTable, Wiedervorlage am nächsten Werktag 9 Uhr${offen ? ", Status „Per Whatsapp bearbeitet“ (keine Erinnerungs-Mails mehr)" : ""}.</p></div>`;
   if (offen) {
     let link = ""; try { link = (await api("transa_vg_link", { id: l.lead_id })).link || ""; } catch {}
     if (!WS || WS.liste[WS.i] !== l || !$("wsText")) return;
