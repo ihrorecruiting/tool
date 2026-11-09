@@ -2959,7 +2959,11 @@ const TR_DEF = {
     { k: "eindruck", label: "Gesamteindruck (Motivation, Zuverlässigkeit, Auftreten)", o: [["1", "1", 2], ["2", "2", 4], ["3", "3", 6], ["4", "4", 8], ["5", "5", 10]] },
   ],
 };
-const TR_STATI = ["Qualifiziert", "Nicht qualifiziert"];
+const TR_STATI = ["Abstellort vorgeschlagen", "Qualifiziert", "Nicht qualifiziert"];
+// Ziel-Status am Ende des Leitfadens: qualifiziert + Abstellort eingetragen → „Abstellort vorgeschlagen“ (geht an Hr. Baumann zur Freigabe)
+const trAbTxt = () => String((TR && TR.txt.abstellort) || "").trim();
+const trAuto = (s) => s.vorschlag !== "Qualifiziert" ? s.vorschlag : trAbTxt() ? "Abstellort vorgeschlagen" : "Qualifiziert";
+function trZiel(s) { return TR.status || trAuto(s); }
 // ---------- Link zum Online-Vorgespräch per WhatsApp (Transa, 07.11.2026) ----------
 // Den Prüfcode rechnet die Function transa-gespraech (Aktion transa_vg_link, Salz nur als Secret) – nie im Cockpit.
 const vgCache = {};
@@ -3041,6 +3045,7 @@ function trProtokoll(s, st) {
   } else {
     for (const q of trCfg.fragen) lines.push(`${q.label.replace(/\?$/, "")}: ${q.o ? trWithT(q.k) : String(TR.txt[q.k] || "").trim() || "–"}`);
   }
+  if (trAbTxt()) lines.push(`Abstellort (Telefonat ${d.toLocaleDateString("de-DE")}): ${trAbTxt()}`);
   if (String(TR.notiz || "").trim()) lines.push("Notiz: " + TR.notiz.trim());
   return lines.join("\n");
 }
@@ -3049,6 +3054,7 @@ async function openTr(l, viaAnruf) {
   if (!l || !isTransa(l)) return;
   if (TR && TR.lead.lead_id === l.lead_id && $("trOv").classList.contains("show")) return;
   const p = trPrefill(l);
+  if (trAbDraft[l.lead_id]) p.t.abstellort = trAbDraft[l.lead_id];
   TR = { lead: l, ans: p.a, txt: p.t, from: new Set(p.from), wohnsitz: p.wohnsitz, notiz: "", status: null, start: viaAnruf ? Date.now() : null, dauer: 0, step: 0, saved: null, dirty: false };
   trCfg = TR_DEF; trRender(); $("trOv").classList.add("show");
   clearInterval(trTick); trTick = setInterval(() => { const c = $("trClock"); if (c && TR) c.textContent = fmtDur(trElapsed()); }, 1000);
@@ -3058,13 +3064,15 @@ async function openTr(l, viaAnruf) {
     const g = r.gespraech;
     if (g && TR && TR.lead.lead_id === l.lead_id) {
       TR.saved = g; TR.ans = { ...(g.antworten || {}) }; TR.txt = { ...TR.txt, ...(g.texte || {}) }; TR.notiz = g.notiz || ""; TR.dauer = g.dauer_sek || 0; TR.from = new Set();
-      if (!g.entwurf) { TR.status = g.status; TR.step = 3; } else TR.step = 2;
+      if (trAbDraft[l.lead_id] && !TR.txt.abstellort) TR.txt.abstellort = trAbDraft[l.lead_id];
+      // fertiges Gespräch: „Qualifiziert“ nicht festhalten, damit ein eingetragener Abstellort automatisch zu „Abstellort vorgeschlagen“ führt
+      if (!g.entwurf) { TR.status = g.status === "Qualifiziert" ? null : g.status; TR.step = 3; } else TR.step = 2;
     }
     trRender();
   } catch (e) { toast("Gespräch konnte nicht geladen werden: " + e.message, true); }
 }
 function trRender() {
-  const l = TR.lead, s = trScore(), st = TR.status || s.vorschlag;
+  const l = TR.lead, s = trScore(), st = trZiel(s);
   const nach = String(l.name || "").trim().split(/\s+/).slice(-1)[0] || "";
   const ko = !!s.ko.length;
   $("trName").textContent = l.name || "Ohne Namen";
@@ -3079,21 +3087,30 @@ function trRender() {
   $("trSave").disabled = !!TR.sending; // nach dem letzten Senden war der Knopf beim nächsten Bewerber noch gesperrt
   let h = "";
   if (TR.step === 0) h = `<div class="trsay"><p>${esc(trCfg.begruessung.replace("{anrede}", nach ? "Herr/Frau " + nach : ""))}</p></div>
-    <div class="row" style="gap:8px"><button class="btn blue" data-go="1">Weiter: Projekt</button></div>`;
+    <div class="row" style="gap:8px"><button class="btn blue" data-go="1">Weiter: Projekt</button>${TR.from.size >= 4 ? `<button class="btn" data-go="2">Formular schon ausgefüllt – direkt zu Qualifizieren</button>` : ""}<button class="btn quiet" data-go="3">Direkt zum Abschluss</button></div>`;
   else if (TR.step === 1) h = `<div class="trsay"><ul>${trCfg.projekt.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><p class="hintline">${esc(trCfg.offen)}</p>
     <div class="row" style="gap:8px"><button class="btn blue" data-go="2">Weiter: Qualifizieren</button></div>`;
   else if (TR.step === 2) h = `<p class="hintline">Vorbelegt aus dem Formular – vorlesen und bestätigen lassen.${TR.wohnsitz === "nein" ? " <b>Formular: kein Wohnsitz in Deutschland (K.o.)</b>" : ""}</p>
     ${trCfg.fragen.map((q, i) => trQ(q, i)).join("")}
     <div class="row" style="gap:8px;margin-top:6px"><button class="btn blue" data-go="3">Weiter: Abschluss</button></div>`;
   else h = `<div class="trsay"><ul>${trCfg.abschluss.map((x) => `<li>${esc(x)}</li>`).join("")}</ul><p style="margin-top:8px">E-Mail laut Bewerbung: <b>${esc(l.email || "keine – bitte erfragen")}</b></p></div>
-    <div class="trlab">Ergebnis für LeadTable <span class="hintline" style="margin:0">Vorschlag: ${esc(s.vorschlag)}${s.offen.length && !ko ? ` · noch offen: Frage ${s.offen.join(", ")}` : ""}</span></div>
+    ${trLfAbBox(l, s)}
+    <div class="trlab">Ergebnis für LeadTable <span class="hintline" style="margin:0" id="trVorsch">Vorschlag: ${esc(trAuto(s))}${s.offen.length && !ko ? ` · noch offen: Frage ${s.offen.join(", ")}` : ""}</span></div>
     <div class="seg big" id="trSt">${TR_STATI.map((x) => `<button type="button" data-st="${esc(x)}" class="${x === st ? "on" : ""}">${esc(x)}</button>`).join("")}</div>
     <details class="trprot"><summary>So landet es in der LeadTable-Beschreibung</summary><pre id="trProt">${esc(trProtokoll(s, st))}</pre></details>
     ${TR.saved && TR.saved.lt_fehler ? `<p class="hintline" style="color:var(--stop-ink)">Letzte Übertragung nach LeadTable fehlgeschlagen: ${esc(TR.saved.lt_fehler)}</p>` : ""}`;
   $("trBody").innerHTML = h;
   { const tn = $("trNotiz"); if (document.activeElement !== tn && tn.value !== (TR.notiz || "")) { tn.value = TR.notiz || ""; trNoteFit(); } }
-  $("trLive").innerHTML = ko ? `<b style="color:var(--stop-ink)">K.o.: ${esc(s.ko.join(", "))}</b>` : `<b>${s.pts} Punkte · Klasse ${s.klasse}</b> <span${s.offen.length ? ' style="color:var(--beacon-ink);font-weight:600"' : ""}>${s.offen.length ? (s.offen.length === 1 ? "Frage " + s.offen[0] + " noch offen" : "Fragen " + s.offen.join(", ") + " noch offen") : esc(s.vorschlag)}</span>`;
+  $("trLive").innerHTML = ko ? `<b style="color:var(--stop-ink)">K.o.: ${esc(s.ko.join(", "))}</b>` : `<b>${s.pts} Punkte · Klasse ${s.klasse}</b> <span${s.offen.length ? ' style="color:var(--beacon-ink);font-weight:600"' : ""}>${s.offen.length ? (s.offen.length === 1 ? "Frage " + s.offen[0] + " noch offen" : "Fragen " + s.offen.join(", ") + " noch offen") : esc(trZiel(s))}</span>`;
   trBind();
+}
+function trLfAbBox(l, s) {
+  const t = (TRQ || []).find((x) => x.lead_id === l.lead_id) || l, a = abFall(t);
+  const lage = a ? tbAbst(t).replace(/<br>/g, " · ") : `<span class="warn">keine PLZ</span>`;
+  const vor = a && a.vorschlag && a.vorschlag !== trAbTxt() ? a.vorschlag : "";
+  return `<div class="trlab">Abstellort <span class="hintline" style="margin:0">${lage}</span></div>
+    <input class="inp" id="trLfAb" autocomplete="off" placeholder="Möglicher Abstellort aus dem Gespräch, z. B. Autohof Sinsheim" value="${esc(TR.txt.abstellort || "")}">
+    <p class="hintline" style="margin:4px 0 12px">${vor ? `Aus dem Vorgespräch: <b>${esc(vor)}</b> <button type="button" class="linkbtn" id="trLfAbVor" data-v="${esc(vor)}">übernehmen</button> · ` : ""}Mit Abstellort wird der Bewerber „Abstellort vorgeschlagen“ – Hr. Baumann gibt ihn frei, dann geht der Vertrag raus. Ohne Abstellort bleibt er „Qualifiziert“.</p>`;
 }
 function trQ(q, i) {
   const v = TR.ans[q.k], isKo = q.o && q.o.some((o) => o[3] && o[0] === v), hasKo = q.o && q.o.some((o) => o[3]);
@@ -3108,8 +3125,10 @@ function trQ(q, i) {
 function trLive() {
   const s = trScore(), ko = !!s.ko.length;
   $("trPlate").className = "trplate" + (ko ? " ko" : ""); $("trPts").textContent = ko ? "K.o." : s.pts; $("trKl").textContent = ko ? "–" : s.klasse;
-  $("trLive").innerHTML = ko ? `<b style="color:var(--stop-ink)">K.o.: ${esc(s.ko.join(", "))}</b>` : `<b>${s.pts} Punkte · Klasse ${s.klasse}</b> <span${s.offen.length ? ' style="color:var(--beacon-ink);font-weight:600"' : ""}>${s.offen.length ? (s.offen.length === 1 ? "Frage " + s.offen[0] + " noch offen" : "Fragen " + s.offen.join(", ") + " noch offen") : esc(s.vorschlag)}</span>`;
-  if ($("trProt")) $("trProt").textContent = trProtokoll(s, TR.status || s.vorschlag);
+  $("trLive").innerHTML = ko ? `<b style="color:var(--stop-ink)">K.o.: ${esc(s.ko.join(", "))}</b>` : `<b>${s.pts} Punkte · Klasse ${s.klasse}</b> <span${s.offen.length ? ' style="color:var(--beacon-ink);font-weight:600"' : ""}>${s.offen.length ? (s.offen.length === 1 ? "Frage " + s.offen[0] + " noch offen" : "Fragen " + s.offen.join(", ") + " noch offen") : esc(trZiel(s))}</span>`;
+  if ($("trProt")) $("trProt").textContent = trProtokoll(s, trZiel(s));
+  if ($("trVorsch")) $("trVorsch").textContent = "Vorschlag: " + trAuto(s) + (s.offen.length && !ko ? " · noch offen: Frage " + s.offen.join(", ") : "");
+  const sg = $("trSt"); if (sg) { const z = trZiel(s); sg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.st === z)); }
 }
 function trBind() {
   $("trBody").querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => { TR.step = Number(b.dataset.go); trRender(); $("trBody").scrollTop = 0; }));
@@ -3125,10 +3144,12 @@ function trBind() {
     trLive();
   }));
   $("trBody").querySelectorAll("[data-t]").forEach((i) => i.addEventListener("input", () => { TR.txt[i.dataset.t] = i.value; TR.dirty = true; trLive(); }));
+  if ($("trLfAb")) $("trLfAb").addEventListener("input", (e) => { TR.txt.abstellort = e.target.value; trAbDraft[TR.lead.lead_id] = e.target.value; TR.dirty = true; trLive(); });
+  if ($("trLfAbVor")) $("trLfAbVor").addEventListener("click", (e) => { const v = e.target.dataset.v; TR.txt.abstellort = v; trAbDraft[TR.lead.lead_id] = v; TR.dirty = true; trRender(); });
   if ($("trSt")) $("trSt").querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { TR.status = b.dataset.st; TR.dirty = true; $("trSt").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); trLive(); }));
 }
 function trPayload(extra) {
-  const s = trScore(), st = TR.status || s.vorschlag, l = TR.lead;
+  const s = trScore(), st = trZiel(s), l = TR.lead;
   return { id: l.lead_id, name: l.name, region: trRegion(l.kampagne), kampagne: l.kampagne, antworten: TR.ans, texte: TR.txt, notiz: TR.notiz,
     punkte: s.pts, klasse: s.klasse, ko: s.ko, status: st, dauer_sek: trElapsed(), protokoll: trProtokoll(s, st), ...extra };
 }
@@ -3150,7 +3171,9 @@ async function trFinal() {
     return;
   }
   if (TR.start) { TR.dauer = trElapsed(); TR.start = null; }
-  const l = TR.lead, st = TR.status || s.vorschlag, btn = $("trSave");
+  const l = TR.lead, st = trZiel(s), btn = $("trSave");
+  if (st === "Abstellort vorgeschlagen" && !trAbTxt()) { toast("Bitte zuerst den Abstellort eintragen – oder „Qualifiziert“ wählen", true); TR.step = 3; trRender(); setTimeout(() => $("trLfAb") && $("trLfAb").focus(), 0); return; }
+  if (st === "Abstellort vorgeschlagen" && ko) { toast("K.o.-Kriterium offen – so kann er nicht zur Freigabe", true); return; }
   TR.sending = true; btn.disabled = true; btn.textContent = "Wird gesendet …";
   let schritt = "Gespräch speichern";
   try {
@@ -3169,7 +3192,8 @@ async function trFinal() {
     TR.sending = false; btn.disabled = false; btn.textContent = "Nochmal an LeadTable senden";
     return;
   }
-  toast(`${l.name || "Bewerber"}: ${st} – in LeadTable eingetragen`);
+  if (trAbTxt()) delete trAbDraft[l.lead_id];
+  toast(st === "Abstellort vorgeschlagen" ? `${l.name || "Bewerber"}: Abstellort vorgeschlagen – wartet auf Freigabe durch Hr. Baumann` : `${l.name || "Bewerber"}: ${st} – in LeadTable eingetragen`);
   TR.sending = false; btn.disabled = false;
   trClose();
   try { await loadWork(); loadStats(); loadTrq(); if (selId === l.lead_id) { const r = await api("lead_get", { id: l.lead_id }); cur = r.lead; renderCard(r); } } catch {}
@@ -3197,7 +3221,7 @@ function trListRender() {
   const regs = [...new Set(trListData.map((g) => g.region).filter(Boolean))].sort();
   if ($("trLReg").options.length !== regs.length + 1) { $("trLReg").innerHTML = `<option value="">Alle Regionen</option>` + regs.map((r) => `<option>${esc(r)}</option>`).join(""); $("trLReg").value = reg; }
   const fertig = trListData.filter((g) => !g.entwurf), c = (s) => fertig.filter((g) => g.status === s).length;
-  $("trLSum").innerHTML = `<span><b>${fertig.length}</b> Gespräche</span><span><b>${c("Qualifiziert")}</b> qualifiziert</span><span><b>${c("Nicht qualifiziert")}</b> nicht qualifiziert</span><span><b>${trListData.length - fertig.length}</b> Entwürfe</span>`;
+  $("trLSum").innerHTML = `<span><b>${fertig.length}</b> Gespräche</span><span><b>${c("Qualifiziert") + c("Abstellort vorgeschlagen")}</b> qualifiziert</span><span><b>${c("Nicht qualifiziert")}</b> nicht qualifiziert</span><span><b>${trListData.length - fertig.length}</b> Entwürfe</span>`;
   const rows = trListData.filter((g) => (!reg || g.region === reg) && (!kl || (kl === "E" ? g.entwurf : !g.entwurf && g.klasse === kl)))
     .sort((a, b) => (a.entwurf - b.entwurf) || ((a.klasse === "K.o.") - (b.klasse === "K.o.")) || (b.punkte || 0) - (a.punkte || 0));
   const o = (g, k) => { const q = TR_DEF.fragen.find((x) => x.k === k), x = q && q.o.find((y) => y[0] === (g.antworten || {})[k]); return x ? x[1] : "–"; };
