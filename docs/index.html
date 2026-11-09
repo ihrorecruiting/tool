@@ -1686,7 +1686,7 @@ const ST_WA = "Per Whatsapp bearbeitet", ST_AUS = "Wohnort außerhalb Umkreis";
 // Freigabe durch Hr. Baumann (09.11.2026): „Abstellort vorgeschlagen“ → freigabe.html → „Abstellort bestätigt“ (= freigegeben, Vertrag schicken) oder „Freigabe abgelehnt“
 const ST_VORG = "Abstellort vorgeschlagen", ST_FOK = "Abstellort bestätigt", ST_FNO = "Freigabe abgelehnt";
 let FGLOG = {};
-const ST_OFFEN = ["Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet", ST_WA].map(stN);
+const ST_OFFEN = ["Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet", ST_WA, "Anrufen"].map(stN);
 const ST_QUALI = [...ABST_ST, "Online-Vorqualifiziert", "Standort passt", "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort"].map(stN);
 function abFall(l) { const a = l.abstellort; if (a && a.fall) return { ...a, quelle: "vg" }; const p = TRPLZ[l.lead_id]; return p ? { ...p, quelle: "plz" } : null; }
 // Nach dem Anruf (Ergebnis-Knöpfe in der Karte) bleibt der Bewerber sichtbar: Stufe „Im Gespräch“
@@ -1707,7 +1707,7 @@ function trTopf(l) {
 const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1, fg_w: 1, fg_ok: 1, fg_no: 1 };
 Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro", "No-Show"], vu: ["Vertrag unterschrieben", "Mündliche Zusage", "Eingestellt"], wav: ST_WA, wau: ST_AUS, fg_w: [], fg_ok: [], fg_no: [], fgv: ST_VORG, fgn: ST_FNO });
 // Diese Status holt das Cockpit für Transa (alle Stufen inkl. Anruf-Ergebnisse)
-const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON])];
+const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON, "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet"])];
 Object.assign(QST, { st_offen: [], st_gespr: [], st_frg: [], st_pruef: [], st_erg: [] });
 Object.assign(QTITEL, { st_offen: "Vorgespräch offen – alle", st_gespr: "Im Gespräch – alle", st_frg: "Freigabe – alle", st_pruef: "Prüfen – alle", st_erg: "Ergebnis – alle", jetzt: "Bereit fürs Angebot", bf: "Bereit fürs Angebot – Abstellort frei", be: "Bereit fürs Angebot – kommt entgegen", wa: "Wohnort außerhalb der Region",
   pz: "PLZ unklar – bitte prüfen", of_frei: "Vorgespräch offen – Abstellort frei (laut PLZ)", of_ent: "Vorgespräch offen – kommt entgegen (laut PLZ)",
@@ -1810,7 +1810,8 @@ function tbHinweis(l) {
   const fg = FGLOG[l.lead_id], dt = (x) => new Date(x).toLocaleDateString("de-DE");
   if (s === stN(ST_VORG)) h.push(`<span class="warn">wartet auf Freigabe</span>`);
   else if (s === stN(ST_FOK)) h.push(`<span class="ok">freigegeben${fg && fg.entscheidung === "frei" ? ` von ${esc(fg.von)} am ${dt(fg.created_at)}` : ""} – Vertrag schicken</span>`);
-  else if (s === stN(ST_FNO)) h.push(`<span class="warn">abgelehnt${fg && fg.entscheidung === "stopp" ? `: ${esc(fg.grund || "")} (${esc(fg.von)})` : ""}</span>`);
+  else if (s === stN(ST_FNO)) h.push(`<span class="warn">${fg && fg.entscheidung === "vorab_stopp" ? "vor dem Anruf gestoppt" : "abgelehnt"}${fg && /stopp/.test(fg.entscheidung) ? `: ${esc(fg.grund || "")} (${esc(fg.von)})` : ""}</span>`);
+  else if (fg && fg.entscheidung === "vorab_frei") h.push(`<span class="ok">vorab freigegeben (${esc(fg.von)}, ${dt(fg.created_at)}) – anrufen</span>`);
   if (a && a.vorschlag) h.push("Vorschlag: " + esc(a.vorschlag)); else if (a && a.hilfe) h.push("möchte Hilfe bei der Suche");
   if (/eigenes auto:\s*nein/i.test(String(l.description || ""))) h.push(`<span class="warn">kein eigenes Auto</span>`);
   if (s === "qualifiziert") h.push("am Telefon qualifiziert"); else if (s === "online-vorqualifiziert") h.push("Vorgespräch ohne Abstellort-Frage");
@@ -2429,12 +2430,12 @@ const PRIMARY = [ST_BEDENK, ST_NACHGEF, "Tendenz gut", "Tendenz Absage", "Probet
 const TR_NACHGEF_ST = ["Nachgefasst nach Telefonat", "Nachgefasst nach Angebot"], TR_NF_ST = ["Nachfassen nach Telefonat", "Nachfassen nach Angebot"], TR_KEINE = "Keine Reaktion auf Nachgefasst";
 const PRIMARY_TR = [ST_BEDENK, ...TR_NACHGEF_ST, "Details verschickt", "Angebot verschickt", "Möchte Rückruf"];
 // Transa-Statusvorlage in LeadTable (Stand 09.11.2026), Reihenfolge wie der Ablauf – für „Anderer Status …“ in der Bewerberkarte
-const TR_VORLAGE = ["Unbearbeitet", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Per Whatsapp bearbeitet",
-  "Online-Vorqualifiziert ", ...ABST_ST, "Standort passt", "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort",
-  "in Kontakt", "Möchte Rückruf", ST_BEDENK, "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat",
+const TR_VORLAGE = ["Unbearbeitet", "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Per Whatsapp bearbeitet",
+  "Online-Vorqualifiziert ", ...ABST_ST, "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort",
+  "Möchte Rückruf", ST_BEDENK, "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat",
   "Abstellort vorgeschlagen", "Abstellort bestätigt", "Freigabe abgelehnt",
   "Details verschickt", "Angebot verschickt", "Nachfassen nach Angebot", "Nachgefasst nach Angebot", "Keine Reaktion auf Nachgefasst",
-  "Termin", "Mündliche Zusage", "Vertrag unterschrieben", "Eingestellt", "Talentpool-Angebot", "Talentpool bestätigt",
+  "Termin", "Termin gebucht", "Vorstellungsgespr. NEUENSTEIN", "Mündliche Zusage", "Vertrag unterschrieben", "Eingestellt", "Talentpool-Angebot", "Talentpool bestätigt",
   "Wohnort außerhalb Umkreis", "Nicht qualifiziert", "Absage durch Bewerber", "Absage Ihro", "No-Show"];
 const primFor = (l) => (berL(l) === "transa" ? PRIMARY_TR : PRIMARY);
 const isTrNachgef = (s) => TR_NACHGEF_ST.some((x) => norm(x) === norm(s)), isTrNf = (s) => TR_NF_ST.some((x) => norm(x) === norm(s));

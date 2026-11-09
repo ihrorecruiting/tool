@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Transa · Freigabe Abstellorte</title>
+<title>Transa · Freigabe</title>
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
 <script src="lib/leaflet/leaflet.js"></script>
 <!-- Freigabe-Seite für Hr. Baumann (09.11.2026). Zugang über eigenen Link #k=<Schlüssel> (Tabelle chef_zugang), darf nur lesen und
@@ -45,6 +45,8 @@
   .grund .chips button{border:.5px solid var(--sep2);background:var(--card);color:var(--ink2);border-radius:999px;padding:6px 11px;font:500 13px inherit;cursor:pointer}
   .grund textarea{width:100%;border:.5px solid var(--sep2);border-radius:12px;padding:10px;font:15px/1.4 inherit;background:var(--bg);color:var(--ink);min-height:60px}
   .grund .row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .umschalt{margin-top:8px;font-size:14px} .umschalt a{color:var(--blue);text-decoration:none;font-weight:600}
+  .stat{font-size:12.5px;color:var(--ink3);margin-top:4px}
   .leer{background:var(--card);border-radius:18px;padding:30px;text-align:center;color:var(--ink3)}
   .fehler{background:var(--stop-t);color:var(--stop);border-radius:14px;padding:14px 16px;margin:10px 0}
   .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:11px 18px;border-radius:14px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw}
@@ -55,7 +57,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div><h1>Transa · Freigabe Abstellorte</h1><div class="sub" id="sub">wird geladen …</div></div>
+    <div><h1 id="titel">Transa · Freigabe Abstellorte</h1><div class="sub" id="sub">wird geladen …</div><div class="umschalt" id="umschalt"></div></div>
     <button class="btn sm" id="neu" type="button">Aktualisieren</button>
   </header>
   <div class="seg" id="seg">
@@ -77,8 +79,13 @@ const store = { get(k) { try { return localStorage.getItem(k); } catch { return 
 const h = new URLSearchParams(location.hash.slice(1));
 if (h.get("k")) { store.set("tc_chef_key", h.get("k")); history.replaceState(null, "", location.pathname); }
 const KEY = store.get("tc_chef_key") || "";
+// Zwei Listen: ?liste=neu = alle offenen Bewerbungen, vor oder nach Dennis' Telefonat freigeben (Status „Anrufen“); sonst Abstellort-Freigabe
+const NEU = new URLSearchParams(location.search).get("liste") === "neu";
 let D = null, tab = "w", offenGrund = null, karte = null, schicht = null;
 const ST = { w: "Abstellort vorgeschlagen", ok: "Abstellort bestätigt", no: "Freigabe abgelehnt" };
+// Reiter je Liste: in der Vorab-Liste zählt die letzte Vorab-Entscheidung (vorab_frei / vorab_stopp), nicht der Status
+const reiter = (l) => NEU ? (!l.vorab ? "w" : l.vorab.entscheidung === "vorab_frei" ? "ok" : "no") : Object.keys(ST).find((k) => ST[k] === l.status);
+const RANG = { frei: 0, entgegen: 1, unbekannt: 2, aus: 3 };
 function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 2600); }
 async function api(action, data = {}) {
   const r = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json", "x-chef-key": KEY }, body: JSON.stringify({ action, ...data }) });
@@ -112,12 +119,14 @@ function kartenHtml(l) {
   if (tab === "w") knoepfe = `<button class="btn stop" data-stopp="${l.lead_id}">Stopp</button><button class="btn go" data-frei="${l.lead_id}">Freigeben</button>`;
   else if (tab === "ok") knoepfe = `<button class="btn sm stop" data-stopp="${l.lead_id}">Doch stoppen</button>`;
   else knoepfe = `<button class="btn sm" data-frei="${l.lead_id}">Doch freigeben</button>`;
-  const info = tab === "ok" ? `<div class="entsch ok">✓ freigegeben${e && e.entscheidung === "frei" ? ` von ${esc(e.von)} am ${dt(e.created_at)}` : ""}</div>`
-    : tab === "no" ? `<div class="entsch no">✕ abgelehnt${e && e.entscheidung === "stopp" ? ` von ${esc(e.von)} am ${dt(e.created_at)}: ${esc(e.grund || "")}` : ""}</div>` : "";
+  const v = NEU ? l.vorab : e;
+  const info = tab === "ok" ? `<div class="entsch ok">✓ freigegeben${v ? ` von ${esc(v.von)} am ${dt(v.created_at)}` : ""}${NEU ? ` · Status jetzt: ${esc(l.status)}` : ""}</div>`
+    : tab === "no" ? `<div class="entsch no">✕ ${NEU ? "gestoppt" : "abgelehnt"}${v ? ` von ${esc(v.von)} am ${dt(v.created_at)}: ${esc(v.grund || "")}` : ""}</div>` : "";
+  const unter = NEU ? `beworben am ${dt(l.beworben)} · ${esc(l.status)}` : (tab === "w" && l.seit ? `vorgeschlagen am ${dt(l.seit)}` : "");
   return `<div class="karte" id="k-${l.lead_id}">
-    <div class="k1"><div class="wer"><b>${esc(l.name || "Ohne Namen")}</b><div class="ort">${esc(l.ort || "")} ${esc(l.plz || "")}${tab === "w" && l.seit ? ` · vorgeschlagen am ${dt(l.seit)}` : ""}</div>${lage(l.abst)}</div>
+    <div class="k1"><div class="wer"><b>${esc(l.name || "Ohne Namen")}</b><div class="ort">${esc(l.ort || "")} ${esc(l.plz || "")}</div>${unter ? `<div class="stat">${unter}</div>` : ""}${lage(l.abst)}</div>
       <div class="knoepfe">${knoepfe}</div></div>
-    ${l.vorschlag ? `<div class="vorschlag"><span>Abstellort-Vorschlag</span>${esc(l.vorschlag)}</div>` : `<div class="vorschlag"><span>Abstellort-Vorschlag</span>– noch kein konkreter Ort eingetragen –</div>`}
+    ${NEU ? "" : l.vorschlag ? `<div class="vorschlag"><span>Abstellort-Vorschlag</span>${esc(l.vorschlag)}</div>` : `<div class="vorschlag"><span>Abstellort-Vorschlag</span>– noch kein konkreter Ort eingetragen –</div>`}
     ${fakten(l)}${info}
     ${offen ? `<div class="grund"><div class="chips">${GRUENDE.map((g) => `<button type="button" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
       <textarea id="gt" placeholder="Grund (Dennis sieht ihn im Cockpit und in LeadTable)"></textarea>
@@ -126,17 +135,18 @@ function kartenHtml(l) {
 }
 function render() {
   if (!D) return;
-  const L = D.leads || [], von = (t) => L.filter((l) => l.status === ST[t]);
+  const L = D.leads || [], von = (t) => L.filter((l) => reiter(l) === t);
   $("nw").textContent = von("w").length; $("nok").textContent = von("ok").length; $("nno").textContent = von("no").length;
   document.querySelectorAll("#seg button").forEach((b) => b.classList.toggle("on", b.dataset.t === tab));
-  $("sub").textContent = `Angemeldet als ${D.du || "–"} · Stand ${new Date(D.stand).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} · Freigeben = Dennis darf den Vertrag schicken`;
-  const A = von(tab).sort((a, b) => String(a.kampagne).localeCompare(String(b.kampagne), "de") || String(a.seit).localeCompare(String(b.seit)));
-  if (!A.length) $("liste").innerHTML = `<div class="leer">${tab === "w" ? "Gerade wartet niemand auf Freigabe. Sobald Dennis einen Abstellort vorschlägt, steht der Bewerber hier." : "Noch niemand."}</div>`;
+  $("sub").textContent = `Angemeldet als ${D.du || "–"} · Stand ${new Date(D.stand).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} · ${NEU ? "Freigeben = Dennis ruft an und führt das Gespräch" : "Freigeben = Dennis darf den Vertrag schicken"}`;
+  const A = von(tab).sort(NEU ? (a, b) => String(a.kampagne).localeCompare(String(b.kampagne), "de") || (RANG[a.abst?.fall] ?? 2) - (RANG[b.abst?.fall] ?? 2) || String(b.beworben).localeCompare(String(a.beworben))
+    : (a, b) => String(a.kampagne).localeCompare(String(b.kampagne), "de") || String(a.seit).localeCompare(String(b.seit)));
+  if (!A.length) $("liste").innerHTML = `<div class="leer">${tab === "w" ? (NEU ? "Keine offenen Bewerbungen ohne Entscheidung." : "Gerade wartet niemand auf Freigabe. Sobald Dennis einen Abstellort vorschlägt, steht der Bewerber hier.") : "Noch niemand."}</div>`;
   else {
     let html = "", last = null;
     for (const l of A) {
-      if (l.kampagne !== last) { last = l.kampagne; const n = A.filter((x) => x.kampagne === last).length;
-        html += `<div class="gruppe"><h2>${esc(last || "ohne Kampagne")}</h2><span class="n">${n}</span>${tab === "w" && n > 1 ? `<button class="btn sm" data-alle="${esc(last)}">Alle ${n} freigeben</button>` : ""}</div>`; }
+      if (l.kampagne !== last) { last = l.kampagne; const n = A.filter((x) => x.kampagne === last).length, m = NEU ? A.filter((x) => x.kampagne === last && x.abst && x.abst.fall !== "aus").length : n;
+        html += `<div class="gruppe"><h2>${esc(last || "ohne Kampagne")}</h2><span class="n">${n}</span>${tab === "w" && m > 1 ? `<button class="btn sm" data-alle="${esc(last)}">Alle ${m}${NEU && m < n ? " im Umkreis" : ""} freigeben</button>` : ""}</div>`; }
       html += kartenHtml(l);
     }
     $("liste").innerHTML = html;
@@ -163,12 +173,12 @@ function karteZeichnen(A) {
 }
 async function laden() {
   if (!KEY) { $("sub").textContent = ""; $("liste").innerHTML = `<div class="fehler">Kein Zugang. Bitte den Link verwenden, den Dennis geschickt hat.</div>`; return; }
-  try { D = await api("chef_liste"); render(); }
+  try { D = await api(NEU ? "neu_liste" : "chef_liste"); render(); }
   catch (e) { $("liste").innerHTML = `<div class="fehler">${esc(e.message)}</div>`; $("sub").textContent = ""; }
 }
 async function entscheiden(ids, entscheidung, grund) {
   try {
-    const r = await api("chef_entscheid", { ids, entscheidung, grund });
+    const r = await api(NEU ? "neu_entscheid" : "chef_entscheid", { ids, entscheidung, grund });
     if (r.fehler && r.fehler.length) toast("Nicht alles gespeichert: " + r.fehler[0]);
     else toast(entscheidung === "frei" ? (ids.length > 1 ? `${ids.length} freigegeben – Dennis bekommt Bescheid` : "Freigegeben – Dennis bekommt Bescheid") : "Gestoppt – Dennis bekommt Bescheid");
     offenGrund = null; await laden();
@@ -184,11 +194,16 @@ document.addEventListener("click", (e) => {
   if (t.dataset.abbr) { offenGrund = null; render(); return; }
   if (t.dataset.stoppok) { const g = ($("gt").value || "").trim(); if (!g) { toast("Bitte kurz einen Grund angeben"); return; } t.disabled = true; entscheiden([t.dataset.stoppok], "stopp", g); return; }
   if (t.dataset.alle) {
-    const ids = (D.leads || []).filter((l) => l.status === ST.w && l.kampagne === t.dataset.alle).map((l) => l.lead_id);
-    if (ids.length && confirm(`Alle ${ids.length} Bewerber in „${t.dataset.alle}“ freigeben?`)) { t.disabled = true; entscheiden(ids, "frei"); }
+    const ids = (D.leads || []).filter((l) => reiter(l) === "w" && l.kampagne === t.dataset.alle && (!NEU || (l.abst && l.abst.fall !== "aus"))).map((l) => l.lead_id);
+    if (ids.length && confirm(`Alle ${ids.length} Bewerber in „${t.dataset.alle}“ freigeben?${NEU ? " (ohne die außerhalb des Umkreises)" : ""}`)) { t.disabled = true; entscheiden(ids, "frei"); }
   }
 });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) laden(); });
+if (NEU) {
+  $("titel").textContent = "Transa · Neue Bewerbungen freigeben";
+  const b = document.querySelectorAll("#seg button"); b[0].firstChild.textContent = "Ohne Entscheidung"; b[2].firstChild.textContent = "Gestoppt";
+  $("umschalt").innerHTML = `<a href="freigabe.html">→ Zur Freigabe der Abstellorte</a>`;
+} else $("umschalt").innerHTML = `<a href="freigabe.html?liste=neu">→ Neue Bewerbungen vorab freigeben</a>`;
 laden();
 </script>
 </body>
