@@ -184,6 +184,60 @@
   .view.on{display:grid;gap:18px;align-items:start}
   #vWork.on{grid-template-columns:370px minmax(0,1fr) 320px}
   #vOver.on{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
+  /* Transa-Board (09.11.2026): Liste in der Mitte, Karte öffnet sich per Klick (nur ab 861 px Breite) */
+  #trBoard{display:none}
+  body.trbrd #vWork.on,body.trcrd #vWork.on{grid-template-columns:minmax(0,1fr) 320px}
+  body.trbrd #vWork>.panel:first-child,body.trcrd #vWork>.panel:first-child,body.trbrd #card{display:none}
+  body.trbrd #trBoard{display:block}
+  .tb-kopf{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;margin-bottom:14px}
+  .tb-kopf h2{margin:0}
+  .tb-kopf .act{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .tb-kopf select{width:auto;min-width:190px}
+  .tb-stufen{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+  .tb-st{border:.5px solid var(--sep-strong);border-radius:18px;padding:12px 14px;background:var(--field)}
+  .tb-st.haupt{border:1.5px solid #16a34a;background:rgba(22,163,74,.07)}
+  .tb-st h3{margin:0 0 2px;font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink2);display:flex;justify-content:space-between;gap:8px}
+  .tb-st h3 b{font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+  .tb-st .hint{font-size:11.5px;color:var(--ink3,#8a8f98);margin:0 0 8px}
+  .tb-st .unter{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3,#8a8f98);margin:8px 0 4px}
+  .tb-chips{display:flex;flex-wrap:wrap;gap:5px}
+  .tb-chips button{display:inline-flex;align-items:center;gap:6px;border:.5px solid var(--sep-strong);background:var(--glass-hi,#fff);color:var(--ink2);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .tb-chips button b{font-variant-numeric:tabular-nums;color:var(--ink)}
+  .tb-chips button i{width:9px;height:9px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+  .tb-chips button.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue-ink)}
+  .tb-chips button.z{opacity:.5}
+  .tb-titel{display:flex;align-items:baseline;gap:10px;margin:4px 0 8px}
+  .tb-titel h3{margin:0;font-size:17px}
+  .tb-titel span{font-size:12.5px;color:var(--ink3,#8a8f98)}
+  .tb-tab{width:100%;border-collapse:collapse;font-size:13.5px}
+  .tb-tab th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3,#8a8f98);padding:6px 10px;border-bottom:1px solid var(--sep-strong)}
+  .tb-tab td{padding:9px 10px;border-bottom:1px solid var(--sep);vertical-align:top}
+  .tb-tab tbody tr.l{cursor:pointer}
+  .tb-tab tbody tr.l:hover td{background:var(--blue-tint)}
+  .tb-tab tr.reg td{font-size:12px;font-weight:700;color:var(--ink2);background:var(--field);padding:6px 10px}
+  .tb-tab td.n b{display:block}
+  .tb-tab td.n small,.tb-tab td small{color:var(--ink3,#8a8f98);font-size:12px}
+  .tb-tab .ok{color:#15803d;font-weight:600} .tb-tab .ent{color:#c2410c;font-weight:600} .tb-tab .warn{color:#b45309;font-weight:600}
+  .tb-tab td.alt{white-space:nowrap;color:var(--ink3,#8a8f98);font-size:12.5px}
+  .trback{margin:-4px 0 12px}
+  .trab{border:.5px solid var(--sep-strong);border-radius:18px;padding:12px 14px;margin:14px 0;background:var(--field)}
+  .trab-kopf{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:8px;font-size:14px}
+  .trab-kopf b{font-size:16px} .trab-plz{color:var(--ink3,#8a8f98)} .trab-lage small{color:var(--ink3,#8a8f98)}
+  .trab .ok{color:#15803d;font-weight:600} .trab .ent{color:#c2410c;font-weight:600} .trab .warn{color:#b45309;font-weight:600}
+  .trmap{height:230px;border-radius:14px;overflow:hidden;border:.5px solid var(--sep-strong);z-index:0}
+  .trab-hint{font-size:12px;color:var(--ink3,#8a8f98);margin:6px 0 2px}
+  .trab-lab{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin:10px 0 5px}
+  .trab-row{display:flex;gap:8px;flex-wrap:wrap} .trab-row .inp{flex:1 1 240px;min-width:0}
+  .wsov{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;padding:16px}
+  .wsov.show{display:flex}
+  .wsbox{background:var(--bg,#fff);color:var(--ink);border-radius:22px;padding:18px 20px;width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  [data-theme="dark"] .wsbox{background:#1c1c1e}
+  .wsbox h3{margin:10px 0 2px;font-size:20px} .wsbox textarea{width:100%;font-size:14.5px;line-height:1.45;margin-top:8px}
+  .wsk{display:flex;align-items:center;gap:10px} .wsk span{color:var(--ink3,#8a8f98);font-size:13px} .wsk button{margin-left:auto}
+  .wsmeter{height:5px;border-radius:9px;background:var(--sep);margin:10px 0 4px;overflow:hidden} .wsmeter i{display:block;height:100%;background:#16a34a}
+  .wsbox .ok{color:#15803d;font-weight:600}
+  .linkbtn{border:0;background:none;color:var(--blue-ink);font-weight:600;cursor:pointer;padding:0 2px}
+  @media (max-width:1380px){ body.trbrd #vWork.on,body.trcrd #vWork.on{grid-template-columns:minmax(0,1fr)} }
   #vOver .full{grid-column:1/-1}
   body[data-view="vOver"] .kpiwrap{display:none}
   .ovhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;padding:6px 6px 0}
@@ -1011,7 +1065,7 @@
         <button data-f="ne">Nicht erreicht</button>
         <button data-f="imail" title="Detail-Mail ist raus, der Bewerber hat noch nicht geklickt („Info verschickt“, „Erinnerungsmail verschickt“). Steht nicht unter „Alle“.">Mail raus, kein Klick <span class="segn" id="imN"></span></button>
         <button data-f="ptplan" title="Alle mit Status „Probetag vereinbaren“ – Termin noch abstimmen">Probetag planen <span class="segn" id="ptN"></span></button>
-        <button class="tr-only" data-f="jetzt" title="Online-Vorgespräch ausgefüllt und Abstellort passt – „Abstellort frei …“, „Kommt entgegen …“ oder noch „Online-Vorqualifiziert“: jetzt anrufen">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
+        <button class="tr-only" data-f="jetzt" title="Bereit fürs Angebot: Vorgespräch oder Telefon „ja“ und Abstellort frei oder entgegen – aus dem Vorgespräch oder laut PLZ der Bewerbung">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
         <button class="tr-only" hidden data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
         <button class="tr-only" hidden data-f="nq" title="Transa-Bewerber mit Status „Nicht qualifiziert“ – über „Alle Kampagnen“ je Region">Nicht qualifiziert <span class="segn" id="nqN"></span></button>
         <button class="tr-only" hidden data-f="abs" title="Transa-Bewerber mit Status „Absage durch Bewerber“">Absage <span class="segn" id="absN"></span></button>
@@ -1023,6 +1077,8 @@
     </div>
     <div class="llist" id="queue"><div class="sk"><i></i><i></i><i></i></div></div>
   </section>
+
+  <section class="panel trboard" id="trBoard" aria-label="Transa-Bewerber"></section>
 
   <section class="panel sticky" id="card">
     <div class="placeholder"><b>Bewerber auswählen</b><span>Links aus der Arbeitsliste, rechts aus den neuen Bewerbern oder über die Suche oben.</span></div>
@@ -1365,7 +1421,7 @@ function toast(msg, err) {
 }
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^abst_/.test(action) ? "transa-abstellort" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + fn, opt = {
     method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
@@ -1506,11 +1562,14 @@ function renderTrKpi() {
   const abFrei = (q.abst_frei || 0) + (q.abst_entgegen || 0) + (q.abst_bestaetigt || 0), abPr = (q.standort_pruefen || 0) + (q.standort_passt || 0);
   const abOff = q.abst_offen != null ? q.abst_offen : (q.online - abFrei - abPr + q.telefon);
   $("tkQualS").className = "s st";
-  $("tkQualS").innerHTML = `<span><b>${abFrei}</b> Abstellort frei${q.abst_entgegen ? ` (davon ${q.abst_entgegen} kommt entgegen)` : ""}</span><span><b>${abPr}</b> Standort prüfen</span>`
+  if (TRQ) { // Einteilung wie im Block „Stand“: Abstellort aus dem Vorgespräch, sonst laut PLZ
+    const c = (f) => trqList(f).length;
+    $("tkQualS").innerHTML = `<span><b>${c("bf") + c("be")}</b> bereit fürs Angebot (${c("bf")} frei, ${c("be")} entgegen)</span><span><b>${c("wa")}</b> Wohnort außerhalb${c("pz") ? ` · <b>${c("pz")}</b> PLZ unklar` : ""}</span>`;
+  } else $("tkQualS").innerHTML = `<span><b>${abFrei}</b> Abstellort frei${q.abst_entgegen ? ` (davon ${q.abst_entgegen} kommt entgegen)` : ""}</span><span><b>${abPr}</b> Standort prüfen</span>`
     + `<span title="${q.online_alt ?? "?"} online vorqualifiziert (alt) + ${q.telefon} am Telefon qualifiziert – für die Abstellort-Nachfrage-Mail"><b>${abOff}</b> Abstellort offen (${q.online_alt ?? "?"} alt + ${q.telefon} Telefon)</span>`;
   const t = HB ? HB.transa : null;
   $("tkAnr").textContent = t ? t.anrufe : "–";
-  $("tkAnrS").innerHTML = (t ? `<span class="dot go"><span>${t.erreicht} erreicht</span></span><span class="dot stop"><span>${t.nicht} nicht</span></span>` : "") + `<span>${abFrei ? `<b>${abFrei}</b> mit Abstellort frei – bereit fürs Angebot` : "noch niemand mit Abstellort frei"}</span>`;
+  $("tkAnrS").innerHTML = (t ? `<span class="dot go"><span>${t.erreicht} erreicht</span></span><span class="dot stop"><span>${t.nicht} nicht</span></span>` : "") + `<span>${(TRQ ? trqList("jetzt").length : abFrei) ? `<b>${TRQ ? trqList("jetzt").length : abFrei}</b> bereit fürs Angebot` : "noch niemand bereit fürs Angebot"}</span>`;
   $("tkCpl").textContent = eur(c.cpl_heute);
   $("tkCplS").innerHTML = `<span>7 Tage: <b>${eur(c.cpl_d7)}</b></span><span>Wochenende: <b>${eur(c.cpl_we)}</b></span>`;
   $("tkCplH").textContent = "Ab 08.11. nur Bewerber mit Fernverkehr + CE – Kosten je Bewerbung davor nicht vergleichbar.";
@@ -1613,24 +1672,75 @@ const ABST_ST = ["Abstellort frei, Vorschlag da", "Abstellort frei, Hilfe nötig
 const QST = { jetzt: [...ABST_ST, "Online-Vorqualifiziert", "Standort passt"], ab: "Abstellort bestätigt", vu: "Vertrag unterschrieben", afv: ABST_ST[0], afh: ABST_ST[1], kev: ABST_ST[2], keh: ABST_ST[3], ovq: "Online-Vorqualifiziert", spr: "Standort prüfen", aa: "Abstellort-Anfrage verschickt", akr: "Keine Reaktion auf Abstellort", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Qualifizierung", erinn: "Erinnerungsmail verschickt", kr: "Keine Reaktion auf Vor-Quali", abs: "Absage durch Bewerber", tp: "Talentpool bestätigt" };
 const QTITEL = { jetzt: "Jetzt anrufen", ab: "Abstellort bestätigt", vu: "Vertrag unterschrieben", afv: "Abstellort frei, Vorschlag da", afh: "Abstellort frei, Hilfe nötig", kev: "Kommt entgegen, Vorschlag da", keh: "Kommt entgegen, Hilfe nötig", ovq: "Online vorqualifiziert (alt)", spr: "Standort prüfen", aa: "Abstellort-Anfrage verschickt", akr: "Keine Reaktion auf Abstellort-Anfrage", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Mail raus – wartet auf Vorgespräch", erinn: "Erinnerung verschickt", kr: "Keine Reaktion auf Vorgespräch", abs: "Absage durch Bewerber", tp: "Talentpool" };
 const stN = (s) => String(s || "").trim().toLowerCase();
-const trqList = (f) => { const w = [].concat(QST[f]).map(stN); return (TRQ || []).filter((l) => w.includes(stN(l.status))); };
+// ---------- Transa: Einteilung nach dem nächsten Schritt (09.11.2026) ----------
+// Nicht mehr nach LeadTable-Status, sondern: Wo steht der Bewerber und was ist zu tun? Abstellort aus dem Online-Vorgespräch,
+// sonst aus der PLZ der Bewerbung (Function transa-abstellort, gleiche Regel und Daten wie das Vorgespräch auf fahrer.talentjagd.de).
+// LeadTable-Status bleiben unverändert; „Qualifiziert“ (Telefon), „Online-Vorqualifiziert (alt)“ und „Standort prüfen“ verteilen sich auf die Töpfe.
+let TRPLZ = {}, TRPLZ_AT = 0;
+// „WhatsApp verschickt“ (09.11.2026): Vorab-WhatsApp an Offene – bleibt bei den Offenen, die Erinnerungs-Mails (Make 8369082) hören damit auf
+// „Wohnort außerhalb Umkreis“ (09.11.2026): Wohnort außerhalb des Meta-Umkreises (60 km, A6 5 × 20 km) – steht immer unter „Prüfen“
+const ST_WA = "WhatsApp verschickt", ST_AUS = "Wohnort außerhalb Umkreis";
+const ST_OFFEN = ["Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet", ST_WA].map(stN);
+const ST_QUALI = [...ABST_ST, "Online-Vorqualifiziert", "Standort passt", "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort"].map(stN);
+function abFall(l) { const a = l.abstellort; if (a && a.fall) return { ...a, quelle: "vg" }; const p = TRPLZ[l.lead_id]; return p ? { ...p, quelle: "plz" } : null; }
+// Nach dem Anruf (Ergebnis-Knöpfe in der Karte) bleibt der Bewerber sichtbar: Stufe „Im Gespräch“
+const TR_NE = ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3"];
+const TR_ANG = ["Angebot verschickt", "Details verschickt", "Nachgefasst nach Angebot", "Termin", "Termin gebucht"];
+const TR_KON = ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Möchte Rückruf", "Nachgefasst nach Telefonat", "Nachgefasst", "Nachfassen bitte", "Per Whatsapp bearbeitet", "Talentpool-Angebot"];
+const TRG = { ne: TR_NE.map(stN), ang: TR_ANG.map(stN), kon: TR_KON.map(stN) };
+function trTopf(l) {
+  const s = stN(l.status), a = abFall(l), f = a ? a.fall : "";
+  if (s === stN(ST_AUS)) return "wa";
+  for (const [k, w] of Object.entries(TRG)) if (w.includes(s)) return k;
+  if (ST_OFFEN.includes(s)) return f === "frei" ? "of_frei" : f === "entgegen" ? "of_ent" : f === "aus" ? "of_aus" : "of_pz";
+  if (ST_QUALI.includes(s)) return f === "frei" ? "bf" : f === "entgegen" ? "be" : f === "aus" ? "wa" : "pz";
+  return "";
+}
+const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1 };
+Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro"], wav: ST_WA, wau: ST_AUS });
+// Diese Status holt das Cockpit für Transa (alle Stufen inkl. Anruf-Ergebnisse)
+const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON])];
+Object.assign(QTITEL, { jetzt: "Bereit fürs Angebot", bf: "Bereit fürs Angebot – Abstellort frei", be: "Bereit fürs Angebot – kommt entgegen", wa: "Wohnort außerhalb der Region",
+  pz: "PLZ unklar – bitte prüfen", of_frei: "Vorgespräch offen – Abstellort frei (laut PLZ)", of_ent: "Vorgespräch offen – kommt entgegen (laut PLZ)",
+  of_aus: "Vorgespräch offen – Wohnort außerhalb", of_pz: "Vorgespräch offen – PLZ unklar",
+  ne: "Im Gespräch – nicht erreicht", kon: "Im Gespräch – Rückruf, Bedenkzeit, in Kontakt", ang: "Im Gespräch – Angebot oder Details raus" });
+// Gleiche Reihenfolge für die Liste in der Mitte und für „Nächster“: in Anruflisten nach Wohnort-Region, mit Vorgespräch zuerst, dann am längsten wartend
+function trSortTopf(L, f) {
+  const regW = (l) => abFall(l)?.region || TRPLZ[l.lead_id]?.region || "ohne Region";
+  const ts = (l) => new Date(l.last_status_change || l.lead_created_at || 0).getTime();
+  const nachRegion = ["jetzt", "bf", "be", "wa", "of_frei", "of_ent"].includes(f);
+  const vg = (l) => (l.abstellort && l.abstellort.fall ? 0 : 1);
+  return [...L].sort((a, b) => (nachRegion ? regW(a).localeCompare(regW(b), "de") || vg(a) - vg(b) : 0) || ts(a) - ts(b));
+}
+const trqList = (f) => {
+  if (!TRQ) return [];
+  if (f === "jetzt") return TRQ.filter((l) => ["bf", "be"].includes(trTopf(l)));
+  if (TOPF[f]) return TRQ.filter((l) => trTopf(l) === f);
+  const w = [].concat(QST[f]).map(stN); return TRQ.filter((l) => w.includes(stN(l.status)));
+};
 let TRSTAND = null;
-const STAND = [ // Reihenfolge und Farben wie im Transa-Report; g = Gruppe (Zeile) im Block „Stand“
+const STAND = [ // g = Zeile im Block „Stand“; topf = gezählt nach der Einteilung oben (nicht nach LeadTable-Status)
   { g: "vg", f: "neu", st: "Unbearbeitet", t: "Neu", c: "#ffffff" }, { g: "vg", f: "mail", st: "Qualifizierung", t: "Mail raus", c: "#facc15" },
   { g: "vg", f: "erinn", st: "Erinnerungsmail verschickt", t: "Erinnerung", c: "#f97316" }, { g: "vg", f: "kr", st: "Keine Reaktion auf Vor-Quali", t: "Keine Reaktion", c: "#111827" },
-  { g: "ab", f: "afv", st: "Abstellort frei, Vorschlag da", t: "Frei + Vorschlag", c: "#16a34a" }, { g: "ab", f: "afh", st: "Abstellort frei, Hilfe nötig", t: "Frei, Hilfe nötig", c: "#4ade80" },
-  { g: "ab", f: "kev", st: "Kommt entgegen, Vorschlag da", t: "Entgegen + Vorschlag", c: "#ea580c" }, { g: "ab", f: "keh", st: "Kommt entgegen, Hilfe nötig", t: "Entgegen, Hilfe nötig", c: "#fb923c" },
-  { g: "ab", f: "spr", st: "Standort prüfen", t: "Standort prüfen", c: "#eab308" }, { g: "ab", f: "aa", st: "Abstellort-Anfrage verschickt", t: "Gefragt", c: "#a5b4fc" },
-  { g: "ab", f: "akr", st: "Keine Reaktion auf Abstellort", t: "Keine Reaktion", c: "#374151" }, { g: "ab", f: "ovq", st: "Online-Vorqualifiziert", t: "Online vorqualifiziert (alt)", c: "#2563eb" },
-  { g: "erg", f: "qual", st: "Qualifiziert", t: "Qualifiziert", c: "#16a34a" }, { g: "erg", f: "ab", st: "Abstellort bestätigt", t: "Abstellort bestätigt", c: "#15803d" },
+  { g: "vgw", f: "of_frei", topf: 1, st: "Vorgespräch offen, Abstellort laut PLZ frei", t: "frei", c: "#16a34a" }, { g: "vgw", f: "of_ent", topf: 1, st: "Vorgespräch offen, laut PLZ entgegenkommen", t: "entgegen", c: "#ea580c" },
+  { g: "vgw", f: "of_aus", topf: 1, st: "Vorgespräch offen, Wohnort außerhalb der Region", t: "außerhalb", c: "#eab308" }, { g: "vgw", f: "of_pz", topf: 1, st: "Vorgespräch offen, PLZ fehlt oder unbekannt", t: "PLZ unklar", c: "#a3a3a3" },
+  { g: "bereit", f: "bf", topf: 1, st: "Qualifiziert (online oder am Telefon), Abstellort frei – aus dem Vorgespräch oder laut PLZ", t: "Abstellort frei", c: "#16a34a" },
+  { g: "bereit", f: "be", topf: 1, st: "Qualifiziert, kommt Richtung Autobahn entgegen", t: "Kommt entgegen", c: "#ea580c" },
+  { g: "pruef", f: "wa", topf: 1, st: "Qualifiziert, aber Wohnort außerhalb der Region", t: "Wohnort außerhalb", c: "#eab308" },
+  { g: "pruef", f: "pz", topf: 1, st: "Qualifiziert, PLZ fehlt oder unbekannt", t: "PLZ unklar", c: "#a3a3a3" },
+  { g: "gespr", f: "ne", topf: 1, st: "Nicht-Erreicht 1–3", t: "Nicht erreicht", c: "#dc2626" },
+  { g: "gespr", f: "kon", topf: 1, st: "in Kontakt, Bedenkzeit, Möchte Rückruf, Nachgefasst …", t: "Rückruf / Bedenkzeit", c: "#0ea5e9" },
+  { g: "gespr", f: "ang", topf: 1, st: "Angebot oder Details verschickt, Termin", t: "Angebot raus", c: "#16a34a" },
+  { g: "erg", f: "ab", st: "Abstellort bestätigt", t: "Abstellort bestätigt", c: "#15803d" },
   { g: "erg", f: "vu", st: "Vertrag unterschrieben", t: "Vertrag", c: "#0369a1" }, { g: "erg", f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" },
   { g: "erg", f: "abs", st: "Absage durch Bewerber", t: "Absage", c: "#6b7280" }, { g: "erg", f: "tp", st: "Talentpool bestätigt", t: "Talentpool", c: "#8b5cf6" }];
-const STAND_GR = [["vg", "Vorgespräch"], ["ab", "Abstellort"], ["erg", "Ergebnis"]];
+const STAND_GR = [["vg", "Vorgespräch offen"], ["vgw", "Offen – nach Wohnort"], ["bereit", "Bereit fürs Angebot"], ["gespr", "Im Gespräch"], ["pruef", "Prüfen"], ["erg", "Ergebnis"]];
 let standZu = store.get("tc_standzu") === "1";
 function renderStand() {
   const el = $("trStand"); if (!el) return;
   const n = (st) => { if (!TRSTAND) return 0; let k = 0; for (const [s, v] of Object.entries(TRSTAND)) if (stN(s) === stN(st)) k += v; return k; };
-  const chip = (x) => { const k = TRSTAND ? n(x.st) : null; return `<button type="button" data-f="${x.f}" class="${qf === x.f ? "on" : ""}${k === 0 && qf !== x.f ? " z" : ""}" title="${esc(x.st)}"><i style="background:${x.c}"></i>${esc(x.t)} <b>${k === null ? "…" : k}</b></button>`; };
+  const zahl = (x) => x.topf ? (TRQ ? trqList(x.f).length : null) : (TRSTAND ? n(x.st) : null);
+  const chip = (x) => { const k = zahl(x); return `<button type="button" data-f="${x.f}" class="${qf === x.f ? "on" : ""}${k === 0 && qf !== x.f ? " z" : ""}" title="${esc(x.st)}"><i style="background:${x.c}"></i>${esc(x.t)} <b>${k === null ? "…" : k}</b></button>`; };
   const gew = STAND.find((x) => x.f === qf);
   const kopf = `<div class="st-kopf"><button type="button" class="st-zu" data-zu="1" aria-expanded="${!standZu}">${standZu ? "▸" : "▾"} Stand</button>${standZu && gew ? chip(gew) : ""}</div>`;
   el.innerHTML = kopf + (standZu ? "" : STAND_GR.map(([g, name]) => `<div class="st-zeile"><span class="st-gr">${name}</span>${STAND.filter((x) => x.g === g).map(chip).join("")}</div>`).join(""));
@@ -1644,22 +1754,249 @@ function vgInfo(l) {
 }
 // Abstellort aus dem Online-Vorgespräch (transa-gespraech v8, Feld abstellort): kurz für die Listen
 function abKurz(l) {
-  const a = l.abstellort; if (!a) return "";
-  const t = { frei: "Abstellort frei", entgegen: "kommt entgegen", passt_nicht: "⚠ Abstellort passt nicht", aus: "⚠ außerhalb der Region", unbekannt: "⚠ PLZ unbekannt" }[a.fall] || "Abstellort: " + a.text;
-  // „Standort prüfen“ hat zwei Gründe (08.11.2026): außerhalb der Region (mit km) oder kein eigenes Auto – beides direkt zeigen
-  const aus = a.fall === "aus" ? (a.text.match(/ca\. (\d+) km außerhalb/) || [])[1] : null;
+  const a = abFall(l); if (!a) return "";
+  let t;
+  if (a.fall === "aus") t = `⚠ ${a.aus ?? (String(a.text || "").match(/ca\. (\d+) km außerhalb/) || [])[1] ?? "?"} km außerhalb der Region`;
+  else t = { frei: "Abstellort frei", entgegen: a.weg ? `kommt ca. ${a.weg} km entgegen` : "kommt entgegen", passt_nicht: "⚠ Abstellort passt nicht", unbekannt: "⚠ PLZ unbekannt" }[a.fall] || "Abstellort: " + (a.text || "");
+  if (a.quelle === "plz") t += " laut PLZ";
   const ohneAuto = /eigenes auto:\s*nein/i.test(String(l.description || "")) ? " · ⚠ kein eigenes Auto" : "";
-  return (aus ? `⚠ ${aus} km außerhalb der Region` : t) + (a.km ? ` (${a.km} km zur Autobahn)` : "") + (a.vorschlag ? ", Vorschlag: " + a.vorschlag : a.hilfe ? ", möchte Hilfe" : "") + ohneAuto;
+  const s = stN(l.status), woher = s === "qualifiziert" ? " · am Telefon qualifiziert" : s === "online-vorqualifiziert" ? " · Vorgespräch ohne Abstellort-Frage" : "";
+  return t + (a.km != null && a.fall !== "aus" ? ` (${a.km} km zur Autobahn)` : "") + (a.vorschlag ? ", Vorschlag: " + a.vorschlag : a.hilfe ? ", möchte Hilfe" : "") + ohneAuto + woher;
 }
+// ---------- Transa-Board (09.11.2026): Übersicht und Liste in der Mitte, Klick öffnet die Bewerberkarte ----------
+// Nur am PC (ab 861 px). Am Handy bleibt alles wie bisher (Liste links bzw. eigene Karten-Ansicht).
+const trDesk = () => !window.matchMedia("(max-width:860px)").matches;
+const trBoardAn = () => BER === "transa" && trDesk() && !searchRes;
+function setTrMode() { document.body.classList.toggle("trbrd", trBoardAn() && !selId); document.body.classList.toggle("trcrd", trBoardAn() && !!selId); }
+const TB_STUFEN = [
+  { k: "offen", t: "Vorgespräch offen", hint: "Einladung oder Erinnerung ist raus, noch keine Antwort", f: ["mail", "erinn", "kr"], unter: "nach Wohnort (laut PLZ)", f2: ["of_frei", "of_ent", "of_aus", "of_pz"] },
+  { k: "bereit", t: "Bereit fürs Angebot", hint: "online oder am Telefon „ja“, Abstellort passt – anrufen", f: ["bf", "be"], haupt: 1 },
+  { k: "gespr", t: "Im Gespräch", hint: "angerufen – nach dem Ergebnis", f: ["ne", "kon", "ang"] },
+  { k: "pruef", t: "Prüfen", hint: "„ja“, aber Wohnort außerhalb oder PLZ unklar", f: ["wa", "pz"] },
+  { k: "erg", t: "Ergebnis", hint: "abgeschlossen", f: ["ab", "vu", "nq", "abs", "tp"] }];
+const tbX = (f) => STAND.find((x) => x.f === f) || { f, t: f, c: "#999" };
+const TB_KURZ = { mail: "Mail raus", erinn: "Erinnerung", kr: "Keine Reaktion" };
+let tbScroll = 0;
+function tbWohnort(l) { const f = trAnswersMap({ answers: (l.answers && l.answers.length ? l.answers : TRA[l.lead_id]) || [] }); const o = [f.wohnort, f.ort].find((x) => x && !REGWORT.test(x)) || ""; return { plz: f.plz || "", ort: o.replace(/ \(aus PLZ\)$/, "") }; }
+function tbAbst(l) {
+  const a = abFall(l); if (!a) return `<span class="warn">PLZ fehlt</span>`;
+  const q = a.quelle === "plz" ? `<small>laut PLZ</small>` : `<small>aus dem Vorgespräch</small>`;
+  if (a.fall === "frei") return `<span class="ok">frei</span>${a.km != null ? ` <small>· ${a.km} km zur Autobahn</small>` : ""}<br>${q}`;
+  if (a.fall === "entgegen") return `<span class="ent">entgegen${a.weg ? ` ca. ${a.weg} km` : ""}</span>${a.km != null ? ` <small>· ${a.km} km zur Autobahn</small>` : ""}<br>${q}`;
+  if (a.fall === "aus") return `<span class="warn">${a.aus ?? (String(a.text || "").match(/ca\. (\d+) km außerhalb/) || [])[1] ?? "?"} km außerhalb</span>${a.region ? ` <small>· nächste: ${esc(a.region)}</small>` : ""}<br>${q}`;
+  return `<span class="warn">${a.fall === "passt_nicht" ? "passt nicht" : "PLZ unbekannt"}</span><br>${q}`;
+}
+function tbHinweis(l) {
+  const a = abFall(l), s = stN(l.status), h = [];
+  if (trWaGesendet(l)) h.push(`<span class="ok">WhatsApp ✓</span>`);
+  if (a && a.vorschlag) h.push("Vorschlag: " + esc(a.vorschlag)); else if (a && a.hilfe) h.push("möchte Hilfe bei der Suche");
+  if (/eigenes auto:\s*nein/i.test(String(l.description || ""))) h.push(`<span class="warn">kein eigenes Auto</span>`);
+  if (s === "qualifiziert") h.push("am Telefon qualifiziert"); else if (s === "online-vorqualifiziert") h.push("Vorgespräch ohne Abstellort-Frage");
+  else if (ST_OFFEN.includes(s)) { if (s !== stN(ST_WA)) h.push(s === "qualifizierung" ? "Einladung raus" : s === "erinnerungsmail verschickt" ? "Erinnerung raus" : esc(l.status)); }
+  else if (s === stN(ST_AUS)) h.push(/vorgespräch online am/i.test(String(l.description || "")) ? "hat online „ja“ gesagt" : "Vorgespräch noch offen");
+  else if (!(a && a.quelle === "vg")) h.push(esc(l.status));
+  const v = vgInfo(l); if (v.erreichbar) h.push("erreichbar: " + esc(v.erreichbar));
+  return h.join(" · ");
+}
+function renderTrBoard() {
+  setTrMode();
+  const el = $("trBoard"); if (!el || !trBoardAn()) return;
+  const f = qf, cnt = (k) => (TRQ ? trqList(k).length : null);
+  const chip = (k, kurz) => { const x = tbX(k), n = cnt(k); return `<button type="button" data-tb="${k}" class="${f === k ? "on" : ""}${n === 0 && f !== k ? " z" : ""}" title="${esc(x.st || "")}"><i style="background:${x.c}"></i>${esc(kurz || x.t)} <b>${n ?? "…"}</b></button>`; };
+  const stufen = TB_STUFEN.map((st) => {
+    const sum = TRQ ? st.f.reduce((a, k) => a + cnt(k), 0) : "…";
+    return `<div class="tb-st${st.haupt ? " haupt" : ""}"><h3>${st.t} <b>${sum}</b></h3><p class="hint">${st.hint}</p><div class="tb-chips">${st.f.map((k) => chip(k, TB_KURZ[k])).join("")}</div>`
+      + (st.f2 ? `<div class="unter">${st.unter}</div><div class="tb-chips">${st.f2.map((k) => chip(k)).join("")}</div>` : "") + `</div>`;
+  }).join("");
+  let L = TRQ ? trqList(f) : []; if (campF) L = L.filter((l) => l.kampagne === campF);
+  const camps = [...new Set((TRQ || []).map((l) => l.kampagne).filter(Boolean))].sort();
+  const regW = (l) => abFall(l)?.region || TRPLZ[l.lead_id]?.region || "ohne Region";
+  const nachRegion = ["jetzt", "bf", "be", "wa", "of_frei", "of_ent"].includes(f);
+  L = trSortTopf(L, f);
+  const zeile = (l) => { const w = tbWohnort(l); return `<tr class="l" data-id="${l.lead_id}"><td class="n"><b>${esc(l.name || "Ohne Namen")}</b><small>${esc(String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, ""))}</small></td>`
+    + `<td>${esc(w.ort || "–")}<br><small>${esc(w.plz)}</small></td><td>${tbAbst(l)}</td><td>${tbHinweis(l)}</td><td class="alt">${rel(l.last_status_change || l.lead_created_at)}</td></tr>`; };
+  let rows = "", last = null;
+  for (const l of L) { if (nachRegion && regW(l) !== last) { last = regW(l); rows += `<tr class="reg"><td colspan="5">${esc(last)} · ${L.filter((x) => regW(x) === last).length}</td></tr>`; } rows += zeile(l); }
+  const titel = QTITEL[f] || tbX(f).t;
+  el.innerHTML = `<div class="tb-kopf"><h2>Transa-Bewerber</h2><span class="note">${TRQ ? "Abstellort aus dem Vorgespräch, sonst laut PLZ der Bewerbung" : "wird geladen …"}</span>
+      <span class="act"><select class="inp" id="tbCamp"><option value="">Alle Kampagnen</option>${camps.map((c) => `<option ${c === campF ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+      <button class="btn sm" type="button" id="tbOv">Scoring-Übersicht</button></span></div>
+    <div class="tb-stufen">${stufen}</div>
+    <div class="tb-titel"><h3>${esc(titel)}</h3>${tbAktion(f, L)}<span>${TRQ ? L.length + (L.length === 1 ? " Bewerber" : " Bewerber") : ""}${nachRegion ? " · nach Wohnort-Region" : ""} · Klick öffnet die Karte</span></div>
+    ${!TRQ ? `<div class="sk"><i></i><i></i><i></i></div>` : !L.length ? `<div class="empty">Niemand in dieser Liste${campF ? " für diese Kampagne" : ""}.</div>`
+      : `<table class="tb-tab"><thead><tr><th>Name</th><th>Wohnort</th><th>Abstellort</th><th>Hinweis</th><th>seit</th></tr></thead><tbody>${rows}</tbody></table>`}`;
+}
+// ---------- WhatsApp-Serie und „Wohnort außerhalb Umkreis“ für ganze Listen (09.11.2026) ----------
+const trWaGesendet = (l) => /whatsapp/i.test(String(l.followup_note || "")) || stN(l.status) === stN(ST_WA);
+const WA_LISTEN = ["jetzt", "bf", "be", "of_frei", "of_ent"], AUS_LISTEN = ["wa", "of_aus"];
+function tbAktion(f, L) {
+  if (!TRQ) return "";
+  if (WA_LISTEN.includes(f)) { const n = L.filter((l) => l.phone && !trWaGesendet(l)).length;
+    return n ? `<button class="btn sm go" type="button" id="tbWa" title="Je Bewerber öffnet sich WhatsApp mit fertigem Text. Danach: Notiz in LeadTable, Wiedervorlage am nächsten Werktag 9 Uhr, Offene bekommen den Status „WhatsApp verschickt“ (keine Erinnerungs-Mails mehr).">${ICON.wa} WhatsApp-Serie (${n})</button>` : `<span class="ok" style="font-size:12.5px">alle mit WhatsApp ✓</span>`; }
+  if (AUS_LISTEN.includes(f)) { const n = L.filter((l) => stN(l.status) !== stN(ST_AUS)).length;
+    return n ? `<button class="btn sm" type="button" id="tbAus" title="Setzt in LeadTable den Status „${ST_AUS}“ und schreibt eine Notiz mit PLZ und Entfernung. Offene bekommen danach keine Erinnerungs-Mails mehr.">Alle auf „${ST_AUS}“ (${n})</button>` : "";}
+  return "";
+}
+const waVor = (l) => { const v = String(l.name || "").trim().split(/\s+/)[0] || ""; return /[\d@]/.test(v) || v.length < 2 ? "" : v.charAt(0).toUpperCase() + v.slice(1); };
+function naechsterWerktag9() { const d = new Date(); d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d; }
+function waSerieText(l, link) {
+  const v = waVor(l), ort = tbWohnort(l).ort, hi = v ? `Hi ${v}` : "Hi";
+  const offen = ST_OFFEN.includes(stN(l.status));
+  if (!offen) return `${hi}, hier ist Dennis von TALENTJAGD. Danke für deine Antworten zur Stelle als LKW-Fahrer im Fernverkehr. ${ort ? `Von ${ort} aus passt das gut.` : "Dein Wohnort passt gut."} Ich würde dich gern kurz anrufen und alles Weitere besprechen. Wann passt es dir am besten: vormittags, nachmittags oder abends?`;
+  return `${hi}, hier ist Dennis von TALENTJAGD. Du hattest dich als LKW-Fahrer im Fernverkehr beworben. ${ort ? `Von ${ort} aus würde das gut passen.` : "Von deinem Wohnort aus würde das gut passen."} Hast du noch Interesse? Dann ruf ich dich gern kurz an. Wann passt es dir am besten?`
+    + (link ? `\n\nWenn du magst, mach vorher das 2-Minuten-Vorgespräch: ${link}` : "");
+}
+let WS = null; // { liste, i, f, erledigt, fehler }
+function waSerieStart() {
+  const L = trSortTopf(trqList(qf), qf).filter((l) => (!campF || l.kampagne === campF) && l.phone && !trWaGesendet(l));
+  if (!L.length) { toast("Niemand ohne WhatsApp in dieser Liste"); return; }
+  WS = { liste: L, i: 0, erledigt: 0, fehler: 0 };
+  if (!$("waSerie")) { const d = document.createElement("div"); d.id = "waSerie"; d.className = "wsov"; document.body.appendChild(d);
+    d.addEventListener("click", waSerieKlick); }
+  $("waSerie").classList.add("show"); waSerieZeigen();
+}
+async function waSerieZeigen() {
+  if (!WS) return;
+  const el = $("waSerie");
+  if (WS.i >= WS.liste.length) {
+    el.innerHTML = `<div class="wsbox"><h3>Fertig</h3><p>${WS.erledigt} WhatsApp geöffnet${WS.fehler ? `, bei ${WS.fehler} hat das Speichern in LeadTable nicht geklappt (Meldung oben)` : ""}.</p><p class="trab-hint">Am nächsten Werktag ab 9 Uhr stehen alle als Wiedervorlage an. Die Liste in der Mitte zeigt „WhatsApp ✓“.</p><div class="row" style="gap:8px;justify-content:flex-end"><button class="btn blue" data-ws="zu">Schließen</button></div></div>`;
+    loadTrq(); loadWork(); return;
+  }
+  const l = WS.liste[WS.i], offen = ST_OFFEN.includes(stN(l.status)), w = tbWohnort(l);
+  el.innerHTML = `<div class="wsbox"><div class="wsk"><b>WhatsApp-Serie</b><span>${WS.i + 1} von ${WS.liste.length}</span><button class="btn sm quiet" data-ws="zu">Beenden</button></div>
+    <div class="wsmeter"><i style="width:${Math.round(WS.i / WS.liste.length * 100)}%"></i></div>
+    <h3>${esc(l.name || "Ohne Namen")}</h3><p class="trab-hint">${esc(w.ort || "")} ${esc(w.plz || "")} · ${esc(l.phone || "")} · ${offen ? "Vorgespräch noch offen" : "hat schon „ja“ gesagt"}</p>
+    <textarea class="inp" id="wsText" rows="7">${offen ? "Link zum Vorgespräch wird geholt …" : esc(waSerieText(l))}</textarea>
+    <div class="row" style="gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn" data-ws="skip">Überspringen</button><button class="btn go" data-ws="send" id="wsSend" ${offen ? "disabled" : ""}>${ICON.wa} In WhatsApp öffnen, dann weiter</button></div>
+    <p class="trab-hint">Danach: Notiz in LeadTable, Wiedervorlage am nächsten Werktag 9 Uhr${offen ? ", Status „WhatsApp verschickt“ (keine Erinnerungs-Mails mehr)" : ""}.</p></div>`;
+  if (offen) {
+    let link = ""; try { link = (await api("transa_vg_link", { id: l.lead_id })).link || ""; } catch {}
+    if (!WS || WS.liste[WS.i] !== l || !$("wsText")) return;
+    $("wsText").value = waSerieText(l, link); $("wsSend").disabled = false;
+  }
+}
+function waSerieKlick(e) {
+  const b = e.target.closest("[data-ws]"); if (!b || !WS) return;
+  const a = b.dataset.ws;
+  if (a === "zu") { $("waSerie").classList.remove("show"); WS = null; loadTrq(); return; }
+  if (a === "skip") { WS.i++; waSerieZeigen(); return; }
+  if (a === "send") {
+    const l = WS.liste[WS.i], text = $("wsText").value.trim(); if (!text) return;
+    window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+    const heute = new Date().toLocaleDateString("de-DE"), at = naechsterWerktag9().toISOString(), note = `WhatsApp am ${heute} – anrufen`;
+    const offen = ST_OFFEN.includes(stN(l.status)) && stN(l.status) !== stN(ST_WA);
+    (offen ? api("lead_status", { id: l.lead_id, status: ST_WA, followup: { at, note } }) : api("lead_followup", { id: l.lead_id, at, note }))
+      .then(() => { l.followup_note = note; if (offen) l.status = ST_WA; return api("lead_note", { id: l.lead_id, text: `WhatsApp vor dem Anruf verschickt am ${heute}.` }); })
+      .catch((err) => { WS && WS.fehler++; toast(`${l.name}: ${err.message}`, true); });
+    WS.erledigt++; WS.i++; waSerieZeigen();
+  }
+}
+async function ausSetzen() {
+  const L = trqList(qf).filter((l) => (!campF || l.kampagne === campF) && stN(l.status) !== stN(ST_AUS));
+  if (!L.length) return;
+  if (!confirm(`${L.length} Bewerber in LeadTable auf „${ST_AUS}“ setzen?\n\nOffene bekommen danach keine Erinnerungs-Mails mehr. Zu jedem kommt eine Notiz mit PLZ und Entfernung.`)) return;
+  const b = $("tbAus"); if (b) b.disabled = true;
+  let ok = 0, err = 0;
+  for (const l of L) {
+    const a = abFall(l), km = a ? (a.aus ?? (String(a.text || "").match(/ca\. (\d+) km außerhalb/) || [])[1]) : null;
+    try {
+      await api("lead_status", { id: l.lead_id, status: ST_AUS });
+      api("lead_note", { id: l.lead_id, text: `Wohnort außerhalb des Umkreises${a && a.plz ? ` (PLZ ${a.plz}${km != null ? `, ca. ${km} km außerhalb` : ""}${a.region ? `, nächste Region ${a.region}` : ""})` : ""}. Status aus dem Cockpit gesetzt.` }).catch(() => {});
+      l.status = ST_AUS; ok++;
+    } catch (e) { err++; if (err === 1) toast(e.message, true); if (/status/i.test(e.message) && err >= 3) break; }
+    if (b) b.textContent = `läuft … ${ok + err} von ${L.length}`;
+  }
+  toast(`${ok} auf „${ST_AUS}“ gesetzt${err ? `, ${err} nicht geklappt` : ""}`, !!err);
+  loadTrq();
+}
+function trZurListe() { selId = null; cur = null; renderTrBoard(); renderQueue(); requestAnimationFrame(() => window.scrollTo({ top: tbScroll })); }
+$("trBoard").addEventListener("click", (e) => {
+  const c = e.target.closest("[data-tb]");
+  if (c) { qf = c.dataset.tb; store.set("tc_trbrd", qf); $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderTrBoard(); renderStand(); renderQueue(); return; }
+  if (e.target.closest("#tbOv")) { $("trOvBtn").click(); return; }
+  if (e.target.closest("#tbWa")) { waSerieStart(); return; }
+  if (e.target.closest("#tbAus")) { ausSetzen(); return; }
+  const r = e.target.closest("tr.l"); if (r) { tbScroll = window.scrollY; openLead(r.dataset.id); window.scrollTo({ top: 0 }); }
+});
+$("trBoard").addEventListener("change", (e) => { if (e.target.id === "tbCamp") { campF = e.target.value; renderTrBoard(); renderQueue(); } });
+$("card").addEventListener("click", (e) => { if (e.target.closest("[data-trback]")) trZurListe(); });
+$("listNote").addEventListener("click", (e) => { if (e.target.closest("#tbWaM")) waSerieStart(); else if (e.target.closest("#tbAusM")) { ausSetzen(); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("trcrd") && !document.querySelector(".ov.show, dialog[open], .modal.show") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) trZurListe(); });
+window.matchMedia("(max-width:860px)").addEventListener("change", () => renderTrBoard());
+// ---------- Transa in der Bewerberkarte (09.11.2026): Wohnort-Karte und Abstellort aus dem Telefonat ----------
+let LF = null, trMapObj = null; const trAbDraft = {};
+function leaflet() {
+  if (LF) return LF;
+  LF = new Promise((ok, no) => {
+    const c = document.createElement("link"); c.rel = "stylesheet"; c.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(c);
+    const sc = document.createElement("script"); sc.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; sc.onload = () => ok(window.L); sc.onerror = () => { LF = null; no(new Error("Karte nicht erreichbar")); };
+    document.head.appendChild(sc);
+  });
+  return LF;
+}
+function trAbBlock(l) {
+  if (!l || !isTransa(l)) return `<div id="trAb" hidden></div>`;
+  const t = (TRQ || []).find((x) => x.lead_id === l.lead_id) || l, p = TRPLZ[l.lead_id];
+  const w = tbWohnort(t.answers && t.answers.length ? t : l), a = abFall(t);
+  const lage = a ? tbAbst(t).replace(/<br>/g, " · ") : `<span class="warn">keine PLZ</span>`;
+  const vor = a && a.vorschlag ? a.vorschlag : "";
+  if (p && p.lat != null) setTimeout(() => trMapInit(l.lead_id), 0);
+  return `<div id="trAb" class="trab">
+    <div class="trab-kopf"><b>${esc(w.ort || "Wohnort unbekannt")}</b> <span class="trab-plz">${esc(w.plz)}</span><span class="trab-lage">${lage}</span></div>
+    ${p && p.lat != null ? `<div id="trMap" class="trmap"></div><div class="trab-hint">Gestrichelter Kreis = 20 km Luftlinie um den Wohnort. Liegt eine Autobahn-Auffahrt im Kreis, wählt er den Abstellort frei.</div>` : ""}
+    <label class="trab-lab" for="trAbIn">Möglicher Abstellort (aus dem Telefonat)</label>
+    <div class="trab-row"><input class="inp" id="trAbIn" autocomplete="off" placeholder="z. B. Autohof Bünde, Parkplatz Industriegebiet Nord …" value="${esc(trAbDraft[l.lead_id] ?? "")}">
+      <button class="btn" type="button" id="trAbSave" title="Zeile „Abstellort (Telefonat …)“ unten an die LeadTable-Beschreibung anhängen">In Beschreibung</button>
+      <button class="btn go" type="button" id="trAbOk" title="In die Beschreibung schreiben und Status „Abstellort bestätigt“ setzen">+ Abstellort bestätigt</button></div>
+    ${vor ? `<div class="trab-hint">Vorschlag aus dem Vorgespräch: <b>${esc(vor)}</b> <button type="button" class="linkbtn" id="trAbVor">übernehmen</button></div>` : ""}
+  </div>`;
+}
+async function trMapInit(id) {
+  const el = $("trMap"), p = TRPLZ[id]; if (!el || !p || p.lat == null) return;
+  let L; try { L = await leaflet(); } catch { el.outerHTML = `<div class="trab-hint">Karte gerade nicht ladbar.</div>`; return; }
+  if (!document.body.contains(el) || !cur || cur.lead_id !== id) return;
+  if (trMapObj) { try { trMapObj.remove(); } catch {} trMapObj = null; }
+  const coarse = window.matchMedia("(pointer: coarse)").matches; // Handy: Karte steht still, damit die Seite scrollt; Zoom über + / −
+  const m = L.map(el, { scrollWheelZoom: false, dragging: !coarse, touchZoom: !coarse, doubleClickZoom: true }).setView([p.lat, p.lon], 9);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 13, attribution: "© OpenStreetMap" }).addTo(m);
+  L.circle([p.lat, p.lon], { radius: 20000, color: "#16a34a", weight: 2, dashArray: "6 6", fillOpacity: 0.05 }).addTo(m);
+  L.circleMarker([p.lat, p.lon], { radius: 7, color: "#fff", weight: 2, fillColor: "#007AFF", fillOpacity: 1 }).addTo(m).bindTooltip("Wohnort (Mitte der PLZ " + p.plz + ")");
+  trMapObj = m;
+}
+async function trAbSpeichern(bestaetigt) {
+  if (!cur) return;
+  const l = cur, v = $("trAbIn").value.trim();
+  if (!v) { toast("Bitte zuerst den Abstellort eintragen", true); $("trAbIn").focus(); return; }
+  const btns = [$("trAbSave"), $("trAbOk")]; btns.forEach((b) => b && (b.disabled = true));
+  try {
+    const line = `Abstellort (Telefonat ${new Date().toLocaleDateString("de-DE")}): ${v}`;
+    const base = selId === l.lead_id ? descBase : (l.description || "");
+    await api("lead_description", { id: l.lead_id, text: (base ? base.trim() + "\n" : "") + line, base });
+    if (bestaetigt) await api("lead_status", { id: l.lead_id, status: "Abstellort bestätigt" });
+    delete trAbDraft[l.lead_id];
+    toast(bestaetigt ? `${l.name || "Bewerber"}: Abstellort gespeichert, Status „Abstellort bestätigt“` : "Abstellort steht jetzt in der LeadTable-Beschreibung");
+    const g = await api("lead_get", { id: l.lead_id }); if (selId === l.lead_id) { cur = g.lead; renderCard(g); }
+    loadTrq(); if (bestaetigt) { loadWork(); loadStats(); }
+  } catch (e) { toast(e.message, true); btns.forEach((b) => b && (b.disabled = false)); }
+}
+$("card").addEventListener("click", (e) => {
+  if (e.target.closest("#trAbSave")) trAbSpeichern(false);
+  else if (e.target.closest("#trAbOk")) trAbSpeichern(true);
+  else if (e.target.closest("#trAbVor")) { const t = (TRQ || []).find((x) => x.lead_id === cur?.lead_id) || cur; const a = abFall(t); if (a && a.vorschlag) { $("trAbIn").value = a.vorschlag; trAbDraft[cur.lead_id] = a.vorschlag; $("trAbIn").focus(); } }
+});
+$("card").addEventListener("input", (e) => { if (e.target.id === "trAbIn" && cur) trAbDraft[cur.lead_id] = e.target.value; });
+$("card").addEventListener("keydown", (e) => { if (e.target.id === "trAbIn" && e.key === "Enter") { e.preventDefault(); trAbSpeichern(false); } });
 async function loadTrq() {
   if (BER !== "transa") return;
   try {
-    const r = await api("transa_status_liste", { alle: true }); TRQ = r.leads || []; TRSTAND = r.stand || null;
+    const plz = Date.now() - TRPLZ_AT > 6e5 ? api("abst_plz").then((p) => { TRPLZ = p.abst || {}; TRPLZ_AT = Date.now(); }).catch(() => {}) : null;
+    const r = await api("transa_status_liste", { alle: true, stati: TR_HOLEN, mitText: true }); await plz; TRQ = r.leads || []; TRSTAND = r.stand || null;
     const n1 = trqList("qual").length, n2 = trqList("nq").length, n0 = trqList("jetzt").length;
     $("qualN").textContent = n1 || ""; $("qualN").hidden = !n1; $("nqN").textContent = n2 || ""; $("nqN").hidden = !n2;
     $("jetztN").textContent = n0 || ""; $("jetztN").hidden = !n0;
+    if (cur && isTransa(cur) && $("trAb") && !$("trAbIn")?.matches(":focus")) $("trAb").outerHTML = trAbBlock(cur);
     for (const k of ["abs", "tp"]) { const n = trqList(k).length; $(k + "N").textContent = n || ""; $(k + "N").hidden = !n; }
-    renderStand();
+    renderStand(); renderTrBoard(); if (typeof TRK !== "undefined" && TRK) renderTrKpi();
     if (QST[qf]) renderQueue();
   } catch (e) { if (QST[qf]) toast(e.message, true); }
 }
@@ -1796,7 +2133,7 @@ async function ihSend(art) {
   } catch (e) { toast(e.message, true); }
 }
 function filtered() {
-  if (!searchRes && QST[qf]) { let Q = trqList(qf); if (campF) Q = Q.filter((l) => l.kampagne === campF); return Q; }
+  if (!searchRes && QST[qf]) { let Q = trSortTopf(trqList(qf), qf); if (campF) Q = Q.filter((l) => l.kampagne === campF); return Q; }
   let L = searchRes ?? (qf === "ptplan" ? (W.probetag_planen || []) : W.arbeitsliste);
   if (!searchRes) {
     const now = new Date();
@@ -1813,6 +2150,7 @@ function filtered() {
   return L;
 }
 function renderQueue() {
+  if (BER === "transa") renderTrBoard(); else setTrMode();
   const L = filtered();
   if (!searchRes && QST[qf]) return renderTrq(L);
   const pt = !searchRes && qf === "ptplan", base = pt ? (W.probetag_planen || []) : W.arbeitsliste;
@@ -1838,20 +2176,23 @@ function renderTrq(L) {
   const base = trqList(qf), q = qf === "qual";
   renderStand();
   $("listTitle").textContent = QTITEL[qf] + " · Transa" + (campF ? " · " + campF.replace(/^T_Transa[_ ]*/i, "") : "");
-  $("listNote").textContent = TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …";
+  $("listNote").innerHTML = (TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …") + (trDesk() ? "" : " " + tbAktion(qf, L).replace('id="tbWa"', 'id="tbWaM"').replace('id="tbAus"', 'id="tbAusM"'));
   $("clearSearch").hidden = true; $("qFilter").style.display = "";
   const kl = (l) => { const g = l.gespraech; if (!g) return `<span class="pill">ohne Gespräch</span>`; return g.klasse === "K.o." || (g.ko && g.ko.length) ? `<span class="trmini ko">K.o.</span>` : `<span class="trmini">${esc(g.klasse || "")}</span> <span class="hintline" style="margin:0">${g.punkte ?? ""} P.</span>`; };
   const sub = (l) => { const g = l.gespraech, ko = g && g.ko && g.ko.length ? " · " + g.ko.join(", ") : "", ab = abKurz(l); return esc(String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "")) + (ab ? " · " + esc(ab) : "") + (g && g.texte && g.texte.anfahrt ? " · " + esc(g.texte.anfahrt) : "") + esc(ko); };
   const reg = (l) => String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "") || "ohne Region";
   const wo = (l) => { const f = trAnswersMap({ answers: l.answers || [] }); const o = [f.wohnort, f.ort].find((x) => x && !REGWORT.test(x)) || ""; return [f.plz, o].filter(Boolean).join(" "); };
-  const leer = { jetzt: "Gerade niemand zum Anrufen – sobald jemand das Online-Vorgespräch passend ausfüllt, steht er hier", qual: "Noch niemand qualifiziert", nq: "Noch niemand als nicht qualifiziert eingestuft",
+  const leer = { jetzt: "Gerade niemand zum Anrufen – sobald jemand das Online-Vorgespräch passend ausfüllt, steht er hier", bf: "Niemand mit freiem Abstellort", be: "Niemand, der entgegenkommen muss",
+    wa: "Niemand außerhalb der Regionen", pz: "Niemand mit unklarer PLZ", of_frei: "Niemand", of_ent: "Niemand", of_aus: "Niemand", of_pz: "Niemand", qual: "Noch niemand qualifiziert", nq: "Noch niemand als nicht qualifiziert eingestuft",
     mail: "Niemand wartet gerade auf das Vorgespräch", spr: "Niemand zum Prüfen", aa: "Keine offene Abstellort-Anfrage", ab: "Noch kein Abstellort bestätigt", vu: "Noch kein Vertrag unterschrieben", akr: "Niemand ohne Reaktion auf die Abstellort-Anfrage", erinn: "Keine offenen Erinnerungen", kr: "Niemand ohne Reaktion", abs: "Noch keine Absagen durch Bewerber", tp: "Noch niemand im Talentpool" }[qf] || "Niemand";
   if (!TRQ) $("queue").innerHTML = `<div class="sk"><i></i><i></i></div>`;
   else if (!L.length) $("queue").innerHTML = `<div class="empty">${leer}${campF ? " in dieser Region" : ""}.</div>`;
-  else if (qf === "jetzt") {
-    // nach Region, je Region die am längsten Wartenden zuerst
+  else if (["jetzt", "bf", "be", "wa"].includes(qf)) {
+    // nach Region des Wohnorts; zuerst wer das Vorgespräch mit Abstellort ausgefüllt hat, dann je Gruppe die am längsten Wartenden
     const ts = (l) => new Date(l.last_status_change || l.lead_created_at || 0).getTime();
-    const S = [...L].sort((a, b) => reg(a).localeCompare(reg(b), "de") || ts(a) - ts(b));
+    const reg = (l) => abFall(l)?.region || TRPLZ[l.lead_id]?.region || String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "") || "ohne Region";
+    const vg = (l) => (l.abstellort && l.abstellort.fall ? 0 : 1);
+    const S = [...L].sort((a, b) => reg(a).localeCompare(reg(b), "de") || vg(a) - vg(b) || ts(a) - ts(b));
     let h = "", last = null;
     for (const l of S) {
       if (reg(l) !== last) { last = reg(l); h += `<div class="lidiv reg">${esc(last)} · ${S.filter((x) => reg(x) === last).length}</div>`; }
@@ -1987,7 +2328,7 @@ function applyBereich() {
   $("tTransa").textContent = nt; $("tTransa").hidden = !nt; $("tHey").textContent = nh; $("tHey").hidden = !nh;
   $("bcI").textContent = ni || ""; $("bcT").textContent = nt || ""; $("bcH").textContent = nh || "";
   $("berSeg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.b === BER));
-  document.body.dataset.ber = BER;
+  document.body.dataset.ber = BER; if (typeof renderTrBoard === "function") renderTrBoard();
   renderKpiBer();
   if (typeof OV !== "undefined" && OV && OV.bereiche) renderBereiche();
 }
@@ -1995,7 +2336,7 @@ function setBereich(b) {
   if (b === BER) return;
   BER = b; campF = "";
   if (QST[qf] && b !== "transa") { qf = "alle"; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === "alle")); }
-  if (b === "transa") { loadTrq(); loadTra(); }
+  if (b === "transa") { if (trDesk() && !QST[qf]) qf = store.get("tc_trbrd") || "jetzt"; loadTrq(); loadTra(); }
   if (!searchRes) { selId = null; cur = null; document.body.classList.remove("mcard"); }
   applyBereich(); renderWork();
   $("tabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.v === "vWork" && (x.dataset.b || "ihro") === BER));
@@ -2068,7 +2409,7 @@ function fill(tpl, l, extra = {}) {
 }
 async function openLead(id) {
   stopRec(true);
-  selId = id;
+  selId = id; setTrMode();
   if (window.matchMedia("(max-width:860px)").matches) { document.body.classList.add("mcard"); window.scrollTo({ top: 0 }); }
   document.querySelectorAll(".li").forEach((b) => b.classList.toggle("on", b.dataset.id === id));
   showView("vWork");
@@ -2080,7 +2421,7 @@ async function openLead(id) {
     renderCard(r);
     if (!ORTE[id]?.gesucht) loadOrte();
   }
-  catch (e) { $("card").innerHTML = `<div class="placeholder"><b>Konnte nicht geladen werden</b><span>${esc(e.message)}</span></div>`; }
+  catch (e) { $("card").innerHTML = `${trBoardAn() ? `<button type="button" class="btn sm quiet trback" data-trback="1">← Zurück zur Liste</button>` : ""}<div class="placeholder"><b>Konnte nicht geladen werden</b><span>${esc(e.message)}</span></div>`; }
 }
 function renderCard(r) {
   const l = r.lead, k = statusKind(l.status);
@@ -2090,7 +2431,7 @@ function renderCard(r) {
   const PRIM = primFor(l);
   const others = all.filter((s) => !PRIM.some((p) => norm(p) === norm(s)) && !/^nichterreicht/.test(norm(s)));
   const wa = (W.wa_vorlagen || []);
-  $("card").innerHTML = `
+  $("card").innerHTML = `${trBoardAn() ? `<button type="button" class="btn sm quiet trback" data-trback="1">← Zurück zur Liste <small style="opacity:.6">(Esc)</small></button>` : ""}
     <div class="card-head">
       <div style="min-width:0"><h2>${esc(l.name || "Ohne Namen")}</h2>
         <div class="meta">${pillFor(l.status)}<span>${esc(l.kampagne)}</span><span>beworben ${rel(l.lead_created_at)}</span>${l.last_status_change ? `<span>letzte Änderung ${rel(l.last_status_change)}</span>` : ""}</div></div>
@@ -2107,6 +2448,7 @@ function renderCard(r) {
       ${isTransa(l) ? `<button class="btn blue" id="trLfBtn" title="Gesprächsfenster mit Leitfaden und Scoring">Leitfaden</button>` : ""}
     </div>
     ${ihBlock(l)}
+    ${trAbBlock(l)}
     ${(r.frueher || []).length ? `<div class="dupe"><b>Schon bekannt: ${r.frueher.length === 1 ? "eine frühere Bewerbung" : r.frueher.length + " frühere Bewerbungen"}</b>${r.frueher.map((f) => `<button data-open="${esc(f.lead_id)}"><span class="n">${esc(f.kampagne)}</span>, ${f.lead_created_at ? new Date(f.lead_created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : ""}, ${esc(f.status || "")}${f.description ? `<span class="d">${esc(f.description)}</span>` : ""}</button>`).join("")}</div>` : ""}
     ${post && post.id === l.lead_id ? `<div class="postbar"><b>${esc(post.msg)}</b><span class="grow"></span>
       ${post.probetag ? `<button class="btn sm blue" id="ptOpen">Probetag eintragen</button>` : ""}
