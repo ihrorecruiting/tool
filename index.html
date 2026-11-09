@@ -363,6 +363,11 @@
   .trstand .st-gr{flex:0 0 100%;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3,#8a8f98);margin-top:2px}
   .trstand button.st-zu{border:0;background:none;padding:2px 2px;font-size:12.5px;font-weight:700;color:var(--ink2)}
   .trstand button.z{padding:2px 8px;font-size:11.5px;opacity:.55}
+  /* Ihro-Anrufliste: Entfernung und WhatsApp (09.11.2026) */
+  .ihkm{font-weight:700}.ihkm.g{color:#15803d}.ihkm.y{color:#b45309}.ihkm.r{color:#b91c1c}.ihalt{color:#0369a1}
+  .ihblock{margin:12px 0 4px;padding:12px;border:1px solid var(--line,#e5e7eb);border-radius:10px;background:var(--bg2,#f8fafc)}
+  .ihlage{font-size:14px;line-height:1.45}.ihhint{display:block;font-size:11.5px;color:var(--ink3,#8a8f98);margin-top:4px}
+  .ihbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .trstand button{display:inline-flex;align-items:center;gap:6px;border:.5px solid var(--sep-strong);background:var(--field);color:var(--ink2);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
   .trstand button b{font-variant-numeric:tabular-nums;color:var(--ink)}
   .trstand button i{width:9px;height:9px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
@@ -1359,7 +1364,7 @@ function toast(msg, err) {
 }
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + fn, opt = {
     method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
@@ -1684,6 +1689,110 @@ function trSortList(L) {
 }
 const MAIL_WARTE = ["infoverschickt", "erinnerungsmailverschickt"];
 const isMailWarte = (l) => MAIL_WARTE.includes(norm(l.status));
+
+// ---------- Ihro-Anrufliste: Entfernung zum Startpunkt, Querabgleich, WhatsApp (09.11.2026) ----------
+// Startpunkte und Fakten wie im Skill ihro-stellen und in der Detail-Mail (IHRO LPS/mail/bauen_mails.py). Ändert sich dort etwas, hier nachziehen.
+const IH_START = { landau: [[49.1983, 8.1123]], morsbach: [[50.8643, 7.7283]], sulz: [[48.3618, 8.6314]], neuburg: [[48.7456, 11.188]],
+  lampertheim: [[49.6239, 8.4093]], kraichgau: [[49.1956, 8.9274], [49.1369, 8.9096], [49.0435, 8.703], [49.0069, 8.4034], [48.9262, 8.4056]], miesterhorst: [[52.4602, 11.1418]] };
+const IH_NAME = { landau: "Landau", morsbach: "Morsbach", sulz: "Sulz", neuburg: "Neuburg", lampertheim: "Lampertheim", kraichgau: "Kraichgau", miesterhorst: "Miesterhorst" };
+const IH_MSG = { landau: "Landau in der Pfalz", morsbach: "Morsbach", sulz: "Sulz am Neckar", neuburg: "Neuburg an der Donau", lampertheim: "Lampertheim",
+  kraichgau: "Kraichgau (Start in Ittlingen, Eppingen, Bretten, Karlsruhe oder Ettlingen)", miesterhorst: "Miesterhorst bei Gardelegen" };
+const IH_TOUR = {
+  landau: { strecke: "Landau – Düsseldorf – Landau", lkw: "Jumbo-Hängerzug, fester Platz in Landau", tag: ["Montag bis Freitag, Start 10 Uhr, Feierabend gegen 22:30 Uhr", "Ein Kunde in Düsseldorf, immer dieselbe Strecke", "Kein Be- und Entladen: Plane auf, Plane zu, Ladung sichern", "Keine Nacht im LKW, Samstag und Sonntag frei"], nacht: true },
+  morsbach: { strecke: "Morsbach – Düsseldorf – Morsbach", lkw: "Jumbo-Hängerzug, zwei Fahrer teilen sich einen LKW (Übergabe mittags in Morsbach)", tag: ["Wechsel jede Woche: Frühschicht ab 3:30 Uhr oder Spätschicht ab 12 Uhr, jeweils etwa 9 Stunden", "Ein Kunde in Düsseldorf", "Kein Be- und Entladen", "Keine Nacht im LKW"], nacht: true },
+  sulz: { strecke: "Touren ab Sulz am Neckar, 3 bis 4 Kunden pro Tour", lkw: "Sattelzug mit Megatrailer", tag: ["Start ab 4 Uhr, je nach Tour, Schicht etwa 10 Stunden", "Vorladen in Sulz, nachmittags Zustellung in Sulz", "Be- und Entladen mit dem Stapler machen Sie selbst. Kein Staplerschein? Den machen Sie kostenlos bei Ihro", "Keine Nacht im LKW"], nacht: true, stapler: true },
+  neuburg: { strecke: "Touren ab Neuburg an der Donau, wechselnde Kunden", lkw: "Sattelzug mit Megatrailer", tag: ["Start ab 4 Uhr, je nach Tour, Schicht etwa 10 Stunden", "Vorladen in Neuburg, nachmittags Zustellung in Neuburg", "Be- und Entladen mit dem Stapler machen Sie selbst. Kein Staplerschein? Den machen Sie kostenlos bei Ihro", "Keine Nacht im LKW"], nacht: true, stapler: true },
+  lampertheim: { strecke: "Zwei Schleifen ab Lampertheim", lkw: "Sattelzug mit Lang-Trailer, zwei Fahrer teilen sich einen LKW (Übergabe mittags in Lampertheim)", tag: ["Wechsel jede Woche: Süd 3 bis 12 Uhr (Lampertheim – Mutlangen – Lampertheim) oder Nord 13 bis 24 Uhr (Lampertheim – Düsseldorf – Lampertheim)", "Kein Be- und Entladen", "Keine Nacht im LKW"], nacht: true },
+  kraichgau: { strecke: "Ittlingen – Bischweier (bei Rastatt), etwa 83 km, immer dieselbe Strecke", lkw: "Jumbo-Hängerzug oder Sattelzug mit Lang-Trailer, je nach Einsatz", tag: ["Start um 7 Uhr oder um 13 Uhr", "Start in Ittlingen oder direkt an der Strecke: Eppingen, Bretten, Karlsruhe, Ettlingen", "Sie laden nicht selbst: Plane auf, Plane zu, Ladung sichern", "Keine Nacht im LKW"], nacht: true },
+  miesterhorst: { strecke: "Miesterhorst – Berlin – Miesterhorst", lkw: "E-Sattelzug mit Megatrailer, elektrisch nach Berlin", tag: ["Montag bis Freitag, 6 bis 16 Uhr", "Eine Entladestelle in Berlin pro Tag", "Sie fahren nur: kein Stapler, kein Be- und Entladen", "Keine Nacht im LKW, Samstag und Sonntag frei"], nacht: false },
+};
+let ORTE = {}; // lead_id -> { tour, ort, lat, lon, label, gesucht } aus der Funktion ihro-anrufliste
+const ihFahrt = (km) => Math.round(km * 1.3 / 5) * 5; // Faustregel: Luftlinie mal 1,3 ≈ Strecke mit dem Auto
+function ihKm(a, b) { const r = 6371, p1 = a[0] * Math.PI / 180, p2 = b[0] * Math.PI / 180, dp = p2 - p1, dl = (b[1] - a[1]) * Math.PI / 180;
+  const h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2; return 2 * r * Math.asin(Math.sqrt(h)); }
+function ihDist(id) {
+  const o = ORTE[id]; if (!o) return null;
+  if (o.lat == null) return { o, own: null, alt: null, eff: null };
+  const d = {}; for (const [k, pts] of Object.entries(IH_START)) d[k] = Math.min(...pts.map((p) => ihKm([o.lat, o.lon], p)));
+  const own = o.tour ? d[o.tour] : null;
+  let alt = null; for (const [k, v] of Object.entries(d)) if (k !== o.tour && (!alt || v < alt.km)) alt = { k, km: v };
+  if (!(alt && own != null && alt.km + 15 <= own && own > 25)) alt = o.tour ? null : alt; // nur, wenn eine andere Tour deutlich näher liegt
+  return { o, own, alt, eff: alt ? alt.km : own };
+}
+function ihSub(l) {
+  const x = ihDist(l.lead_id); if (!x) return undefined;
+  if (x.own == null && !x.alt) return `${esc(l.kampagne)} · ${x.o.ort ? esc(x.o.ort) + " · Ort prüfen" : "kein Wohnort"}`;
+  const f = x.own != null ? ihFahrt(x.own) : null;
+  return `${esc(x.o.ort)}${f != null ? ` · <b class="ihkm ${f <= 30 ? "g" : f <= 55 ? "y" : "r"}">ca. ${f} km</b> bis ${IH_NAME[x.o.tour]}` : ""}${x.alt ? ` · <b class="ihalt">näher an ${IH_NAME[x.alt.k]}</b>` : ""}`;
+}
+let ihLaden = 0;
+async function loadOrte() {
+  const ids = (WALL?.arbeitsliste || []).filter((l) => bereichOf(l.campaign || l.kampagne) === "ihro" && !(ORTE[l.lead_id]?.gesucht)).map((l) => l.lead_id);
+  if (cur && !ORTE[cur.lead_id]?.gesucht) ids.push(cur.lead_id);
+  if (!ids.length || ihLaden) return;
+  ihLaden = 1;
+  try {
+    const r = await api("ihro_orte", { ids: [...new Set(ids)] });
+    Object.assign(ORTE, r.orte || {});
+    renderQueue();
+    if (cur && ORTE[cur.lead_id] && $("ihBlock")) $("ihBlock").outerHTML = ihBlock(cur);
+    if (r.offen) setTimeout(() => { ihLaden = 0; loadOrte(); }, 1500); else ihLaden = 0;
+  } catch { ihLaden = 0; }
+}
+const ihVor = (l) => String(l.name || "").trim().split(/\s+/)[0] || "";
+const ihAnrede = (l) => ihVor(l) ? `Guten Tag ${ihVor(l)}` : "Guten Tag";
+const IH_ENDE = "\n\nViele Grüße\nDennis Mende\nHans Ihro GmbH · 07942 9101-66";
+function ihText(l, art) {
+  const x = ihDist(l.lead_id), t = x?.o?.tour, ort = x?.o?.ort;
+  if (art === "alt" && x?.alt)
+    return `${ihAnrede(l)}, hier ist Dennis Mende von der Hans Ihro GmbH. Ich hatte Ihnen nach Ihrer Bewerbung eine E-Mail mit allen Details zur Tagestour ab ${IH_MSG[t] || l.kampagne} geschickt. ` +
+      `Mir ist aufgefallen: ${ort ? "Von " + ort + " aus" : "Für Sie"} liegt unser Startpunkt ${IH_MSG[x.alt.k]} näher. Dort suchen wir ebenfalls Fahrer für Tagestouren, mit denselben Leistungen.\n\n` +
+      `Wäre das interessant für Sie? Dann telefonieren wir gern kurz. Wann passt es Ihnen?` + IH_ENDE;
+  if (art === "det") {
+    const k = t, tr = IH_TOUR[k]; if (!tr) return "";
+    const geld = ["Grundgehalt: 3.000 € brutto im Monat", "Spesen: je nach Schichtlänge 14 bis 28 € pro Tag"];
+    if (tr.nacht) geld.push("Nachtzuschlag: 25 % für Arbeit zwischen 20 und 6 Uhr");
+    if (tr.stapler) geld.push("Staplerzulage: 200 € im Monat");
+    geld.push("Ticketplus: 50 € netto jeden Monat", "Urlaub: 26 Arbeitstage plus 1 Tag Ausgleich für Schulungen", "Privat-PKW über das Mitarbeiter-Leasing möglich");
+    const b = (a) => a.map((s) => "• " + s).join("\n");
+    return `${ihAnrede(l)}, gern schicke ich Ihnen die Details hier noch einmal direkt:\n\n*Tagestour ab ${IH_MSG[k]}*\n${tr.strecke}\nLKW: ${tr.lkw}\n${b(tr.tag)}\n\n` +
+      `*Gehalt und Leistungen*\n${b(geld)}\n\n*So geht es weiter*\n1. Kurzes Telefonat mit mir\n2. Mitfahrt auf der Tour, bevor Sie etwas unterschreiben\n3. Vertrag und Einweisung: ein Tag in Neuenstein, ohne Übernachtung\n4. 1 bis 2 Tage bezahlte Einarbeitung auf Ihrer Tour mit einem Fahrertrainer\n\n` +
+      `Beginn kurzfristig oder später möglich. Voraussetzung: Führerschein CE mit Schlüsselzahl 95 und Fahrerkarte.\n\nKlingt das gut für Sie? Dann sagen Sie mir kurz, wann ich Sie anrufen kann.` + IH_ENDE;
+  }
+  return `${ihAnrede(l)}, hier ist Dennis Mende von der Hans Ihro GmbH. Vielen Dank noch einmal für Ihre Bewerbung! ` +
+    `Ich hatte Ihnen per E-Mail alle Details zur Tagestour ab ${IH_MSG[t] || l.kampagne} geschickt, auch das Gehalt, aber noch keine Antwort von Ihnen bekommen.\n\n` +
+    `Ist das Angebot interessant für Sie? Dann telefonieren wir gern kurz. Wann passt es Ihnen am besten?` + IH_ENDE;
+}
+function ihBlock(l) {
+  if (!l || bereichOf(l.campaign || l.kampagne) !== "ihro" || !l.phone) return `<div id="ihBlock" hidden></div>`;
+  const x = ihDist(l.lead_id), t = x?.o?.tour;
+  const f = x?.own != null ? ihFahrt(x.own) : null;
+  const lage = !x ? "Wohnort wird gesucht …" : x.own == null && !x.alt ? `${x.o.ort ? esc(x.o.ort) + ": Ort nicht gefunden, bitte prüfen" : "Kein Wohnort angegeben"}`
+    : `${esc(x.o.ort)}${f != null ? ` · <b class="ihkm ${f <= 30 ? "g" : f <= 55 ? "y" : "r"}">ca. ${f} km</b> bis ${IH_NAME[t]}` : ""}${x.alt ? ` · <b class="ihalt">${f != null ? "näher an" : "nächster Startpunkt:"} ${IH_NAME[x.alt.k]}: ca. ${ihFahrt(x.alt.km)} km</b>` : ""}`;
+  return `<div id="ihBlock" class="ihblock"><div class="ihlage">${lage}<span class="ihhint">mit dem Auto geschätzt</span></div><div class="ihbtns">
+    <button class="btn go" data-ihwa="nach">${ICON.wa}Nachfragen</button>
+    ${t ? `<button class="btn" data-ihwa="det">${ICON.wa}Details senden</button>` : ""}
+    ${x?.alt ? `<button class="btn blue" data-ihwa="alt">${ICON.wa}${IH_NAME[x.alt.k]} anbieten</button>` : ""}</div>
+    <div class="ihhint">Nach dem Senden: Status „Per Whatsapp bearbeitet“, Wiedervorlage in 2 Werktagen.</div></div>`;
+}
+function in2Werktagen() { const d = new Date(); let n = 0; while (n < 2) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; } d.setHours(9, 0, 0, 0); return d; }
+async function ihSend(art) {
+  const l = cur; if (!l) return;
+  const text = ihText(l, art); if (!text) return;
+  window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  const was = { nach: "Nachfrage", det: "Details zur Tour", alt: "Angebot Tour " + (IH_NAME[ihDist(l.lead_id)?.alt?.k] || "") }[art];
+  const heute = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  api("lead_note", { id: l.lead_id, text: `WhatsApp verschickt (${was}) am ${heute}.` }).catch(() => {});
+  // Nur Bewerber, die noch nicht geantwortet haben, wechseln den Status (Möchte Rückruf, Tendenz usw. bleiben)
+  if (!(MAIL_WARTE.includes(norm(l.status)) || ["unbearbeitet", "anrufen", "perwhatsappbearbeitet"].includes(norm(l.status)))) { toast(`WhatsApp geöffnet, Notiz gespeichert`); return; }
+  try {
+    await api("lead_status", { id: l.lead_id, status: "Per Whatsapp bearbeitet", followup: { at: in2Werktagen().toISOString(), note: `WhatsApp (${was}) am ${heute} – keine Antwort? → anrufen` } });
+    toast(`${l.name || "Bewerber"}: WhatsApp verschickt, wieder dran ${when(in2Werktagen().toISOString())}`);
+    const L = filtered(), n = L.find((x) => x.lead_id !== l.lead_id);
+    await loadWork();
+    if (qf === "imail" && n) openLead(n.lead_id);
+  } catch (e) { toast(e.message, true); }
+}
 function filtered() {
   if (!searchRes && QST[qf]) { let Q = trqList(qf); if (campF) Q = Q.filter((l) => l.kampagne === campF); return Q; }
   let L = searchRes ?? (qf === "ptplan" ? (W.probetag_planen || []) : W.arbeitsliste);
@@ -1695,7 +1804,7 @@ function filtered() {
     if (qf === "ne") L = L.filter((l) => statusKind(l.status) === "ne");
     // Mail-Automatik (06.11.2026): wer die Detail-Mail noch nicht bestätigt hat, steht nicht unter „Alle“, nur unter „Mail raus, kein Klick“
     if (qf === "alle") L = L.filter((l) => !isMailWarte(l) || (l.followup_at && new Date(l.followup_at) <= now));
-    if (qf === "imail") L = L.filter(isMailWarte);
+    if (qf === "imail") L = L.filter(isMailWarte).sort((a, b) => (ihDist(a.lead_id)?.eff ?? 9999) - (ihDist(b.lead_id)?.eff ?? 9999));
   }
   if (campF) L = L.filter((l) => l.kampagne === campF);
   if (trListMode()) L = trSortList(L);
@@ -1717,7 +1826,7 @@ function renderQueue() {
     $("queue").innerHTML = ok.join("") + (ko.length ? `<div class="lidiv">K.o. laut Formular · ${ko.length}<span>kein CE oder kein Wohnsitz in Deutschland – kurz prüfen, ob die Angabe stimmt</span></div>` + ko.join("") : "");
   } else
   $("queue").innerHTML = L.length ? L.map((l) => pt ? liHtml(l, `${esc(l.kampagne)}${l.last_note ? " · " + esc(String(l.last_note).slice(0, 80)) : ""}`,
-      `<span class="age ${Date.now() - new Date(l.last_status_change || l.lead_created_at) > 2 * 864e5 ? "warm" : ""}" title="seit dann auf „Probetag vereinbaren“">${rel(l.last_status_change || l.lead_created_at)}</span>`) : liHtml(l)).join("")
+      `<span class="age ${Date.now() - new Date(l.last_status_change || l.lead_created_at) > 2 * 864e5 ? "warm" : ""}" title="seit dann auf „Probetag vereinbaren“">${rel(l.last_status_change || l.lead_created_at)}</span>`) : liHtml(l, ihSub(l))).join("")
     : `<div class="empty">${pt ? "Niemand auf „Probetag vereinbaren“. Alles geplant." : searchRes ? "Niemand gefunden. Suche nach Vor- oder Nachname, den letzten Ziffern der Nummer oder der E-Mail." : W.leads_gesamt === 0 ? "Noch keine Bewerber geladen. Einstellungen → Bewerber aus LeadTable abgleichen." : "Hier ist gerade niemand. Gute Arbeit."}</div>`;
   const camps = [...new Set(base.map((l) => l.kampagne))].sort();
   const sel = $("campFilter"), keep = sel.value;
@@ -1855,7 +1964,7 @@ async function loadWork() {
     if (!window._wvAt || Date.now() - window._wvAt > 300000) { window._wvAt = Date.now(); try { await api("wiedervorlagen"); } catch {} }
     WALL = await api("work");
     for (const x of NEUE_STATUS) if (!(WALL.status_liste || []).some((y) => norm(y) === norm(x))) (WALL.status_liste = WALL.status_liste || []).push(x);
-    applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu(); loadIm();
+    applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu(); loadIm(); loadOrte();
   } catch (e) { if (e.message !== "Nicht eingerichtet") toast(e.message, true); }
 }
 // ---------- Bereiche: Ihro / Transa / HeyRecruit ----------
@@ -1966,6 +2075,7 @@ async function openLead(id) {
     const lb = berL(r.lead);
     if (lb !== BER && WALL) { BER = lb; applyBereich(); renderWork(); $("tabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.v === "vWork" && (x.dataset.b || "ihro") === BER)); }
     renderCard(r);
+    if (!ORTE[id]?.gesucht) loadOrte();
   }
   catch (e) { $("card").innerHTML = `<div class="placeholder"><b>Konnte nicht geladen werden</b><span>${esc(e.message)}</span></div>`; }
 }
@@ -1993,6 +2103,7 @@ function renderCard(r) {
       <button class="btn" id="calledBtn" title="Dieser Bewerber hat bei dir angerufen – zählt als eingehender Anruf">${ICON.phone}Hat angerufen</button>
       ${isTransa(l) ? `<button class="btn blue" id="trLfBtn" title="Gesprächsfenster mit Leitfaden und Scoring">Leitfaden</button>` : ""}
     </div>
+    ${ihBlock(l)}
     ${(r.frueher || []).length ? `<div class="dupe"><b>Schon bekannt: ${r.frueher.length === 1 ? "eine frühere Bewerbung" : r.frueher.length + " frühere Bewerbungen"}</b>${r.frueher.map((f) => `<button data-open="${esc(f.lead_id)}"><span class="n">${esc(f.kampagne)}</span>, ${f.lead_created_at ? new Date(f.lead_created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : ""}, ${esc(f.status || "")}${f.description ? `<span class="d">${esc(f.description)}</span>` : ""}</button>`).join("")}</div>` : ""}
     ${post && post.id === l.lead_id ? `<div class="postbar"><b>${esc(post.msg)}</b><span class="grow"></span>
       ${post.probetag ? `<button class="btn sm blue" id="ptOpen">Probetag eintragen</button>` : ""}
@@ -2103,6 +2214,7 @@ function renderCard(r) {
   }
 }
 document.addEventListener("click", () => document.querySelectorAll(".menu.open").forEach((m) => m.classList.remove("open")));
+$("card").addEventListener("click", (e) => { const b = e.target.closest("[data-ihwa]"); if (b) ihSend(b.dataset.ihwa); });
 
 // ---------- Probetag-Erinnerung am Vortag ----------
 const berlinDayOf = (x) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(new Date(x));
