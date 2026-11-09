@@ -228,6 +228,7 @@
   .trab-hint{font-size:12px;color:var(--ink3,#8a8f98);margin:6px 0 2px}
   .trab-lab{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin:10px 0 5px}
   .trab-row{display:flex;gap:8px;flex-wrap:wrap} .trab-row .inp{flex:1 1 240px;min-width:0}
+  #feed .ev[data-at]{cursor:pointer;border-radius:12px} #feed .ev[data-at]:hover{background:var(--blue-tint)}
   .wsov{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;padding:16px}
   .wsov.show{display:flex}
   .wsbox{background:var(--bg,#fff);color:var(--ink);border-radius:22px;padding:18px 20px;width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
@@ -1421,7 +1422,7 @@ function toast(msg, err) {
 }
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^abst_/.test(action) ? "transa-abstellort" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids)$/.test(action) ? "cockpit-plus" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + fn, opt = {
     method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
@@ -1525,7 +1526,7 @@ async function loadStats() {
     $("kOff").textContent = d.punkte.offen;
     $("kOffS").textContent = d.punkte.prio ? `davon ${d.punkte.prio} mit Prio` : "keine mit Prio";
 
-    $("feed").innerHTML = d.letzte.length ? d.letzte.map((e) => `<div class="ev"><span class="tm">${fmtTime(e.received_at)}</span><span class="mk ${e.neu ? "neu" : (e.kat || "")}"></span>
+    $("feed").innerHTML = d.letzte.length ? d.letzte.map((e) => `<div class="ev" role="button" tabindex="0" data-at="${esc(e.received_at)}" title="Bewerber öffnen"><span class="tm">${fmtTime(e.received_at)}</span><span class="mk ${e.neu ? "neu" : (e.kat || "")}"></span>
       <span class="who"><b>${esc(e.lead_name || "Ohne Namen")}</b><span>${esc(e.neu ? "Neuer Bewerber" : (e.status || "Statuswechsel"))}</span></span><span class="cp">${esc(e.kampagne)}</span></div>`).join("")
       : `<div class="empty">Noch nichts eingegangen.</div>`;
 
@@ -1909,6 +1910,18 @@ async function ausSetzen() {
   toast(`${ok} auf „${ST_AUS}“ gesetzt${err ? `, ${err} nicht geklappt` : ""}`, !!err);
   loadTrq();
 }
+// „Letzte Ereignisse“ (09.11.2026): Klick öffnet den Bewerber. Die IDs kommen aus cockpit-plus (ev_ids), höchstens einmal pro Minute.
+let EVID = null, EVID_AT = 0;
+async function evOeffnen(at) {
+  try {
+    if (!EVID || Date.now() - EVID_AT > 60e3) { EVID = (await api("ev_ids")).ev || []; EVID_AT = Date.now(); }
+    let x = EVID.find((e) => e.received_at === at);
+    if (!x) { EVID = (await api("ev_ids")).ev || []; EVID_AT = Date.now(); x = EVID.find((e) => e.received_at === at); }
+    if (x && x.lead_id) openLead(x.lead_id); else toast("Bewerber nicht gefunden – ggf. über die Suche öffnen", true);
+  } catch (e) { toast(e.message, true); }
+}
+$("feed").addEventListener("click", (e) => { const ev = e.target.closest(".ev[data-at]"); if (ev) evOeffnen(ev.dataset.at); });
+$("feed").addEventListener("keydown", (e) => { const ev = e.target.closest(".ev[data-at]"); if (ev && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); evOeffnen(ev.dataset.at); } });
 function trZurListe() { selId = null; cur = null; renderTrBoard(); renderQueue(); requestAnimationFrame(() => window.scrollTo({ top: tbScroll })); }
 $("trBoard").addEventListener("click", (e) => {
   const c = e.target.closest("[data-tb]");
@@ -4283,7 +4296,10 @@ const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
-  navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.type === "refresh" && configured()) { loadStats(); loadWork(); } });
+  navigator.serviceWorker.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "refresh" && configured()) { loadStats(); loadWork(); }
+    if (e.data && e.data.type === "open" && e.data.lead && configured()) { loadStats(); loadWork(); openLead(e.data.lead); }
+  });
 }
 function b64ToBytes(s) { const p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, (c) => c.charCodeAt(0)); }
 async function pushStatus() {
@@ -4883,7 +4899,12 @@ setDate();
     catch (e) { openSetup("Verbindung mit dem QR-Code hat nicht geklappt: " + e.message); return; }
     if (/iphone|ipad|android/i.test(navigator.userAgent) && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches)) $("hsOv").classList.add("show");
   }
-  if (configured()) { loadAll(); setTimeout(dictOffen, 1500); } else openSetup();
+  if (configured()) {
+    loadAll(); setTimeout(dictOffen, 1500);
+    // Klick auf eine Push-Nachricht (09.11.2026): ./?lead=<id> öffnet direkt den Bewerber
+    const lid = new URLSearchParams(location.search).get("lead");
+    if (/^[a-f0-9]{24}$/i.test(lid || "")) { history.replaceState(null, "", location.pathname); openLead(lid); }
+  } else openSetup();
 })();
 </script>
 </body>

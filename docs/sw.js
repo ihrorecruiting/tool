@@ -7,11 +7,17 @@ self.addEventListener("push", (e) => {
     body: d.body || "", icon: "icon-192.png", badge: "icon-192.png", tag: d.tag || undefined, data: { url: d.url || "./" },
   }));
 });
+// Klick auf die Nachricht (09.11.2026): Bewerber direkt öffnen. Die Bewerber-ID steckt im tag („neu-<id>“, „vg-<id>“, „im-<id>“).
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  const url = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;
+  const lead = ((e.notification.tag || "").match(/[a-f0-9]{24}/i) || [])[0] || null;
+  const base = (e.notification.data && e.notification.data.url) || "./";
+  const url = new URL(lead ? "./?lead=" + lead : base, self.registration.scope).href;
   e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-    for (const c of list) if (c.url.startsWith(self.registration.scope)) { c.focus(); c.postMessage({ type: "refresh" }); return; }
+    for (const c of list) if (c.url.startsWith(self.registration.scope)) {
+      c.postMessage(lead ? { type: "open", lead } : { type: "refresh" });
+      return c.focus();
+    }
     return self.clients.openWindow(url);
   }));
 });

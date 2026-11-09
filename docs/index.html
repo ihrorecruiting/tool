@@ -149,6 +149,17 @@
   body[data-ber="transa"] .trkpis{display:grid}
   .trkpis .v small.nq{color:var(--stop-ink)}
   .trkpis .s b{color:var(--ink);font-weight:700}
+  body[data-ber="transa"] .trkpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .trkpis .s.st{flex-direction:column;gap:2px}
+  .trkpis .hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.3}
+  .trfun{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+  .trfun .r{display:grid;grid-template-columns:132px minmax(0,1fr) 34px;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
+  .trfun .bar{height:8px;border-radius:5px;background:rgba(120,120,128,.16);overflow:hidden}
+  .trfun .bar i{display:block;height:100%;border-radius:5px;background:var(--go,#34C759)}
+  .trfun .r b{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .trfun .seg2{display:flex;gap:4px;margin:0 0 2px}
+  .trfun .seg2 button{border:0;background:rgba(120,120,128,.12);color:var(--ink2);border-radius:8px;padding:2px 8px;font:inherit;font-size:11.5px;cursor:pointer}
+  .trfun .seg2 button.on{background:var(--ink);color:#fff}
   .kpi{border-radius:22px;padding:14px 18px 15px;min-width:0;position:relative}
   .kpi .l{font-size:13px;color:var(--ink2);font-weight:600}
   .kpi .v{font-family:var(--round);font-weight:700;font-size:40px;line-height:1;margin-top:8px;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
@@ -173,6 +184,61 @@
   .view.on{display:grid;gap:18px;align-items:start}
   #vWork.on{grid-template-columns:370px minmax(0,1fr) 320px}
   #vOver.on{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
+  /* Transa-Board (09.11.2026): Liste in der Mitte, Karte öffnet sich per Klick (nur ab 861 px Breite) */
+  #trBoard{display:none}
+  body.trbrd #vWork.on,body.trcrd #vWork.on{grid-template-columns:minmax(0,1fr) 320px}
+  body.trbrd #vWork>.panel:first-child,body.trcrd #vWork>.panel:first-child,body.trbrd #card{display:none}
+  body.trbrd #trBoard{display:block}
+  .tb-kopf{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;margin-bottom:14px}
+  .tb-kopf h2{margin:0}
+  .tb-kopf .act{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .tb-kopf select{width:auto;min-width:190px}
+  .tb-stufen{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+  .tb-st{border:.5px solid var(--sep-strong);border-radius:18px;padding:12px 14px;background:var(--field)}
+  .tb-st.haupt{border:1.5px solid #16a34a;background:rgba(22,163,74,.07)}
+  .tb-st h3{margin:0 0 2px;font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink2);display:flex;justify-content:space-between;gap:8px}
+  .tb-st h3 b{font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+  .tb-st .hint{font-size:11.5px;color:var(--ink3,#8a8f98);margin:0 0 8px}
+  .tb-st .unter{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3,#8a8f98);margin:8px 0 4px}
+  .tb-chips{display:flex;flex-wrap:wrap;gap:5px}
+  .tb-chips button{display:inline-flex;align-items:center;gap:6px;border:.5px solid var(--sep-strong);background:var(--glass-hi,#fff);color:var(--ink2);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .tb-chips button b{font-variant-numeric:tabular-nums;color:var(--ink)}
+  .tb-chips button i{width:9px;height:9px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+  .tb-chips button.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue-ink)}
+  .tb-chips button.z{opacity:.5}
+  .tb-titel{display:flex;align-items:baseline;gap:10px;margin:4px 0 8px}
+  .tb-titel h3{margin:0;font-size:17px}
+  .tb-titel span{font-size:12.5px;color:var(--ink3,#8a8f98)}
+  .tb-tab{width:100%;border-collapse:collapse;font-size:13.5px}
+  .tb-tab th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3,#8a8f98);padding:6px 10px;border-bottom:1px solid var(--sep-strong)}
+  .tb-tab td{padding:9px 10px;border-bottom:1px solid var(--sep);vertical-align:top}
+  .tb-tab tbody tr.l{cursor:pointer}
+  .tb-tab tbody tr.l:hover td{background:var(--blue-tint)}
+  .tb-tab tr.reg td{font-size:12px;font-weight:700;color:var(--ink2);background:var(--field);padding:6px 10px}
+  .tb-tab td.n b{display:block}
+  .tb-tab td.n small,.tb-tab td small{color:var(--ink3,#8a8f98);font-size:12px}
+  .tb-tab .ok{color:#15803d;font-weight:600} .tb-tab .ent{color:#c2410c;font-weight:600} .tb-tab .warn{color:#b45309;font-weight:600}
+  .tb-tab td.alt{white-space:nowrap;color:var(--ink3,#8a8f98);font-size:12.5px}
+  .trback{margin:-4px 0 12px}
+  .trab{border:.5px solid var(--sep-strong);border-radius:18px;padding:12px 14px;margin:14px 0;background:var(--field)}
+  .trab-kopf{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:8px;font-size:14px}
+  .trab-kopf b{font-size:16px} .trab-plz{color:var(--ink3,#8a8f98)} .trab-lage small{color:var(--ink3,#8a8f98)}
+  .trab .ok{color:#15803d;font-weight:600} .trab .ent{color:#c2410c;font-weight:600} .trab .warn{color:#b45309;font-weight:600}
+  .trmap{height:230px;border-radius:14px;overflow:hidden;border:.5px solid var(--sep-strong);z-index:0}
+  .trab-hint{font-size:12px;color:var(--ink3,#8a8f98);margin:6px 0 2px}
+  .trab-lab{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin:10px 0 5px}
+  .trab-row{display:flex;gap:8px;flex-wrap:wrap} .trab-row .inp{flex:1 1 240px;min-width:0}
+  #feed .ev[data-at]{cursor:pointer;border-radius:12px} #feed .ev[data-at]:hover{background:var(--blue-tint)}
+  .wsov{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;padding:16px}
+  .wsov.show{display:flex}
+  .wsbox{background:var(--bg,#fff);color:var(--ink);border-radius:22px;padding:18px 20px;width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  [data-theme="dark"] .wsbox{background:#1c1c1e}
+  .wsbox h3{margin:10px 0 2px;font-size:20px} .wsbox textarea{width:100%;font-size:14.5px;line-height:1.45;margin-top:8px}
+  .wsk{display:flex;align-items:center;gap:10px} .wsk span{color:var(--ink3,#8a8f98);font-size:13px} .wsk button{margin-left:auto}
+  .wsmeter{height:5px;border-radius:9px;background:var(--sep);margin:10px 0 4px;overflow:hidden} .wsmeter i{display:block;height:100%;background:#16a34a}
+  .wsbox .ok{color:#15803d;font-weight:600}
+  .linkbtn{border:0;background:none;color:var(--blue-ink);font-weight:600;cursor:pointer;padding:0 2px}
+  @media (max-width:1380px){ body.trbrd #vWork.on,body.trcrd #vWork.on{grid-template-columns:minmax(0,1fr)} }
   #vOver .full{grid-column:1/-1}
   body[data-view="vOver"] .kpiwrap{display:none}
   .ovhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;padding:6px 6px 0}
@@ -347,13 +413,32 @@
   .mdupe button{border:0;background:none;color:var(--blue-ink);font:inherit;font-weight:600;padding:0;cursor:pointer}
   .pass{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:0 6px;line-height:17px;margin-right:2px;vertical-align:1px}
   .pass.p-hoch{background:#dcfce7;color:#166534}.pass.p-mittel{background:#fef3c7;color:#92400e}.pass.p-gering{background:#f2f4f7;color:#475467}.pass.p-ko{background:#fee2e2;color:#991b1b}
-  .trstand{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+  .trstand{display:flex;flex-direction:column;gap:5px;margin:2px 0 4px}
+  .trstand .st-zeile,.trstand .st-kopf{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .trstand .st-gr{flex:0 0 100%;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3,#8a8f98);margin-top:2px}
+  .trstand button.st-zu{border:0;background:none;padding:2px 2px;font-size:12.5px;font-weight:700;color:var(--ink2)}
+  .trstand button.z{padding:2px 8px;font-size:11.5px;opacity:.55}
+  /* Ihro-Anrufliste: Entfernung und WhatsApp (09.11.2026) */
+  .ihkm{font-weight:700}.ihkm.g{color:#15803d}.ihkm.y{color:#b45309}.ihkm.r{color:#b91c1c}.ihalt{color:#0369a1}
+  .ihblock{margin:12px 0 4px;padding:12px;border:1px solid var(--line,#e5e7eb);border-radius:10px;background:var(--bg2,#f8fafc)}
+  .ihlage{font-size:14px;line-height:1.45}.ihhint{display:block;font-size:11.5px;color:var(--ink3,#8a8f98);margin-top:4px}
+  .ihbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .trstand button{display:inline-flex;align-items:center;gap:6px;border:.5px solid var(--sep-strong);background:var(--field);color:var(--ink2);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
   .trstand button b{font-variant-numeric:tabular-nums;color:var(--ink)}
   .trstand button i{width:9px;height:9px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.25)}
   .trstand button.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue-ink)}
   .trwarn{color:var(--stop-ink);font-weight:700}
   .lidiv.reg{color:var(--ink2)}
+  .imkpi{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 0 12px}
+  .imkpi button{padding:10px 2px}.imkpi button span{display:block;line-height:1.2;font-size:10.5px}
+  .imkpi button{border:0;border-radius:12px;background:var(--fill2);padding:10px 6px;text-align:center;color:var(--ink);cursor:pointer}
+  .imkpi button b{display:block;font-size:22px;line-height:1.1}.imkpi button span{font-size:11.5px;color:var(--muted);font-weight:600}
+  .imkpi button.on{box-shadow:0 0 0 2px var(--accent,#0a84ff) inset}
+  .imkpi button.int b{color:#16a34a}.imkpi button.abs b{color:#dc2626}
+  .neusum{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.neusum .pill{cursor:default}
+  .neutag{margin:12px 4px 4px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .neutag:first-child{margin-top:0}
+  .neumehr{display:block;width:100%;margin-top:8px;border:0;background:var(--fill2);border-radius:10px;padding:8px;font-weight:600;color:var(--ink2)}
   .lidiv{margin:14px 4px 6px;font-size:12.5px;font-weight:700;color:#991b1b;display:flex;flex-direction:column;gap:2px}
   .lidiv span{font-weight:500;color:var(--ink2);font-size:12px}
   #trSort{margin-top:8px}
@@ -784,7 +869,7 @@
     .kpi .v{font-size:26px!important}.kpi .l{font-size:12px}.kpi .s{font-size:11.5px!important}
     .kpi .ring{display:none}
     .kpis:not(.trkpis)>.kpi:nth-child(5){display:none}
-    .trkpis>.kpi:nth-child(5){grid-column:1/-1}
+    .trkpis>.kpi:nth-child(5),.trkpis>.kpi:nth-child(6){grid-column:1/-1}
     input.inp,select.inp,textarea.inp,.search input{font-size:16px!important}
     .tabs-top{display:none}
     .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;padding:6px 6px calc(6px + env(safe-area-inset-bottom));
@@ -962,7 +1047,8 @@
     <div class="kpi"><div class="l">Online-Vorgespräch beantwortet</div><div class="v" id="tkQuote">–</div><div class="meter"><i id="tkMeter"></i></div><div class="s" id="tkQuoteS"></div></div>
     <div class="kpi"><div class="l">Qualifiziert / nicht qualifiziert</div><div class="v" id="tkQual">–</div><div class="s" id="tkQualS"></div></div>
     <div class="kpi"><div class="l">Anrufe heute (Qualifizierte)</div><div class="v" id="tkAnr">–</div><div class="s" id="tkAnrS"></div></div>
-    <div class="kpi"><div class="l">Kosten je Bewerbung heute</div><div class="v" id="tkCpl">–</div><div class="s" id="tkCplS"></div></div>
+    <div class="kpi"><div class="l">Kosten je Bewerbung heute</div><div class="v" id="tkCpl">–</div><div class="s" id="tkCplS"></div><div class="hint" id="tkCplH"></div></div>
+    <div class="kpi"><div class="l">Online-Vorgespräch Schritte</div><div class="trfun" id="tkFun"><div class="s">–</div></div></div>
   </div>
 </section>
 
@@ -978,10 +1064,13 @@
         <button data-f="rueckruf">Rückruf</button>
         <button data-f="neu">Neu</button>
         <button data-f="ne">Nicht erreicht</button>
+        <button data-f="imail" title="Detail-Mail ist raus, der Bewerber hat noch nicht geklickt („Info verschickt“, „Erinnerungsmail verschickt“). Steht nicht unter „Alle“.">Mail raus, kein Klick <span class="segn" id="imN"></span></button>
         <button data-f="ptplan" title="Alle mit Status „Probetag vereinbaren“ – Termin noch abstimmen">Probetag planen <span class="segn" id="ptN"></span></button>
-        <button class="tr-only" data-f="jetzt" title="Online-Vorgespräch ausgefüllt und passt – Status „Online-Vorqualifiziert“: jetzt anrufen">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
-        <button class="tr-only" data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
-        <button class="tr-only" data-f="nq" title="Transa-Bewerber mit Status „Nicht qualifiziert“ – über „Alle Kampagnen“ je Region">Nicht qualifiziert <span class="segn" id="nqN"></span></button>
+        <button class="tr-only" data-f="jetzt" title="Bereit fürs Angebot: Vorgespräch oder Telefon „ja“ und Abstellort frei oder entgegen – aus dem Vorgespräch oder laut PLZ der Bewerbung">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
+        <button class="tr-only" hidden data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
+        <button class="tr-only" hidden data-f="nq" title="Transa-Bewerber mit Status „Nicht qualifiziert“ – über „Alle Kampagnen“ je Region">Nicht qualifiziert <span class="segn" id="nqN"></span></button>
+        <button class="tr-only" hidden data-f="abs" title="Transa-Bewerber mit Status „Absage durch Bewerber“">Absage <span class="segn" id="absN"></span></button>
+        <button class="tr-only" hidden data-f="tp" title="Transa-Bewerber mit Status „Talentpool bestätigt“">Talentpool <span class="segn" id="tpN"></span></button>
       </div>
       <div class="trstand tr-only" id="trStand" aria-label="Stand im Online-Vorgespräch"></div>
       <select class="inp" id="campFilter"><option value="">Alle Kampagnen</option></select>
@@ -989,6 +1078,8 @@
     </div>
     <div class="llist" id="queue"><div class="sk"><i></i><i></i><i></i></div></div>
   </section>
+
+  <section class="panel trboard" id="trBoard" aria-label="Transa-Bewerber"></section>
 
   <section class="panel sticky" id="card">
     <div class="placeholder"><b>Bewerber auswählen</b><span>Links aus der Arbeitsliste, rechts aus den neuen Bewerbern oder über die Suche oben.</span></div>
@@ -999,8 +1090,15 @@
       <div class="ph"><h2>Termine</h2><span class="note" id="tfNote"></span></div>
       <div id="tfList"></div>
     </section>
+    <section class="panel" id="imPanel" hidden>
+      <div class="ph"><h2>Info-Mails</h2><span class="note" id="imNote">letzte 7 Tage</span></div>
+      <div class="imkpi" id="imKpi"></div>
+      <div class="mini" id="imList"></div>
+    </section>
     <section class="panel">
-      <div class="ph"><h2>Neue Bewerber</h2><span class="note">die letzten 10</span></div>
+      <div class="ph"><h2>Neue Bewerber</h2><span class="note" id="neuNote">die letzten 10</span></div>
+      <div class="seg" id="neuSeg" style="margin:-4px 0 10px"><button data-z="heute">Heute</button><button data-z="auto" id="neuAuto">Seit gestern</button><button data-z="7">7 Tage</button></div>
+      <div id="neuSum" class="neusum"></div>
       <div class="mini" id="newest"><div class="sk"><i></i><i></i><i></i></div></div>
     </section>
     <section class="panel">
@@ -1324,13 +1422,13 @@ function toast(msg, err) {
 }
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche)$/.test(action) ? "items-edit" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids)$/.test(action) ? "cockpit-plus" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + fn, opt = {
     method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
   // Am Handy reißt die Verbindung kurz ab (Funkloch, Wechsel LTE/5G/WLAN, App aus dem Hintergrund) – Safari meldet dann „Load failed“.
   // Lesende Abfragen werden still wiederholt, beim Speichern kommt eine verständliche Meldung.
-  const lesend = /^(work|stats|overview|overview_getrennt|heute_bereiche|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
+  const lesend = /^(work|stats|overview|overview_getrennt|heute_bereiche|neue_seit|info_mails|push_log|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
   let r;
   for (let i = 0; ; i++) {
     try { r = await fetch(url, opt); break; }
@@ -1428,7 +1526,7 @@ async function loadStats() {
     $("kOff").textContent = d.punkte.offen;
     $("kOffS").textContent = d.punkte.prio ? `davon ${d.punkte.prio} mit Prio` : "keine mit Prio";
 
-    $("feed").innerHTML = d.letzte.length ? d.letzte.map((e) => `<div class="ev"><span class="tm">${fmtTime(e.received_at)}</span><span class="mk ${e.neu ? "neu" : (e.kat || "")}"></span>
+    $("feed").innerHTML = d.letzte.length ? d.letzte.map((e) => `<div class="ev" role="button" tabindex="0" data-at="${esc(e.received_at)}" title="Bewerber öffnen"><span class="tm">${fmtTime(e.received_at)}</span><span class="mk ${e.neu ? "neu" : (e.kat || "")}"></span>
       <span class="who"><b>${esc(e.lead_name || "Ohne Namen")}</b><span>${esc(e.neu ? "Neuer Bewerber" : (e.status || "Statuswechsel"))}</span></span><span class="cp">${esc(e.kampagne)}</span></div>`).join("")
       : `<div class="empty">Noch nichts eingegangen.</div>`;
 
@@ -1461,14 +1559,42 @@ function renderTrKpi() {
   $("tkMeter").style.width = (v.quote || 0) + "%";
   $("tkQuoteS").innerHTML = `<span><b>${v.beantwortet}</b> von <b>${v.eingeladen}</b> Mails beantwortet</span><span>${v.wartend} warten${v.keine_reaktion ? ` · ${v.keine_reaktion} ohne Reaktion` : ""}</span>`;
   $("tkQual").innerHTML = `${q.online + q.telefon}<small class="nq"> / ${q.nicht}</small>`;
-  $("tkQualS").innerHTML = `<span><b>${q.online}</b> online vorqualifiziert</span><span><b>${q.telefon}</b> nach Telefonat</span>`;
+  // Seit 06.11. landen Antworten in den Abstellort-Status; „Online-Vorqualifiziert (alt)“ und am Telefon Qualifizierte haben noch keine Abstellort-Antwort
+  const abFrei = (q.abst_frei || 0) + (q.abst_entgegen || 0) + (q.abst_bestaetigt || 0), abPr = (q.standort_pruefen || 0) + (q.standort_passt || 0);
+  const abOff = q.abst_offen != null ? q.abst_offen : (q.online - abFrei - abPr + q.telefon);
+  $("tkQualS").className = "s st";
+  if (TRQ) { // Einteilung wie im Block „Stand“: Abstellort aus dem Vorgespräch, sonst laut PLZ
+    const c = (f) => trqList(f).length;
+    $("tkQualS").innerHTML = `<span><b>${c("bf") + c("be")}</b> bereit fürs Angebot (${c("bf")} frei, ${c("be")} entgegen)</span><span><b>${c("wa")}</b> Wohnort außerhalb${c("pz") ? ` · <b>${c("pz")}</b> PLZ unklar` : ""}</span>`;
+  } else $("tkQualS").innerHTML = `<span><b>${abFrei}</b> Abstellort frei${q.abst_entgegen ? ` (davon ${q.abst_entgegen} kommt entgegen)` : ""}</span><span><b>${abPr}</b> Standort prüfen</span>`
+    + `<span title="${q.online_alt ?? "?"} online vorqualifiziert (alt) + ${q.telefon} am Telefon qualifiziert – für die Abstellort-Nachfrage-Mail"><b>${abOff}</b> Abstellort offen (${q.online_alt ?? "?"} alt + ${q.telefon} Telefon)</span>`;
   const t = HB ? HB.transa : null;
   $("tkAnr").textContent = t ? t.anrufe : "–";
-  $("tkAnrS").innerHTML = (t ? `<span class="dot go"><span>${t.erreicht} erreicht</span></span><span class="dot stop"><span>${t.nicht} nicht</span></span>` : "") + `<span>${q.online ? `<b>${q.online}</b> warten auf Anruf` : "niemand wartet auf Anruf"}</span>`;
+  $("tkAnrS").innerHTML = (t ? `<span class="dot go"><span>${t.erreicht} erreicht</span></span><span class="dot stop"><span>${t.nicht} nicht</span></span>` : "") + `<span>${(TRQ ? trqList("jetzt").length : abFrei) ? `<b>${TRQ ? trqList("jetzt").length : abFrei}</b> bereit fürs Angebot` : "noch niemand bereit fürs Angebot"}</span>`;
   $("tkCpl").textContent = eur(c.cpl_heute);
   $("tkCplS").innerHTML = `<span>7 Tage: <b>${eur(c.cpl_d7)}</b></span><span>Wochenende: <b>${eur(c.cpl_we)}</b></span>`;
+  $("tkCplH").textContent = "Ab 08.11. nur Bewerber mit Fernverkehr + CE – Kosten je Bewerbung davor nicht vergleichbar.";
+  renderTrFun();
   $("tkCpl").title = `Werbekosten heute ${eur(c.heute)}, 7 Tage ${eur(c.d7)}, Wochenende ${c.wochenende.map((d) => d.slice(8, 10) + "." + d.slice(5, 7) + ".").join("–")} ${eur(c.we)}`;
 }
+// Trichter aus dem anonymen Zähler (vg_zaehler): Vorgespräch und – falls die Seite es meldet – Bewerbungsformular
+let TRF_Z = "heute";
+const TRF_SCHRITTE = { vorgespraech: [["geoeffnet", "geöffnet"], ["gestartet", "gestartet"], ["plz", "PLZ"], ["abstellort", "Abstellort"], ["abgeschickt", "abgeschickt"]],
+  bewerbung: [["geoeffnet", "geöffnet"], ["gestartet", "gestartet"], ["fernverkehr_nein", "Ende: Fernverkehr nein"], ["ce_nein", "Ende: CE nein"], ["abgeschickt", "abgeschickt"]] };
+function renderTrFun() {
+  const f = TRK && TRK.trichter, el = $("tkFun"); if (!el) return;
+  if (!f || f.fehler) { el.innerHTML = `<div class="s">${f && f.fehler ? "nicht geladen: " + esc(f.fehler) : "noch keine Daten"}</div>`; return; }
+  const seg = `<div class="seg2">${[["heute", "Heute"], ["d7", "7 Tage"], ["gesamt", "Gesamt"]].map(([k, l]) => `<button type="button" data-z="${k}" class="${k === TRF_Z ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  const block = (art, titel) => {
+    const d = (f[art] || {})[TRF_Z] || {}, sch = TRF_SCHRITTE[art], max = Math.max(1, ...sch.map(([k]) => d[k] || 0));
+    if (!sch.some(([k]) => d[k])) return art === "vorgespraech" ? `<div class="s">${titel}: noch niemand${TRF_Z === "heute" ? " heute" : ""}</div>` : "";
+    return `<div class="s" style="margin-top:4px"><b>${titel}</b></div>` + sch.map(([k, l]) => `<div class="r"><span>${l}</span><span class="bar"><i style="width:${Math.round(100 * (d[k] || 0) / max)}%"></i></span><b>${d[k] || 0}</b></div>`).join("");
+  };
+  el.innerHTML = seg + block("vorgespraech", "Vorgespräch") + block("nachfrage", "Abstellort-Nachfrage") + block("bewerbung", "Bewerbungsformular")
+    + `<div class="hint">anonym gezählt${f.seit ? " seit " + f.seit.slice(8, 10) + "." + f.seit.slice(5, 7) + "." : ""}</div>`;
+}
+document.addEventListener("click", (e) => { const b = e.target.closest("#tkFun .seg2 button"); if (!b) return; TRF_Z = b.dataset.z; renderTrFun(); });
+TRF_SCHRITTE.nachfrage = TRF_SCHRITTE.vorgespraech;
 function renderKpiBer() {
   if (!STATS || typeof BER === "undefined") return;
   if (BER === "transa") { if (TRK) renderTrKpi(); loadTrKpi(); }
@@ -1541,20 +1667,84 @@ function miniHtml(l, right) {
 // Transa: Listen „Qualifiziert“ / „Nicht qualifiziert“ (Status aus LeadTable, mit Punkten aus dem Gespräch)
 let TRQ = null;
 // Seit 04.11.2026 Online-Vorgespräch (fahrer.talentjagd.de/vorgespraech): Make setzt die Stände, Dennis ruft „Online-Vorqualifiziert“ an
-const QST = { jetzt: "Online-Vorqualifiziert", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Qualifizierung", erinn: "Erinnerungsmail verschickt", kr: "Keine Reaktion auf Vor-Quali" };
-const QTITEL = { jetzt: "Jetzt anrufen", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Mail raus – wartet auf Vorgespräch", erinn: "Erinnerung verschickt", kr: "Keine Reaktion auf Vorgespräch" };
+// Seit 06.11.2026 Abstellort im Vorgespräch, endgültige Status von Dennis: „Abstellort frei, Vorschlag da / Hilfe nötig“ und
+// „Kommt entgegen, Vorschlag da / Hilfe nötig“ gehören zu „Jetzt anrufen“, „Standort prüfen“ (außerhalb/PLZ unbekannt/kein Auto) hat eine eigene Liste
+const ABST_ST = ["Abstellort frei, Vorschlag da", "Abstellort frei, Hilfe nötig", "Kommt entgegen, Vorschlag da", "Kommt entgegen, Hilfe nötig"];
+const QST = { jetzt: [...ABST_ST, "Online-Vorqualifiziert", "Standort passt"], ab: "Abstellort bestätigt", vu: "Vertrag unterschrieben", afv: ABST_ST[0], afh: ABST_ST[1], kev: ABST_ST[2], keh: ABST_ST[3], ovq: "Online-Vorqualifiziert", spr: "Standort prüfen", aa: "Abstellort-Anfrage verschickt", akr: "Keine Reaktion auf Abstellort", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Qualifizierung", erinn: "Erinnerungsmail verschickt", kr: "Keine Reaktion auf Vor-Quali", abs: "Absage durch Bewerber", tp: "Talentpool bestätigt" };
+const QTITEL = { jetzt: "Jetzt anrufen", ab: "Abstellort bestätigt", vu: "Vertrag unterschrieben", afv: "Abstellort frei, Vorschlag da", afh: "Abstellort frei, Hilfe nötig", kev: "Kommt entgegen, Vorschlag da", keh: "Kommt entgegen, Hilfe nötig", ovq: "Online vorqualifiziert (alt)", spr: "Standort prüfen", aa: "Abstellort-Anfrage verschickt", akr: "Keine Reaktion auf Abstellort-Anfrage", qual: "Qualifiziert", nq: "Nicht qualifiziert", mail: "Mail raus – wartet auf Vorgespräch", erinn: "Erinnerung verschickt", kr: "Keine Reaktion auf Vorgespräch", abs: "Absage durch Bewerber", tp: "Talentpool" };
 const stN = (s) => String(s || "").trim().toLowerCase();
-const trqList = (f) => (TRQ || []).filter((l) => stN(l.status) === stN(QST[f]));
+// ---------- Transa: Einteilung nach dem nächsten Schritt (09.11.2026) ----------
+// Nicht mehr nach LeadTable-Status, sondern: Wo steht der Bewerber und was ist zu tun? Abstellort aus dem Online-Vorgespräch,
+// sonst aus der PLZ der Bewerbung (Function transa-abstellort, gleiche Regel und Daten wie das Vorgespräch auf fahrer.talentjagd.de).
+// LeadTable-Status bleiben unverändert; „Qualifiziert“ (Telefon), „Online-Vorqualifiziert (alt)“ und „Standort prüfen“ verteilen sich auf die Töpfe.
+let TRPLZ = {}, TRPLZ_AT = 0;
+// „Per Whatsapp bearbeitet“ (09.11.2026, gleicher Status wie bei Ihro): Vorab-WhatsApp an Offene – bleibt bei den Offenen, die Erinnerungs-Mails (Make 8369082) hören damit auf
+// „Wohnort außerhalb Umkreis“ (09.11.2026): Wohnort außerhalb des Meta-Umkreises (60 km, A6 5 × 20 km) – steht immer unter „Prüfen“
+const ST_WA = "Per Whatsapp bearbeitet", ST_AUS = "Wohnort außerhalb Umkreis";
+const ST_OFFEN = ["Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet", ST_WA].map(stN);
+const ST_QUALI = [...ABST_ST, "Online-Vorqualifiziert", "Standort passt", "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort"].map(stN);
+function abFall(l) { const a = l.abstellort; if (a && a.fall) return { ...a, quelle: "vg" }; const p = TRPLZ[l.lead_id]; return p ? { ...p, quelle: "plz" } : null; }
+// Nach dem Anruf (Ergebnis-Knöpfe in der Karte) bleibt der Bewerber sichtbar: Stufe „Im Gespräch“
+const TR_NE = ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3"];
+const TR_ANG = ["Angebot verschickt", "Details verschickt", "Nachgefasst nach Angebot", "Termin", "Termin gebucht"];
+const TR_KON = ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Möchte Rückruf", "Nachgefasst nach Telefonat", "Nachgefasst", "Nachfassen bitte", "Talentpool-Angebot"];
+const TRG = { ne: TR_NE.map(stN), ang: TR_ANG.map(stN), kon: TR_KON.map(stN) };
+function trTopf(l) {
+  const s = stN(l.status), a = abFall(l), f = a ? a.fall : "";
+  if (s === stN(ST_AUS)) return "wa";
+  for (const [k, w] of Object.entries(TRG)) if (w.includes(s)) return k;
+  if (ST_OFFEN.includes(s)) return f === "frei" ? "of_frei" : f === "entgegen" ? "of_ent" : f === "aus" ? "of_aus" : "of_pz";
+  if (ST_QUALI.includes(s)) return f === "frei" ? "bf" : f === "entgegen" ? "be" : f === "aus" ? "wa" : "pz";
+  return "";
+}
+const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1 };
+Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro"], wav: ST_WA, wau: ST_AUS });
+// Diese Status holt das Cockpit für Transa (alle Stufen inkl. Anruf-Ergebnisse)
+const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON])];
+Object.assign(QTITEL, { jetzt: "Bereit fürs Angebot", bf: "Bereit fürs Angebot – Abstellort frei", be: "Bereit fürs Angebot – kommt entgegen", wa: "Wohnort außerhalb der Region",
+  pz: "PLZ unklar – bitte prüfen", of_frei: "Vorgespräch offen – Abstellort frei (laut PLZ)", of_ent: "Vorgespräch offen – kommt entgegen (laut PLZ)",
+  of_aus: "Vorgespräch offen – Wohnort außerhalb", of_pz: "Vorgespräch offen – PLZ unklar",
+  ne: "Im Gespräch – nicht erreicht", kon: "Im Gespräch – Rückruf, Bedenkzeit, in Kontakt", ang: "Im Gespräch – Angebot oder Details raus" });
+// Gleiche Reihenfolge für die Liste in der Mitte und für „Nächster“: in Anruflisten nach Wohnort-Region, mit Vorgespräch zuerst, dann am längsten wartend
+function trSortTopf(L, f) {
+  const regW = (l) => abFall(l)?.region || TRPLZ[l.lead_id]?.region || "ohne Region";
+  const ts = (l) => new Date(l.last_status_change || l.lead_created_at || 0).getTime();
+  const nachRegion = ["jetzt", "bf", "be", "wa", "of_frei", "of_ent"].includes(f);
+  const vg = (l) => (l.abstellort && l.abstellort.fall ? 0 : 1);
+  return [...L].sort((a, b) => (nachRegion ? regW(a).localeCompare(regW(b), "de") || vg(a) - vg(b) : 0) || ts(a) - ts(b));
+}
+const trqList = (f) => {
+  if (!TRQ) return [];
+  if (f === "jetzt") return TRQ.filter((l) => ["bf", "be"].includes(trTopf(l)));
+  if (TOPF[f]) return TRQ.filter((l) => trTopf(l) === f);
+  const w = [].concat(QST[f]).map(stN); return TRQ.filter((l) => w.includes(stN(l.status)));
+};
 let TRSTAND = null;
-const STAND = [ // Reihenfolge und Farben wie im Transa-Report
-  { f: "neu", st: "Unbearbeitet", t: "Neu", c: "#ffffff" }, { f: "mail", st: "Qualifizierung", t: "Mail raus", c: "#facc15" },
-  { f: "erinn", st: "Erinnerungsmail verschickt", t: "Erinnerung", c: "#f97316" }, { f: "kr", st: "Keine Reaktion auf Vor-Quali", t: "Keine Reaktion", c: "#111827" },
-  { f: "jetzt", st: "Online-Vorqualifiziert", t: "Online vorqualifiziert", c: "#2563eb" }, { f: "qual", st: "Qualifiziert", t: "Qualifiziert", c: "#16a34a" },
-  { f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" }];
+const STAND = [ // g = Zeile im Block „Stand“; topf = gezählt nach der Einteilung oben (nicht nach LeadTable-Status)
+  { g: "vg", f: "neu", st: "Unbearbeitet", t: "Neu", c: "#ffffff" }, { g: "vg", f: "mail", st: "Qualifizierung", t: "Mail raus", c: "#facc15" },
+  { g: "vg", f: "erinn", st: "Erinnerungsmail verschickt", t: "Erinnerung", c: "#f97316" }, { g: "vg", f: "kr", st: "Keine Reaktion auf Vor-Quali", t: "Keine Reaktion", c: "#111827" },
+  { g: "vgw", f: "of_frei", topf: 1, st: "Vorgespräch offen, Abstellort laut PLZ frei", t: "frei", c: "#16a34a" }, { g: "vgw", f: "of_ent", topf: 1, st: "Vorgespräch offen, laut PLZ entgegenkommen", t: "entgegen", c: "#ea580c" },
+  { g: "vgw", f: "of_aus", topf: 1, st: "Vorgespräch offen, Wohnort außerhalb der Region", t: "außerhalb", c: "#eab308" }, { g: "vgw", f: "of_pz", topf: 1, st: "Vorgespräch offen, PLZ fehlt oder unbekannt", t: "PLZ unklar", c: "#a3a3a3" },
+  { g: "bereit", f: "bf", topf: 1, st: "Qualifiziert (online oder am Telefon), Abstellort frei – aus dem Vorgespräch oder laut PLZ", t: "Abstellort frei", c: "#16a34a" },
+  { g: "bereit", f: "be", topf: 1, st: "Qualifiziert, kommt Richtung Autobahn entgegen", t: "Kommt entgegen", c: "#ea580c" },
+  { g: "pruef", f: "wa", topf: 1, st: "Qualifiziert, aber Wohnort außerhalb der Region", t: "Wohnort außerhalb", c: "#eab308" },
+  { g: "pruef", f: "pz", topf: 1, st: "Qualifiziert, PLZ fehlt oder unbekannt", t: "PLZ unklar", c: "#a3a3a3" },
+  { g: "gespr", f: "ne", topf: 1, st: "Nicht-Erreicht 1–3", t: "Nicht erreicht", c: "#dc2626" },
+  { g: "gespr", f: "kon", topf: 1, st: "in Kontakt, Bedenkzeit, Möchte Rückruf, Nachgefasst …", t: "Rückruf / Bedenkzeit", c: "#0ea5e9" },
+  { g: "gespr", f: "ang", topf: 1, st: "Angebot oder Details verschickt, Termin", t: "Angebot raus", c: "#16a34a" },
+  { g: "erg", f: "ab", st: "Abstellort bestätigt", t: "Abstellort bestätigt", c: "#15803d" },
+  { g: "erg", f: "vu", st: "Vertrag unterschrieben", t: "Vertrag", c: "#0369a1" }, { g: "erg", f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" },
+  { g: "erg", f: "abs", st: "Absage durch Bewerber", t: "Absage", c: "#6b7280" }, { g: "erg", f: "tp", st: "Talentpool bestätigt", t: "Talentpool", c: "#8b5cf6" }];
+const STAND_GR = [["vg", "Vorgespräch offen"], ["vgw", "Offen – nach Wohnort"], ["bereit", "Bereit fürs Angebot"], ["gespr", "Im Gespräch"], ["pruef", "Prüfen"], ["erg", "Ergebnis"]];
+let standZu = store.get("tc_standzu") === "1";
 function renderStand() {
   const el = $("trStand"); if (!el) return;
   const n = (st) => { if (!TRSTAND) return 0; let k = 0; for (const [s, v] of Object.entries(TRSTAND)) if (stN(s) === stN(st)) k += v; return k; };
-  el.innerHTML = STAND.map((x) => `<button type="button" data-f="${x.f}" class="${qf === x.f ? "on" : ""}" title="${esc(x.st)}"><i style="background:${x.c}"></i>${esc(x.t)} <b>${TRSTAND ? n(x.st) : "…"}</b></button>`).join("");
+  const zahl = (x) => x.topf ? (TRQ ? trqList(x.f).length : null) : (TRSTAND ? n(x.st) : null);
+  const chip = (x) => { const k = zahl(x); return `<button type="button" data-f="${x.f}" class="${qf === x.f ? "on" : ""}${k === 0 && qf !== x.f ? " z" : ""}" title="${esc(x.st)}"><i style="background:${x.c}"></i>${esc(x.t)} <b>${k === null ? "…" : k}</b></button>`; };
+  const gew = STAND.find((x) => x.f === qf);
+  const kopf = `<div class="st-kopf"><button type="button" class="st-zu" data-zu="1" aria-expanded="${!standZu}">${standZu ? "▸" : "▾"} Stand</button>${standZu && gew ? chip(gew) : ""}</div>`;
+  el.innerHTML = kopf + (standZu ? "" : STAND_GR.map(([g, name]) => `<div class="st-zeile"><span class="st-gr">${name}</span>${STAND.filter((x) => x.g === g).map(chip).join("")}</div>`).join(""));
 }
 // Aus der LeadTable-Beschreibung (Make schreibt das Vorgespräch hinein): „Am besten erreichbar“ und Prüfhinweis
 function vgInfo(l) {
@@ -1563,14 +1753,263 @@ function vgInfo(l) {
   const warn = lines.filter((z) => /⚠|bitte prüfen/i.test(z)).map((z) => z.trim()).filter(Boolean);
   return { erreichbar, warn: [...new Set(warn)] };
 }
+// Abstellort aus dem Online-Vorgespräch (transa-gespraech v8, Feld abstellort): kurz für die Listen
+function abKurz(l) {
+  const a = abFall(l); if (!a) return "";
+  let t;
+  if (a.fall === "aus") t = `⚠ ${a.aus ?? (String(a.text || "").match(/ca\. (\d+) km außerhalb/) || [])[1] ?? "?"} km außerhalb der Region`;
+  else t = { frei: "Abstellort frei", entgegen: a.weg ? `kommt ca. ${a.weg} km entgegen` : "kommt entgegen", passt_nicht: "⚠ Abstellort passt nicht", unbekannt: "⚠ PLZ unbekannt" }[a.fall] || "Abstellort: " + (a.text || "");
+  if (a.quelle === "plz") t += " laut PLZ";
+  const ohneAuto = /eigenes auto:\s*nein/i.test(String(l.description || "")) ? " · ⚠ kein eigenes Auto" : "";
+  const s = stN(l.status), woher = s === "qualifiziert" ? " · am Telefon qualifiziert" : s === "online-vorqualifiziert" ? " · Vorgespräch ohne Abstellort-Frage" : "";
+  return t + (a.km != null && a.fall !== "aus" ? ` (${a.km} km zur Autobahn)` : "") + (a.vorschlag ? ", Vorschlag: " + a.vorschlag : a.hilfe ? ", möchte Hilfe" : "") + ohneAuto + woher;
+}
+// ---------- Transa-Board (09.11.2026): Übersicht und Liste in der Mitte, Klick öffnet die Bewerberkarte ----------
+// Nur am PC (ab 861 px). Am Handy bleibt alles wie bisher (Liste links bzw. eigene Karten-Ansicht).
+const trDesk = () => !window.matchMedia("(max-width:860px)").matches;
+const trBoardAn = () => BER === "transa" && trDesk() && !searchRes;
+function setTrMode() { document.body.classList.toggle("trbrd", trBoardAn() && !selId); document.body.classList.toggle("trcrd", trBoardAn() && !!selId); }
+const TB_STUFEN = [
+  { k: "offen", t: "Vorgespräch offen", hint: "Einladung oder Erinnerung ist raus, noch keine Antwort", f: ["mail", "erinn", "kr"], unter: "nach Wohnort (laut PLZ)", f2: ["of_frei", "of_ent", "of_aus", "of_pz"] },
+  { k: "bereit", t: "Bereit fürs Angebot", hint: "online oder am Telefon „ja“, Abstellort passt – anrufen", f: ["bf", "be"], haupt: 1 },
+  { k: "gespr", t: "Im Gespräch", hint: "angerufen – nach dem Ergebnis", f: ["ne", "kon", "ang"] },
+  { k: "pruef", t: "Prüfen", hint: "„ja“, aber Wohnort außerhalb oder PLZ unklar", f: ["wa", "pz"] },
+  { k: "erg", t: "Ergebnis", hint: "abgeschlossen", f: ["ab", "vu", "nq", "abs", "tp"] }];
+const tbX = (f) => STAND.find((x) => x.f === f) || { f, t: f, c: "#999" };
+const TB_KURZ = { mail: "Mail raus", erinn: "Erinnerung", kr: "Keine Reaktion" };
+let tbScroll = 0;
+function tbWohnort(l) { const f = trAnswersMap({ answers: (l.answers && l.answers.length ? l.answers : TRA[l.lead_id]) || [] }); const o = [f.wohnort, f.ort].find((x) => x && !REGWORT.test(x)) || ""; return { plz: f.plz || "", ort: o.replace(/ \(aus PLZ\)$/, "") }; }
+function tbAbst(l) {
+  const a = abFall(l); if (!a) return `<span class="warn">PLZ fehlt</span>`;
+  const q = a.quelle === "plz" ? `<small>laut PLZ</small>` : `<small>aus dem Vorgespräch</small>`;
+  if (a.fall === "frei") return `<span class="ok">frei</span>${a.km != null ? ` <small>· ${a.km} km zur Autobahn</small>` : ""}<br>${q}`;
+  if (a.fall === "entgegen") return `<span class="ent">entgegen${a.weg ? ` ca. ${a.weg} km` : ""}</span>${a.km != null ? ` <small>· ${a.km} km zur Autobahn</small>` : ""}<br>${q}`;
+  if (a.fall === "aus") return `<span class="warn">${a.aus ?? (String(a.text || "").match(/ca\. (\d+) km außerhalb/) || [])[1] ?? "?"} km außerhalb</span>${a.region ? ` <small>· nächste: ${esc(a.region)}</small>` : ""}<br>${q}`;
+  return `<span class="warn">${a.fall === "passt_nicht" ? "passt nicht" : "PLZ unbekannt"}</span><br>${q}`;
+}
+function tbHinweis(l) {
+  const a = abFall(l), s = stN(l.status), h = [];
+  if (trWaGesendet(l)) h.push(`<span class="ok">WhatsApp ✓</span>`);
+  if (a && a.vorschlag) h.push("Vorschlag: " + esc(a.vorschlag)); else if (a && a.hilfe) h.push("möchte Hilfe bei der Suche");
+  if (/eigenes auto:\s*nein/i.test(String(l.description || ""))) h.push(`<span class="warn">kein eigenes Auto</span>`);
+  if (s === "qualifiziert") h.push("am Telefon qualifiziert"); else if (s === "online-vorqualifiziert") h.push("Vorgespräch ohne Abstellort-Frage");
+  else if (ST_OFFEN.includes(s)) { if (s !== stN(ST_WA)) h.push(s === "qualifizierung" ? "Einladung raus" : s === "erinnerungsmail verschickt" ? "Erinnerung raus" : esc(l.status)); }
+  else if (s === stN(ST_AUS)) h.push(/vorgespräch online am/i.test(String(l.description || "")) ? "hat online „ja“ gesagt" : "Vorgespräch noch offen");
+  else if (!(a && a.quelle === "vg")) h.push(esc(l.status));
+  const v = vgInfo(l); if (v.erreichbar) h.push("erreichbar: " + esc(v.erreichbar));
+  return h.join(" · ");
+}
+function renderTrBoard() {
+  setTrMode();
+  const el = $("trBoard"); if (!el || !trBoardAn()) return;
+  const f = qf, cnt = (k) => (TRQ ? trqList(k).length : null);
+  const chip = (k, kurz) => { const x = tbX(k), n = cnt(k); return `<button type="button" data-tb="${k}" class="${f === k ? "on" : ""}${n === 0 && f !== k ? " z" : ""}" title="${esc(x.st || "")}"><i style="background:${x.c}"></i>${esc(kurz || x.t)} <b>${n ?? "…"}</b></button>`; };
+  const stufen = TB_STUFEN.map((st) => {
+    const sum = TRQ ? st.f.reduce((a, k) => a + cnt(k), 0) : "…";
+    return `<div class="tb-st${st.haupt ? " haupt" : ""}"><h3>${st.t} <b>${sum}</b></h3><p class="hint">${st.hint}</p><div class="tb-chips">${st.f.map((k) => chip(k, TB_KURZ[k])).join("")}</div>`
+      + (st.f2 ? `<div class="unter">${st.unter}</div><div class="tb-chips">${st.f2.map((k) => chip(k)).join("")}</div>` : "") + `</div>`;
+  }).join("");
+  let L = TRQ ? trqList(f) : []; if (campF) L = L.filter((l) => l.kampagne === campF);
+  const camps = [...new Set((TRQ || []).map((l) => l.kampagne).filter(Boolean))].sort();
+  const regW = (l) => abFall(l)?.region || TRPLZ[l.lead_id]?.region || "ohne Region";
+  const nachRegion = ["jetzt", "bf", "be", "wa", "of_frei", "of_ent"].includes(f);
+  L = trSortTopf(L, f);
+  const zeile = (l) => { const w = tbWohnort(l); return `<tr class="l" data-id="${l.lead_id}"><td class="n"><b>${esc(l.name || "Ohne Namen")}</b><small>${esc(String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, ""))}</small></td>`
+    + `<td>${esc(w.ort || "–")}<br><small>${esc(w.plz)}</small></td><td>${tbAbst(l)}</td><td>${tbHinweis(l)}</td><td class="alt">${rel(l.last_status_change || l.lead_created_at)}</td></tr>`; };
+  let rows = "", last = null;
+  for (const l of L) { if (nachRegion && regW(l) !== last) { last = regW(l); rows += `<tr class="reg"><td colspan="5">${esc(last)} · ${L.filter((x) => regW(x) === last).length}</td></tr>`; } rows += zeile(l); }
+  const titel = QTITEL[f] || tbX(f).t;
+  el.innerHTML = `<div class="tb-kopf"><h2>Transa-Bewerber</h2><span class="note">${TRQ ? "Abstellort aus dem Vorgespräch, sonst laut PLZ der Bewerbung" : "wird geladen …"}</span>
+      <span class="act"><select class="inp" id="tbCamp"><option value="">Alle Kampagnen</option>${camps.map((c) => `<option ${c === campF ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+      <button class="btn sm" type="button" id="tbOv">Scoring-Übersicht</button></span></div>
+    <div class="tb-stufen">${stufen}</div>
+    <div class="tb-titel"><h3>${esc(titel)}</h3>${tbAktion(f, L)}<span>${TRQ ? L.length + (L.length === 1 ? " Bewerber" : " Bewerber") : ""}${nachRegion ? " · nach Wohnort-Region" : ""} · Klick öffnet die Karte</span></div>
+    ${!TRQ ? `<div class="sk"><i></i><i></i><i></i></div>` : !L.length ? `<div class="empty">Niemand in dieser Liste${campF ? " für diese Kampagne" : ""}.</div>`
+      : `<table class="tb-tab"><thead><tr><th>Name</th><th>Wohnort</th><th>Abstellort</th><th>Hinweis</th><th>seit</th></tr></thead><tbody>${rows}</tbody></table>`}`;
+}
+// ---------- WhatsApp-Serie und „Wohnort außerhalb Umkreis“ für ganze Listen (09.11.2026) ----------
+const trWaGesendet = (l) => /whatsapp/i.test(String(l.followup_note || "")) || stN(l.status) === stN(ST_WA);
+const WA_LISTEN = ["jetzt", "bf", "be", "of_frei", "of_ent"], AUS_LISTEN = ["wa", "of_aus"];
+function tbAktion(f, L) {
+  if (!TRQ) return "";
+  if (WA_LISTEN.includes(f)) { const n = L.filter((l) => l.phone && !trWaGesendet(l)).length;
+    return n ? `<button class="btn sm go" type="button" id="tbWa" title="Je Bewerber öffnet sich WhatsApp mit fertigem Text. Danach: Notiz in LeadTable, Wiedervorlage am nächsten Werktag 9 Uhr, Offene bekommen den Status „Per Whatsapp bearbeitet“ (keine Erinnerungs-Mails mehr).">${ICON.wa} WhatsApp-Serie (${n})</button>` : `<span class="ok" style="font-size:12.5px">alle mit WhatsApp ✓</span>`; }
+  if (AUS_LISTEN.includes(f)) { const n = L.filter((l) => stN(l.status) !== stN(ST_AUS)).length;
+    return n ? `<button class="btn sm" type="button" id="tbAus" title="Setzt in LeadTable den Status „${ST_AUS}“ und schreibt eine Notiz mit PLZ und Entfernung. Offene bekommen danach keine Erinnerungs-Mails mehr.">Alle auf „${ST_AUS}“ (${n})</button>` : "";}
+  return "";
+}
+const waVor = (l) => { const v = String(l.name || "").trim().split(/\s+/)[0] || ""; return /[\d@]/.test(v) || v.length < 2 ? "" : v.charAt(0).toUpperCase() + v.slice(1); };
+function naechsterWerktag9() { const d = new Date(); d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d; }
+function waSerieText(l, link) {
+  const v = waVor(l), ort = tbWohnort(l).ort, hi = v ? `Hi ${v}` : "Hi";
+  const offen = ST_OFFEN.includes(stN(l.status));
+  if (!offen) return `${hi}, hier ist Dennis von TALENTJAGD. Danke für deine Antworten zur Stelle als LKW-Fahrer im Fernverkehr. ${ort ? `Von ${ort} aus passt das gut.` : "Dein Wohnort passt gut."} Ich würde dich gern kurz anrufen und alles Weitere besprechen. Wann passt es dir am besten: vormittags, nachmittags oder abends?`;
+  return `${hi}, hier ist Dennis von TALENTJAGD. Du hattest dich als LKW-Fahrer im Fernverkehr beworben. ${ort ? `Von ${ort} aus würde das gut passen.` : "Von deinem Wohnort aus würde das gut passen."} Hast du noch Interesse? Dann ruf ich dich gern kurz an. Wann passt es dir am besten?`
+    + (link ? `\n\nWenn du magst, mach vorher das 2-Minuten-Vorgespräch: ${link}` : "");
+}
+let WS = null; // { liste, i, f, erledigt, fehler }
+function waSerieStart() {
+  const L = trSortTopf(trqList(qf), qf).filter((l) => (!campF || l.kampagne === campF) && l.phone && !trWaGesendet(l));
+  if (!L.length) { toast("Niemand ohne WhatsApp in dieser Liste"); return; }
+  WS = { liste: L, i: 0, erledigt: 0, fehler: 0 };
+  if (!$("waSerie")) { const d = document.createElement("div"); d.id = "waSerie"; d.className = "wsov"; document.body.appendChild(d);
+    d.addEventListener("click", waSerieKlick); }
+  $("waSerie").classList.add("show"); waSerieZeigen();
+}
+async function waSerieZeigen() {
+  if (!WS) return;
+  const el = $("waSerie");
+  if (WS.i >= WS.liste.length) {
+    el.innerHTML = `<div class="wsbox"><h3>Fertig</h3><p>${WS.erledigt} WhatsApp geöffnet${WS.fehler ? `, bei ${WS.fehler} hat das Speichern in LeadTable nicht geklappt (Meldung oben)` : ""}.</p><p class="trab-hint">Am nächsten Werktag ab 9 Uhr stehen alle als Wiedervorlage an. Die Liste in der Mitte zeigt „WhatsApp ✓“.</p><div class="row" style="gap:8px;justify-content:flex-end"><button class="btn blue" data-ws="zu">Schließen</button></div></div>`;
+    loadTrq(); loadWork(); return;
+  }
+  const l = WS.liste[WS.i], offen = ST_OFFEN.includes(stN(l.status)), w = tbWohnort(l);
+  el.innerHTML = `<div class="wsbox"><div class="wsk"><b>WhatsApp-Serie</b><span>${WS.i + 1} von ${WS.liste.length}</span><button class="btn sm quiet" data-ws="zu">Beenden</button></div>
+    <div class="wsmeter"><i style="width:${Math.round(WS.i / WS.liste.length * 100)}%"></i></div>
+    <h3>${esc(l.name || "Ohne Namen")}</h3><p class="trab-hint">${esc(w.ort || "")} ${esc(w.plz || "")} · ${esc(l.phone || "")} · ${offen ? "Vorgespräch noch offen" : "hat schon „ja“ gesagt"}</p>
+    <textarea class="inp" id="wsText" rows="7">${offen ? "Link zum Vorgespräch wird geholt …" : esc(waSerieText(l))}</textarea>
+    <div class="row" style="gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn" data-ws="skip">Überspringen</button><button class="btn go" data-ws="send" id="wsSend" ${offen ? "disabled" : ""}>${ICON.wa} In WhatsApp öffnen, dann weiter</button></div>
+    <p class="trab-hint">Danach: Notiz in LeadTable, Wiedervorlage am nächsten Werktag 9 Uhr${offen ? ", Status „Per Whatsapp bearbeitet“ (keine Erinnerungs-Mails mehr)" : ""}.</p></div>`;
+  if (offen) {
+    let link = ""; try { link = (await api("transa_vg_link", { id: l.lead_id })).link || ""; } catch {}
+    if (!WS || WS.liste[WS.i] !== l || !$("wsText")) return;
+    $("wsText").value = waSerieText(l, link); $("wsSend").disabled = false;
+  }
+}
+function waSerieKlick(e) {
+  const b = e.target.closest("[data-ws]"); if (!b || !WS) return;
+  const a = b.dataset.ws;
+  if (a === "zu") { $("waSerie").classList.remove("show"); WS = null; loadTrq(); return; }
+  if (a === "skip") { WS.i++; waSerieZeigen(); return; }
+  if (a === "send") {
+    const l = WS.liste[WS.i], text = $("wsText").value.trim(); if (!text) return;
+    window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+    const heute = new Date().toLocaleDateString("de-DE"), at = naechsterWerktag9().toISOString(), note = `WhatsApp am ${heute} – anrufen`;
+    const offen = ST_OFFEN.includes(stN(l.status)) && stN(l.status) !== stN(ST_WA);
+    (offen ? api("lead_status", { id: l.lead_id, status: ST_WA, followup: { at, note } }) : api("lead_followup", { id: l.lead_id, at, note }))
+      .then(() => { l.followup_note = note; if (offen) l.status = ST_WA; return api("lead_note", { id: l.lead_id, text: `WhatsApp vor dem Anruf verschickt am ${heute}.` }); })
+      .catch((err) => { WS && WS.fehler++; toast(`${l.name}: ${err.message}`, true); });
+    WS.erledigt++; WS.i++; waSerieZeigen();
+  }
+}
+async function ausSetzen() {
+  const L = trqList(qf).filter((l) => (!campF || l.kampagne === campF) && stN(l.status) !== stN(ST_AUS));
+  if (!L.length) return;
+  if (!confirm(`${L.length} Bewerber in LeadTable auf „${ST_AUS}“ setzen?\n\nOffene bekommen danach keine Erinnerungs-Mails mehr. Zu jedem kommt eine Notiz mit PLZ und Entfernung.`)) return;
+  const b = $("tbAus"); if (b) b.disabled = true;
+  let ok = 0, err = 0;
+  for (const l of L) {
+    const a = abFall(l), km = a ? (a.aus ?? (String(a.text || "").match(/ca\. (\d+) km außerhalb/) || [])[1]) : null;
+    try {
+      await api("lead_status", { id: l.lead_id, status: ST_AUS });
+      api("lead_note", { id: l.lead_id, text: `Wohnort außerhalb des Umkreises${a && a.plz ? ` (PLZ ${a.plz}${km != null ? `, ca. ${km} km außerhalb` : ""}${a.region ? `, nächste Region ${a.region}` : ""})` : ""}. Status aus dem Cockpit gesetzt.` }).catch(() => {});
+      l.status = ST_AUS; ok++;
+    } catch (e) { err++; if (err === 1) toast(e.message, true); if (/status/i.test(e.message) && err >= 3) break; }
+    if (b) b.textContent = `läuft … ${ok + err} von ${L.length}`;
+  }
+  toast(`${ok} auf „${ST_AUS}“ gesetzt${err ? `, ${err} nicht geklappt` : ""}`, !!err);
+  loadTrq();
+}
+// „Letzte Ereignisse“ (09.11.2026): Klick öffnet den Bewerber. Die IDs kommen aus cockpit-plus (ev_ids), höchstens einmal pro Minute.
+let EVID = null, EVID_AT = 0;
+async function evOeffnen(at) {
+  try {
+    if (!EVID || Date.now() - EVID_AT > 60e3) { EVID = (await api("ev_ids")).ev || []; EVID_AT = Date.now(); }
+    let x = EVID.find((e) => e.received_at === at);
+    if (!x) { EVID = (await api("ev_ids")).ev || []; EVID_AT = Date.now(); x = EVID.find((e) => e.received_at === at); }
+    if (x && x.lead_id) openLead(x.lead_id); else toast("Bewerber nicht gefunden – ggf. über die Suche öffnen", true);
+  } catch (e) { toast(e.message, true); }
+}
+$("feed").addEventListener("click", (e) => { const ev = e.target.closest(".ev[data-at]"); if (ev) evOeffnen(ev.dataset.at); });
+$("feed").addEventListener("keydown", (e) => { const ev = e.target.closest(".ev[data-at]"); if (ev && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); evOeffnen(ev.dataset.at); } });
+function trZurListe() { selId = null; cur = null; renderTrBoard(); renderQueue(); requestAnimationFrame(() => window.scrollTo({ top: tbScroll })); }
+$("trBoard").addEventListener("click", (e) => {
+  const c = e.target.closest("[data-tb]");
+  if (c) { qf = c.dataset.tb; store.set("tc_trbrd", qf); $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderTrBoard(); renderStand(); renderQueue(); return; }
+  if (e.target.closest("#tbOv")) { $("trOvBtn").click(); return; }
+  if (e.target.closest("#tbWa")) { waSerieStart(); return; }
+  if (e.target.closest("#tbAus")) { ausSetzen(); return; }
+  const r = e.target.closest("tr.l"); if (r) { tbScroll = window.scrollY; openLead(r.dataset.id); window.scrollTo({ top: 0 }); }
+});
+$("trBoard").addEventListener("change", (e) => { if (e.target.id === "tbCamp") { campF = e.target.value; renderTrBoard(); renderQueue(); } });
+$("card").addEventListener("click", (e) => { if (e.target.closest("[data-trback]")) trZurListe(); });
+$("listNote").addEventListener("click", (e) => { if (e.target.closest("#tbWaM")) waSerieStart(); else if (e.target.closest("#tbAusM")) { ausSetzen(); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("trcrd") && !document.querySelector(".ov.show, dialog[open], .modal.show") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) trZurListe(); });
+window.matchMedia("(max-width:860px)").addEventListener("change", () => renderTrBoard());
+// ---------- Transa in der Bewerberkarte (09.11.2026): Wohnort-Karte und Abstellort aus dem Telefonat ----------
+let LF = null, trMapObj = null; const trAbDraft = {};
+function leaflet() {
+  if (LF) return LF;
+  LF = new Promise((ok, no) => {
+    const c = document.createElement("link"); c.rel = "stylesheet"; c.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(c);
+    const sc = document.createElement("script"); sc.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; sc.onload = () => ok(window.L); sc.onerror = () => { LF = null; no(new Error("Karte nicht erreichbar")); };
+    document.head.appendChild(sc);
+  });
+  return LF;
+}
+function trAbBlock(l) {
+  if (!l || !isTransa(l)) return `<div id="trAb" hidden></div>`;
+  const t = (TRQ || []).find((x) => x.lead_id === l.lead_id) || l, p = TRPLZ[l.lead_id];
+  const w = tbWohnort(t.answers && t.answers.length ? t : l), a = abFall(t);
+  const lage = a ? tbAbst(t).replace(/<br>/g, " · ") : `<span class="warn">keine PLZ</span>`;
+  const vor = a && a.vorschlag ? a.vorschlag : "";
+  if (p && p.lat != null) setTimeout(() => trMapInit(l.lead_id), 0);
+  return `<div id="trAb" class="trab">
+    <div class="trab-kopf"><b>${esc(w.ort || "Wohnort unbekannt")}</b> <span class="trab-plz">${esc(w.plz)}</span><span class="trab-lage">${lage}</span></div>
+    ${p && p.lat != null ? `<div id="trMap" class="trmap"></div><div class="trab-hint">Gestrichelter Kreis = 20 km Luftlinie um den Wohnort. Liegt eine Autobahn-Auffahrt im Kreis, wählt er den Abstellort frei.</div>` : ""}
+    <label class="trab-lab" for="trAbIn">Möglicher Abstellort (aus dem Telefonat)</label>
+    <div class="trab-row"><input class="inp" id="trAbIn" autocomplete="off" placeholder="z. B. Autohof Bünde, Parkplatz Industriegebiet Nord …" value="${esc(trAbDraft[l.lead_id] ?? "")}">
+      <button class="btn" type="button" id="trAbSave" title="Zeile „Abstellort (Telefonat …)“ unten an die LeadTable-Beschreibung anhängen">In Beschreibung</button>
+      <button class="btn go" type="button" id="trAbOk" title="In die Beschreibung schreiben und Status „Abstellort bestätigt“ setzen">+ Abstellort bestätigt</button></div>
+    ${vor ? `<div class="trab-hint">Vorschlag aus dem Vorgespräch: <b>${esc(vor)}</b> <button type="button" class="linkbtn" id="trAbVor">übernehmen</button></div>` : ""}
+  </div>`;
+}
+async function trMapInit(id) {
+  const el = $("trMap"), p = TRPLZ[id]; if (!el || !p || p.lat == null) return;
+  let L; try { L = await leaflet(); } catch { el.outerHTML = `<div class="trab-hint">Karte gerade nicht ladbar.</div>`; return; }
+  if (!document.body.contains(el) || !cur || cur.lead_id !== id) return;
+  if (trMapObj) { try { trMapObj.remove(); } catch {} trMapObj = null; }
+  const coarse = window.matchMedia("(pointer: coarse)").matches; // Handy: Karte steht still, damit die Seite scrollt; Zoom über + / −
+  const m = L.map(el, { scrollWheelZoom: false, dragging: !coarse, touchZoom: !coarse, doubleClickZoom: true }).setView([p.lat, p.lon], 9);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 13, attribution: "© OpenStreetMap" }).addTo(m);
+  L.circle([p.lat, p.lon], { radius: 20000, color: "#16a34a", weight: 2, dashArray: "6 6", fillOpacity: 0.05 }).addTo(m);
+  L.circleMarker([p.lat, p.lon], { radius: 7, color: "#fff", weight: 2, fillColor: "#007AFF", fillOpacity: 1 }).addTo(m).bindTooltip("Wohnort (Mitte der PLZ " + p.plz + ")");
+  trMapObj = m;
+}
+async function trAbSpeichern(bestaetigt) {
+  if (!cur) return;
+  const l = cur, v = $("trAbIn").value.trim();
+  if (!v) { toast("Bitte zuerst den Abstellort eintragen", true); $("trAbIn").focus(); return; }
+  const btns = [$("trAbSave"), $("trAbOk")]; btns.forEach((b) => b && (b.disabled = true));
+  try {
+    const line = `Abstellort (Telefonat ${new Date().toLocaleDateString("de-DE")}): ${v}`;
+    const base = selId === l.lead_id ? descBase : (l.description || "");
+    await api("lead_description", { id: l.lead_id, text: (base ? base.trim() + "\n" : "") + line, base });
+    if (bestaetigt) await api("lead_status", { id: l.lead_id, status: "Abstellort bestätigt" });
+    delete trAbDraft[l.lead_id];
+    toast(bestaetigt ? `${l.name || "Bewerber"}: Abstellort gespeichert, Status „Abstellort bestätigt“` : "Abstellort steht jetzt in der LeadTable-Beschreibung");
+    const g = await api("lead_get", { id: l.lead_id }); if (selId === l.lead_id) { cur = g.lead; renderCard(g); }
+    loadTrq(); if (bestaetigt) { loadWork(); loadStats(); }
+  } catch (e) { toast(e.message, true); btns.forEach((b) => b && (b.disabled = false)); }
+}
+$("card").addEventListener("click", (e) => {
+  if (e.target.closest("#trAbSave")) trAbSpeichern(false);
+  else if (e.target.closest("#trAbOk")) trAbSpeichern(true);
+  else if (e.target.closest("#trAbVor")) { const t = (TRQ || []).find((x) => x.lead_id === cur?.lead_id) || cur; const a = abFall(t); if (a && a.vorschlag) { $("trAbIn").value = a.vorschlag; trAbDraft[cur.lead_id] = a.vorschlag; $("trAbIn").focus(); } }
+});
+$("card").addEventListener("input", (e) => { if (e.target.id === "trAbIn" && cur) trAbDraft[cur.lead_id] = e.target.value; });
+$("card").addEventListener("keydown", (e) => { if (e.target.id === "trAbIn" && e.key === "Enter") { e.preventDefault(); trAbSpeichern(false); } });
 async function loadTrq() {
   if (BER !== "transa") return;
   try {
-    const r = await api("transa_status_liste", { alle: true }); TRQ = r.leads || []; TRSTAND = r.stand || null;
+    const plz = Date.now() - TRPLZ_AT > 6e5 ? api("abst_plz").then((p) => { TRPLZ = p.abst || {}; TRPLZ_AT = Date.now(); }).catch(() => {}) : null;
+    const r = await api("transa_status_liste", { alle: true, stati: TR_HOLEN, mitText: true }); await plz; TRQ = r.leads || []; TRSTAND = r.stand || null;
     const n1 = trqList("qual").length, n2 = trqList("nq").length, n0 = trqList("jetzt").length;
     $("qualN").textContent = n1 || ""; $("qualN").hidden = !n1; $("nqN").textContent = n2 || ""; $("nqN").hidden = !n2;
     $("jetztN").textContent = n0 || ""; $("jetztN").hidden = !n0;
-    renderStand();
+    if (cur && isTransa(cur) && $("trAb") && !$("trAbIn")?.matches(":focus")) $("trAb").outerHTML = trAbBlock(cur);
+    for (const k of ["abs", "tp"]) { const n = trqList(k).length; $(k + "N").textContent = n || ""; $(k + "N").hidden = !n; }
+    renderStand(); renderTrBoard(); if (typeof TRK !== "undefined" && TRK) renderTrKpi();
     if (QST[qf]) renderQueue();
   } catch (e) { if (QST[qf]) toast(e.message, true); }
 }
@@ -1599,8 +2038,115 @@ function trSortList(L) {
     (trSort === "alter" ? ts(a.l) - ts(b.l) : trSort === "neu" ? ts(b.l) - ts(a.l) : (rang(a.pa) - rang(b.pa)) || ts(a.l) - ts(b.l)));
   return w.map((x) => x.l);
 }
+const MAIL_WARTE = ["infoverschickt", "erinnerungsmailverschickt"];
+const isMailWarte = (l) => MAIL_WARTE.includes(norm(l.status));
+
+// ---------- Ihro-Anrufliste: Entfernung zum Startpunkt, Querabgleich, WhatsApp (09.11.2026) ----------
+// Startpunkte und Fakten wie im Skill ihro-stellen und in der Detail-Mail (IHRO LPS/mail/bauen_mails.py). Ändert sich dort etwas, hier nachziehen.
+const IH_START = { landau: [[49.1983, 8.1123]], morsbach: [[50.8643, 7.7283]], sulz: [[48.3618, 8.6314]], neuburg: [[48.7456, 11.188]],
+  lampertheim: [[49.6239, 8.4093]], kraichgau: [[49.1956, 8.9274], [49.1369, 8.9096], [49.0435, 8.703], [49.0069, 8.4034], [48.9262, 8.4056]], miesterhorst: [[52.4602, 11.1418]] };
+const IH_NAME = { landau: "Landau", morsbach: "Morsbach", sulz: "Sulz", neuburg: "Neuburg", lampertheim: "Lampertheim", kraichgau: "Kraichgau", miesterhorst: "Miesterhorst" };
+const IH_MSG = { landau: "Landau in der Pfalz", morsbach: "Morsbach", sulz: "Sulz am Neckar", neuburg: "Neuburg an der Donau", lampertheim: "Lampertheim",
+  kraichgau: "Kraichgau (Start in Ittlingen, Eppingen, Bretten, Karlsruhe oder Ettlingen)", miesterhorst: "Miesterhorst bei Gardelegen" };
+const IH_TOUR = {
+  landau: { strecke: "Landau – Düsseldorf – Landau", lkw: "Jumbo-Hängerzug, fester Platz in Landau", tag: ["Montag bis Freitag, Start 10 Uhr, Feierabend gegen 22:30 Uhr", "Ein Kunde in Düsseldorf, immer dieselbe Strecke", "Kein Be- und Entladen: Plane auf, Plane zu, Ladung sichern", "Keine Nacht im LKW, Samstag und Sonntag frei"], nacht: true },
+  morsbach: { strecke: "Morsbach – Düsseldorf – Morsbach", lkw: "Jumbo-Hängerzug, zwei Fahrer teilen sich einen LKW (Übergabe mittags in Morsbach)", tag: ["Wechsel jede Woche: Frühschicht ab 3:30 Uhr oder Spätschicht ab 12 Uhr, jeweils etwa 9 Stunden", "Ein Kunde in Düsseldorf", "Kein Be- und Entladen", "Keine Nacht im LKW"], nacht: true },
+  sulz: { strecke: "Touren ab Sulz am Neckar, 3 bis 4 Kunden pro Tour", lkw: "Sattelzug mit Megatrailer", tag: ["Start ab 4 Uhr, je nach Tour, Schicht etwa 10 Stunden", "Vorladen in Sulz, nachmittags Zustellung in Sulz", "Be- und Entladen mit dem Stapler machen Sie selbst. Kein Staplerschein? Den machen Sie kostenlos bei Ihro", "Keine Nacht im LKW"], nacht: true, stapler: true },
+  neuburg: { strecke: "Touren ab Neuburg an der Donau, wechselnde Kunden", lkw: "Sattelzug mit Megatrailer", tag: ["Start ab 4 Uhr, je nach Tour, Schicht etwa 10 Stunden", "Vorladen in Neuburg, nachmittags Zustellung in Neuburg", "Be- und Entladen mit dem Stapler machen Sie selbst. Kein Staplerschein? Den machen Sie kostenlos bei Ihro", "Keine Nacht im LKW"], nacht: true, stapler: true },
+  lampertheim: { strecke: "Zwei Schleifen ab Lampertheim", lkw: "Sattelzug mit Lang-Trailer, zwei Fahrer teilen sich einen LKW (Übergabe mittags in Lampertheim)", tag: ["Wechsel jede Woche: Süd 3 bis 12 Uhr (Lampertheim – Mutlangen – Lampertheim) oder Nord 13 bis 24 Uhr (Lampertheim – Düsseldorf – Lampertheim)", "Kein Be- und Entladen", "Keine Nacht im LKW"], nacht: true },
+  kraichgau: { strecke: "Ittlingen – Bischweier (bei Rastatt), etwa 83 km, immer dieselbe Strecke", lkw: "Jumbo-Hängerzug oder Sattelzug mit Lang-Trailer, je nach Einsatz", tag: ["Start um 7 Uhr oder um 13 Uhr", "Start in Ittlingen oder direkt an der Strecke: Eppingen, Bretten, Karlsruhe, Ettlingen", "Sie laden nicht selbst: Plane auf, Plane zu, Ladung sichern", "Keine Nacht im LKW"], nacht: true },
+  miesterhorst: { strecke: "Miesterhorst – Berlin – Miesterhorst", lkw: "E-Sattelzug mit Megatrailer, elektrisch nach Berlin", tag: ["Montag bis Freitag, 6 bis 16 Uhr", "Eine Entladestelle in Berlin pro Tag", "Sie fahren nur: kein Stapler, kein Be- und Entladen", "Keine Nacht im LKW, Samstag und Sonntag frei"], nacht: false },
+};
+let ORTE = {}; // lead_id -> { tour, ort, lat, lon, label, gesucht } aus der Funktion ihro-anrufliste
+const ihFahrt = (km) => Math.round(km * 1.3 / 5) * 5; // Faustregel: Luftlinie mal 1,3 ≈ Strecke mit dem Auto
+function ihKm(a, b) { const r = 6371, p1 = a[0] * Math.PI / 180, p2 = b[0] * Math.PI / 180, dp = p2 - p1, dl = (b[1] - a[1]) * Math.PI / 180;
+  const h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2; return 2 * r * Math.asin(Math.sqrt(h)); }
+function ihDist(id) {
+  const o = ORTE[id]; if (!o || (o.ort && !o.gesucht)) return null; // noch nicht gesucht: „wird gesucht“ statt „nicht gefunden“
+  if (o.lat == null) return { o, own: null, alt: null, eff: null };
+  const d = {}; for (const [k, pts] of Object.entries(IH_START)) d[k] = Math.min(...pts.map((p) => ihKm([o.lat, o.lon], p)));
+  const own = o.tour ? d[o.tour] : null;
+  let alt = null; for (const [k, v] of Object.entries(d)) if (k !== o.tour && (!alt || v < alt.km)) alt = { k, km: v };
+  if (!(alt && own != null && alt.km + 15 <= own && own > 25)) alt = o.tour ? null : alt; // nur, wenn eine andere Tour deutlich näher liegt
+  return { o, own, alt, eff: alt ? alt.km : own };
+}
+function ihSub(l) {
+  const x = ihDist(l.lead_id); if (!x) return undefined;
+  if (x.own == null && !x.alt) return `${esc(l.kampagne)} · ${x.o.ort ? esc(x.o.ort) + " · Ort prüfen" : "kein Wohnort"}`;
+  const f = x.own != null ? ihFahrt(x.own) : null;
+  return `${esc(x.o.ort)}${f != null ? ` · <b class="ihkm ${f <= 30 ? "g" : f <= 55 ? "y" : "r"}">ca. ${f} km</b> bis ${IH_NAME[x.o.tour]}` : ""}${x.alt ? ` · <b class="ihalt">näher an ${IH_NAME[x.alt.k]}</b>` : ""}`;
+}
+let ihLaden = 0;
+async function loadOrte() {
+  const ids = (WALL?.arbeitsliste || []).filter((l) => bereichOf(l.campaign || l.kampagne) === "ihro" && !(ORTE[l.lead_id]?.gesucht)).map((l) => l.lead_id);
+  if (cur && !ORTE[cur.lead_id]?.gesucht) ids.push(cur.lead_id);
+  if (!ids.length || ihLaden) return;
+  ihLaden = 1;
+  try {
+    const r = await api("ihro_orte", { ids: [...new Set(ids)] });
+    Object.assign(ORTE, r.orte || {});
+    renderQueue();
+    if (cur && ORTE[cur.lead_id] && $("ihBlock")) $("ihBlock").outerHTML = ihBlock(cur);
+    // Neue Orte sucht die Funktion in Sechserpaketen; höchstens 10 Runden je Laden, damit nichts endlos weiterläuft
+    if (r.offen && (loadOrte.runden = (loadOrte.runden || 0) + 1) < 10) setTimeout(() => { ihLaden = 0; loadOrte(); }, 1500); else { ihLaden = 0; loadOrte.runden = 0; }
+  } catch { ihLaden = 0; }
+}
+const ihVor = (l) => String(l.name || "").trim().split(/\s+/)[0] || "";
+const ihAnrede = (l) => ihVor(l) ? `Guten Tag ${ihVor(l)}` : "Guten Tag";
+const IH_ENDE = "\n\nViele Grüße\nDennis Mende\nHans Ihro GmbH · 07942 9101-66";
+function ihText(l, art) {
+  const x = ihDist(l.lead_id), t = x?.o?.tour, ort = x?.o?.ort;
+  if (art === "alt" && x?.alt)
+    return `${ihAnrede(l)}, hier ist Dennis Mende von der Hans Ihro GmbH. Ich hatte Ihnen nach Ihrer Bewerbung eine E-Mail mit allen Details zur Tagestour ab ${IH_MSG[t] || l.kampagne} geschickt. ` +
+      `Mir ist aufgefallen: ${ort ? "Von " + ort + " aus" : "Für Sie"} liegt unser Startpunkt ${IH_MSG[x.alt.k]} näher. Dort suchen wir ebenfalls Fahrer für Tagestouren, mit denselben Leistungen.\n\n` +
+      `Wäre das interessant für Sie? Dann telefonieren wir gern kurz. Wann passt es Ihnen?` + IH_ENDE;
+  if (art === "det") {
+    const k = t, tr = IH_TOUR[k]; if (!tr) return "";
+    const geld = ["Grundgehalt: 3.000 € brutto im Monat", "Spesen: je nach Schichtlänge 14 bis 28 € pro Tag"];
+    if (tr.nacht) geld.push("Nachtzuschlag: 25 % für Arbeit zwischen 20 und 6 Uhr");
+    if (tr.stapler) geld.push("Staplerzulage: 200 € im Monat");
+    geld.push("Ticketplus: 50 € netto jeden Monat", "Urlaub: 26 Arbeitstage plus 1 Tag Ausgleich für Schulungen", "Privat-PKW über das Mitarbeiter-Leasing möglich");
+    const b = (a) => a.map((s) => "• " + s).join("\n");
+    return `${ihAnrede(l)}, gern schicke ich Ihnen die Details hier noch einmal direkt:\n\n*Tagestour ab ${IH_MSG[k]}*\n${tr.strecke}\nLKW: ${tr.lkw}\n${b(tr.tag)}\n\n` +
+      `*Gehalt und Leistungen*\n${b(geld)}\n\n*So geht es weiter*\n1. Kurzes Telefonat mit mir\n2. Mitfahrt auf der Tour, bevor Sie etwas unterschreiben\n3. Vertrag und Einweisung: ein Tag in Neuenstein, ohne Übernachtung\n4. 1 bis 2 Tage bezahlte Einarbeitung auf Ihrer Tour mit einem Fahrertrainer\n\n` +
+      `Beginn kurzfristig oder später möglich. Voraussetzung: Führerschein CE mit Schlüsselzahl 95 und Fahrerkarte.\n\nKlingt das gut für Sie? Dann sagen Sie mir kurz, wann ich Sie anrufen kann.` + IH_ENDE;
+  }
+  return `${ihAnrede(l)}, hier ist Dennis Mende von der Hans Ihro GmbH. Vielen Dank noch einmal für Ihre Bewerbung! ` +
+    `Ich hatte Ihnen per E-Mail alle Details zur Tagestour ab ${IH_MSG[t] || l.kampagne} geschickt, auch das Gehalt, aber noch keine Antwort von Ihnen bekommen.\n\n` +
+    `Ist das Angebot interessant für Sie? Dann telefonieren wir gern kurz. Wann passt es Ihnen am besten?` + IH_ENDE;
+}
+function ihBlock(l) {
+  if (!l || bereichOf(l.campaign || l.kampagne) !== "ihro" || !l.phone) return `<div id="ihBlock" hidden></div>`;
+  const x = ihDist(l.lead_id), t = x?.o?.tour;
+  const f = x?.own != null ? ihFahrt(x.own) : null;
+  const lage = !x ? "Wohnort wird gesucht …" : x.own == null && !x.alt ? `${x.o.ort ? esc(x.o.ort) + ": Ort nicht gefunden, bitte prüfen" : "Kein Wohnort angegeben"}`
+    : `${esc(x.o.ort)}${f != null ? ` · <b class="ihkm ${f <= 30 ? "g" : f <= 55 ? "y" : "r"}">ca. ${f} km</b> bis ${IH_NAME[t]}` : ""}${x.alt ? ` · <b class="ihalt">${f != null ? "näher an" : "nächster Startpunkt:"} ${IH_NAME[x.alt.k]}: ca. ${ihFahrt(x.alt.km)} km</b>` : ""}`;
+  return `<div id="ihBlock" class="ihblock"><div class="ihlage">${lage}<span class="ihhint">mit dem Auto geschätzt</span></div><div class="ihbtns">
+    <button class="btn go" data-ihwa="nach">${ICON.wa}Nachfragen</button>
+    ${t ? `<button class="btn" data-ihwa="det">${ICON.wa}Details senden</button>` : ""}
+    ${x?.alt ? `<button class="btn blue" data-ihwa="alt">${ICON.wa}${IH_NAME[x.alt.k]} anbieten</button>` : ""}</div>
+    <div class="ihhint">Nach dem Senden: Status „Per Whatsapp bearbeitet“, Wiedervorlage in 2 Werktagen.</div></div>`;
+}
+function in2Werktagen() { const d = new Date(); let n = 0; while (n < 2) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; } d.setHours(9, 0, 0, 0); return d; }
+async function ihSend(art) {
+  const l = cur; if (!l) return;
+  const text = ihText(l, art); if (!text) return;
+  window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  const was = { nach: "Nachfrage", det: "Details zur Tour", alt: "Angebot Tour " + (IH_NAME[ihDist(l.lead_id)?.alt?.k] || "") }[art];
+  const heute = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  api("lead_note", { id: l.lead_id, text: `WhatsApp verschickt (${was}) am ${heute}.` }).catch(() => {});
+  // Nur Bewerber, die noch nicht geantwortet haben, wechseln den Status (Möchte Rückruf, Tendenz usw. bleiben)
+  if (!(MAIL_WARTE.includes(norm(l.status)) || ["unbearbeitet", "anrufen", "perwhatsappbearbeitet"].includes(norm(l.status)))) { toast(`WhatsApp geöffnet, Notiz gespeichert`); return; }
+  try {
+    await api("lead_status", { id: l.lead_id, status: "Per Whatsapp bearbeitet", followup: { at: in2Werktagen().toISOString(), note: `WhatsApp (${was}) am ${heute} – keine Antwort? → anrufen` } });
+    toast(`${l.name || "Bewerber"}: WhatsApp verschickt, wieder dran ${when(in2Werktagen().toISOString())}`);
+    const L = filtered(), n = L.find((x) => x.lead_id !== l.lead_id);
+    await loadWork();
+    if (qf === "imail" && n) openLead(n.lead_id);
+  } catch (e) { toast(e.message, true); }
+}
 function filtered() {
-  if (!searchRes && QST[qf]) { let Q = trqList(qf); if (campF) Q = Q.filter((l) => l.kampagne === campF); return Q; }
+  if (!searchRes && QST[qf]) { let Q = trSortTopf(trqList(qf), qf); if (campF) Q = Q.filter((l) => l.kampagne === campF); return Q; }
   let L = searchRes ?? (qf === "ptplan" ? (W.probetag_planen || []) : W.arbeitsliste);
   if (!searchRes) {
     const now = new Date();
@@ -1608,12 +2154,16 @@ function filtered() {
     if (qf === "rueckruf") L = L.filter((l) => statusKind(l.status) === "rueckruf");
     if (qf === "neu") L = L.filter((l) => statusKind(l.status) === "neu");
     if (qf === "ne") L = L.filter((l) => statusKind(l.status) === "ne");
+    // Mail-Automatik (06.11.2026): wer die Detail-Mail noch nicht bestätigt hat, steht nicht unter „Alle“, nur unter „Mail raus, kein Klick“
+    if (qf === "alle") L = L.filter((l) => !isMailWarte(l) || (l.followup_at && new Date(l.followup_at) <= now));
+    if (qf === "imail") L = L.filter(isMailWarte).sort((a, b) => (ihDist(a.lead_id)?.eff ?? 9999) - (ihDist(b.lead_id)?.eff ?? 9999));
   }
   if (campF) L = L.filter((l) => l.kampagne === campF);
   if (trListMode()) L = trSortList(L);
   return L;
 }
 function renderQueue() {
+  if (BER === "transa") renderTrBoard(); else setTrMode();
   const L = filtered();
   if (!searchRes && QST[qf]) return renderTrq(L);
   const pt = !searchRes && qf === "ptplan", base = pt ? (W.probetag_planen || []) : W.arbeitsliste;
@@ -1629,7 +2179,7 @@ function renderQueue() {
     $("queue").innerHTML = ok.join("") + (ko.length ? `<div class="lidiv">K.o. laut Formular · ${ko.length}<span>kein CE oder kein Wohnsitz in Deutschland – kurz prüfen, ob die Angabe stimmt</span></div>` + ko.join("") : "");
   } else
   $("queue").innerHTML = L.length ? L.map((l) => pt ? liHtml(l, `${esc(l.kampagne)}${l.last_note ? " · " + esc(String(l.last_note).slice(0, 80)) : ""}`,
-      `<span class="age ${Date.now() - new Date(l.last_status_change || l.lead_created_at) > 2 * 864e5 ? "warm" : ""}" title="seit dann auf „Probetag vereinbaren“">${rel(l.last_status_change || l.lead_created_at)}</span>`) : liHtml(l)).join("")
+      `<span class="age ${Date.now() - new Date(l.last_status_change || l.lead_created_at) > 2 * 864e5 ? "warm" : ""}" title="seit dann auf „Probetag vereinbaren“">${rel(l.last_status_change || l.lead_created_at)}</span>`) : liHtml(l, ihSub(l))).join("")
     : `<div class="empty">${pt ? "Niemand auf „Probetag vereinbaren“. Alles geplant." : searchRes ? "Niemand gefunden. Suche nach Vor- oder Nachname, den letzten Ziffern der Nummer oder der E-Mail." : W.leads_gesamt === 0 ? "Noch keine Bewerber geladen. Einstellungen → Bewerber aus LeadTable abgleichen." : "Hier ist gerade niemand. Gute Arbeit."}</div>`;
   const camps = [...new Set(base.map((l) => l.kampagne))].sort();
   const sel = $("campFilter"), keep = sel.value;
@@ -1639,34 +2189,37 @@ function renderTrq(L) {
   const base = trqList(qf), q = qf === "qual";
   renderStand();
   $("listTitle").textContent = QTITEL[qf] + " · Transa" + (campF ? " · " + campF.replace(/^T_Transa[_ ]*/i, "") : "");
-  $("listNote").textContent = TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …";
+  $("listNote").innerHTML = (TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …") + (trDesk() ? "" : " " + tbAktion(qf, L).replace('id="tbWa"', 'id="tbWaM"').replace('id="tbAus"', 'id="tbAusM"'));
   $("clearSearch").hidden = true; $("qFilter").style.display = "";
   const kl = (l) => { const g = l.gespraech; if (!g) return `<span class="pill">ohne Gespräch</span>`; return g.klasse === "K.o." || (g.ko && g.ko.length) ? `<span class="trmini ko">K.o.</span>` : `<span class="trmini">${esc(g.klasse || "")}</span> <span class="hintline" style="margin:0">${g.punkte ?? ""} P.</span>`; };
-  const sub = (l) => { const g = l.gespraech, ko = g && g.ko && g.ko.length ? " · " + g.ko.join(", ") : ""; return esc(String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "")) + (g && g.texte && g.texte.anfahrt ? " · " + esc(g.texte.anfahrt) : "") + esc(ko); };
+  const sub = (l) => { const g = l.gespraech, ko = g && g.ko && g.ko.length ? " · " + g.ko.join(", ") : "", ab = abKurz(l); return esc(String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "")) + (ab ? " · " + esc(ab) : "") + (g && g.texte && g.texte.anfahrt ? " · " + esc(g.texte.anfahrt) : "") + esc(ko); };
   const reg = (l) => String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "") || "ohne Region";
   const wo = (l) => { const f = trAnswersMap({ answers: l.answers || [] }); const o = [f.wohnort, f.ort].find((x) => x && !REGWORT.test(x)) || ""; return [f.plz, o].filter(Boolean).join(" "); };
-  const leer = { jetzt: "Gerade niemand zum Anrufen – sobald jemand das Online-Vorgespräch passend ausfüllt, steht er hier", qual: "Noch niemand qualifiziert", nq: "Noch niemand als nicht qualifiziert eingestuft",
-    mail: "Niemand wartet gerade auf das Vorgespräch", erinn: "Keine offenen Erinnerungen", kr: "Niemand ohne Reaktion" }[qf] || "Niemand";
+  const leer = { jetzt: "Gerade niemand zum Anrufen – sobald jemand das Online-Vorgespräch passend ausfüllt, steht er hier", bf: "Niemand mit freiem Abstellort", be: "Niemand, der entgegenkommen muss",
+    wa: "Niemand außerhalb der Regionen", pz: "Niemand mit unklarer PLZ", of_frei: "Niemand", of_ent: "Niemand", of_aus: "Niemand", of_pz: "Niemand", qual: "Noch niemand qualifiziert", nq: "Noch niemand als nicht qualifiziert eingestuft",
+    mail: "Niemand wartet gerade auf das Vorgespräch", spr: "Niemand zum Prüfen", aa: "Keine offene Abstellort-Anfrage", ab: "Noch kein Abstellort bestätigt", vu: "Noch kein Vertrag unterschrieben", akr: "Niemand ohne Reaktion auf die Abstellort-Anfrage", erinn: "Keine offenen Erinnerungen", kr: "Niemand ohne Reaktion", abs: "Noch keine Absagen durch Bewerber", tp: "Noch niemand im Talentpool" }[qf] || "Niemand";
   if (!TRQ) $("queue").innerHTML = `<div class="sk"><i></i><i></i></div>`;
   else if (!L.length) $("queue").innerHTML = `<div class="empty">${leer}${campF ? " in dieser Region" : ""}.</div>`;
-  else if (qf === "jetzt") {
-    // nach Region, je Region die am längsten Wartenden zuerst
+  else if (["jetzt", "bf", "be", "wa"].includes(qf)) {
+    // nach Region des Wohnorts; zuerst wer das Vorgespräch mit Abstellort ausgefüllt hat, dann je Gruppe die am längsten Wartenden
     const ts = (l) => new Date(l.last_status_change || l.lead_created_at || 0).getTime();
-    const S = [...L].sort((a, b) => reg(a).localeCompare(reg(b), "de") || ts(a) - ts(b));
+    const reg = (l) => abFall(l)?.region || TRPLZ[l.lead_id]?.region || String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "") || "ohne Region";
+    const vg = (l) => (l.abstellort && l.abstellort.fall ? 0 : 1);
+    const S = [...L].sort((a, b) => reg(a).localeCompare(reg(b), "de") || vg(a) - vg(b) || ts(a) - ts(b));
     let h = "", last = null;
     for (const l of S) {
       if (reg(l) !== last) { last = reg(l); h += `<div class="lidiv reg">${esc(last)} · ${S.filter((x) => reg(x) === last).length}</div>`; }
       const v = vgInfo(l);
-      const sb = [wo(l), v.erreichbar ? "erreichbar: " + v.erreichbar : ""].filter(Boolean).map(esc).join(" · ") + (v.warn.length ? ` <span class="trwarn" title="${esc(v.warn.join(" | "))}">⚠ Bitte prüfen</span>` : "");
+      const sb = [wo(l), abKurz(l), v.erreichbar ? "erreichbar: " + v.erreichbar : ""].filter(Boolean).map(esc).join(" · ") + (v.warn.length ? ` <span class="trwarn" title="${esc(v.warn.join(" | "))}">⚠ Bitte prüfen</span>` : "");
       h += liHtml(l, sb, `<span class="age" title="seit dann online vorqualifiziert">${rel(l.last_status_change || l.lead_created_at)}</span>`);
     }
     $("queue").innerHTML = h;
-  } else $("queue").innerHTML = L.map((l) => liHtml(l, sub(l), `${QST[qf] === "Qualifiziert" || QST[qf] === "Nicht qualifiziert" ? kl(l) : ""}<span class="age">${rel(l.last_status_change || l.lead_created_at)}</span>`)).join("");
+  } else $("queue").innerHTML = L.map((l) => liHtml(l, sub(l), `${["qual", "nq", "abs", "tp"].includes(qf) ? kl(l) : ""}<span class="age">${rel(l.last_status_change || l.lead_created_at)}</span>`)).join("");
   const camps = [...new Set(base.map((l) => l.kampagne))].sort(), sel = $("campFilter"), keep = sel.value;
   sel.innerHTML = `<option value="">Alle Kampagnen</option>` + camps.map((c) => `<option ${c === keep ? "selected" : ""}>${esc(c)}</option>`).join("");
 }
 function renderSide() {
-  $("newest").innerHTML = W.neueste.length ? W.neueste.map((l) => miniHtml(l, `${pillFor(l.status)}${ageBadge(l) || `<span class="age">${rel(l.lead_created_at)}</span>`}`)).join("") : `<div class="empty">Noch keine.</div>`;
+  renderNeu(); if (typeof renderIm === "function") renderIm();
   $("planned").innerHTML = W.geplant.length ? W.geplant.map((l) => miniHtml(l, `<span class="age warm">${when(l.followup_at)}</span>`)).join("") : `<div class="empty">Keine geplant.</div>`;
   const remind = new Set((W.probetag_erinnern || []).filter((l) => !l.probetag_erinnert_at).map((l) => l.lead_id));
   $("trialsNote").textContent = remind.size ? `${remind.size} ${remind.size === 1 ? "Erinnerung" : "Erinnerungen"} fällig` : "anstehend";
@@ -1677,6 +2230,90 @@ function renderSide() {
     return miniHtml(l, right);
   }).join("") : `<div class="empty">Keine.</div>`;
 }
+// ---------- Neue Bewerber seit … (07.11.2026) ----------
+// Früher: die 10 neuesten über alle Bereiche, danach auf den Bereich gefiltert – an Tagen mit vielen Transa-Bewerbern blieben für Ihro nur 2 übrig.
+// Jetzt: alle Bewerber seit Beginn des Zeitraums (items-edit „neue_seit“), je Bereich, nach Tag gruppiert, mit aktuellem Status.
+// „Seit letztem Arbeitstag“: montags (und am Wochenende) alles seit Freitag 0 Uhr, sonst seit gestern 0 Uhr.
+let NEU = null, NEUZ = store.get("tc_neuz") || "auto", neuAlle = false;
+const WTAG = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"], WTAG_LANG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+function neuStart(z = NEUZ) {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  if (z === "heute") return d;
+  if (z === "7") { d.setDate(d.getDate() - 6); return d; }
+  d.setDate(d.getDate() - 1);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+  return d;
+}
+function neuAutoLabel() {
+  const d = neuStart("auto"), g = new Date(); g.setHours(0, 0, 0, 0); g.setDate(g.getDate() - 1);
+  return +d === +g ? "Seit gestern" : `Seit ${WTAG[d.getDay()]}.`;
+}
+async function loadNeu() {
+  try { const r = await api("neue_seit", { seit: neuStart().toISOString() }); NEU = { z: NEUZ, leads: r.leads || [] }; }
+  catch (e) { NEU = null; }
+  renderNeu();
+}
+function tagLabel(x) {
+  const d = new Date(x); d.setHours(0, 0, 0, 0);
+  const h = new Date(); h.setHours(0, 0, 0, 0);
+  const diff = Math.round((h - d) / 864e5);
+  return diff === 0 ? "Heute" : diff === 1 ? "Gestern" : `${WTAG_LANG[d.getDay()]}, ${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.`;
+}
+const uhr = (x) => new Date(x).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+function renderNeu() {
+  if (!$("newest")) return;
+  $("neuAuto").textContent = neuAutoLabel();
+  $("neuSeg").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.z === NEUZ));
+  if (!NEU || NEU.z !== NEUZ) { // noch nicht geladen: alte Liste zeigen
+    $("neuNote").textContent = "wird geladen …"; $("neuSum").innerHTML = "";
+    $("newest").innerHTML = (W && W.neueste && W.neueste.length) ? W.neueste.map((l) => miniHtml(l, `${pillFor(l.status)}${ageBadge(l) || `<span class="age">${rel(l.lead_created_at)}</span>`}`)).join("") : `<div class="sk"><i></i><i></i><i></i></div>`;
+    return;
+  }
+  const L = NEU.leads.filter((l) => berL(l) === BER).sort((a, b) => String(b.lead_created_at).localeCompare(String(a.lead_created_at)));
+  const zt = NEUZ === "heute" ? "heute" : NEUZ === "7" ? "in 7 Tagen" : neuAutoLabel().toLowerCase();
+  $("neuNote").textContent = `${L.length} ${zt}`;
+  const cnt = new Map(); for (const l of L) cnt.set(l.status || "ohne Status", (cnt.get(l.status || "ohne Status") || 0) + 1);
+  $("neuSum").innerHTML = [...cnt.entries()].sort((a, b) => b[1] - a[1]).map(([s, n]) => pillFor(s).replace(">", `>${n} × `)).join("");
+  if (!L.length) { $("newest").innerHTML = `<div class="empty">Keine neuen Bewerber ${zt}.</div>`; return; }
+  const MAX = 12, zeig = neuAlle ? L : L.slice(0, MAX);
+  let h = "", tag = "";
+  for (const l of zeig) {
+    const t = tagLabel(l.lead_created_at);
+    if (t !== tag && NEUZ !== "heute") { h += `<div class="neutag">${esc(t)} · ${L.filter((x) => tagLabel(x.lead_created_at) === t).length}</div>`; tag = t; }
+    h += miniHtml(l, `${pillFor(l.status)}${ageBadge(l) || `<span class="age">${uhr(l.lead_created_at)}</span>`}`);
+  }
+  if (L.length > MAX) h += `<button class="neumehr" id="neuMehr">${neuAlle ? "weniger zeigen" : `alle ${L.length} zeigen`}</button>`;
+  $("newest").innerHTML = h;
+}
+$("neuSeg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || b.dataset.z === NEUZ) return; NEUZ = b.dataset.z; store.set("tc_neuz", NEUZ); neuAlle = false; renderNeu(); loadNeu(); });
+$("newest").addEventListener("click", (e) => { if (e.target.closest("#neuMehr")) { e.stopPropagation(); neuAlle = !neuAlle; renderNeu(); } });
+// ---------- Info-Mails (07.11.2026) ----------
+// Wer hat die Info-Mail bekommen, wer hat per Klick reagiert (Interesse → „Möchte Rückruf“, anders überlegt → „Absage durch Bewerber“), wer noch nicht.
+let IM = null, imF = store.get("tc_imf") || "interesse";
+async function loadIm() { try { IM = (await api("info_mails", { tage: 7 })).leads || []; } catch { IM = null; } renderIm(); }
+function renderIm() {
+  if (!$("imPanel")) return;
+  const L = (IM || []).filter((l) => berL(l) === BER);
+  $("imPanel").hidden = !L.length;
+  if (!L.length) return;
+  // 09.11.2026: Die vier Gruppen ergeben zusammen „verschickt“ – wer ohne Klick von Dennis weiterbearbeitet wurde (z. B. WhatsApp), steht unter „von dir bearbeitet“
+  const g = { alle: L, interesse: L.filter((l) => l.reaktion === "interesse"), absage: L.filter((l) => l.reaktion === "absage"), hand: L.filter((l) => !l.reaktion && !l.wartet), offen: L.filter((l) => !l.reaktion && l.wartet) };
+  const ruf = g.interesse.filter((l) => /rueckruf/.test(norm(l.status))).length;
+  const k = (f, n, t, c) => `<button data-imf="${f}" class="${c} ${imF === f ? "on" : ""}"><b>${n}</b><span>${t}</span></button>`;
+  $("imKpi").innerHTML = k("alle", L.length, "verschickt", "") + k("interesse", g.interesse.length, "Interesse", "int") + k("absage", g.absage.length, "Absage", "abs") + k("hand", g.hand.length, "von dir weiter", "") + k("offen", g.offen.length, "ohne Antwort", "");
+  const X = g[imF] || L;
+  const zeit = (x) => x ? `${tagLabel(x) === "Heute" ? "" : tagLabel(x) === "Gestern" ? "gestern " : tagLabel(x).replace(/^[A-Za-zäöü]+, /, "") + " "}${uhr(x)}` : "";
+  const leer = { interesse: "Noch niemand hat auf „Interesse“ geklickt.", absage: "Keine Absagen per Klick.", hand: "Noch niemand von dir weiterbearbeitet.", offen: "Alle haben reagiert.", alle: "Keine Info-Mails." };
+  $("imList").innerHTML = (imF === "interesse" && ruf ? `<div class="hintline" style="margin:0 4px 6px">${ruf} warten auf deinen Anruf</div>` : "") +
+    (X.length ? X.map((l) => {
+      const r = l.reaktion === "interesse" ? `<span class="pill go">Interesse ${zeit(l.reaktion_at)}</span>` : l.reaktion === "absage" ? `<span class="pill stop">Absage ${zeit(l.reaktion_at)}</span>${l.absage_grund ? `<span class="age" title="Absagegrund aus der Info-Mail">${esc(l.absage_grund)}</span>` : ""}`
+        : `<span class="pill">${l.erinnert_at ? "Erinnerung raus" : "Info " + zeit(l.info_at)}</span>`;
+      const jetzt = !l.reaktion && !l.wartet ? `<span class="age">jetzt: ${esc(l.status || "")}</span>` : l.reaktion && norm(l.status) !== norm(l.reaktion === "interesse" ? "Möchte Rückruf" : "Absage durch Bewerber") ? `<span class="age">jetzt: ${esc(l.status || "")}</span>` : "";
+      return miniHtml(l, r + jetzt);
+    }).join("") : `<div class="empty">${leer[imF]}</div>`);
+}
+$("imKpi").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; imF = b.dataset.imf; store.set("tc_imf", imF); renderIm(); });
+$("imList").addEventListener("click", (e) => { const b = e.target.closest(".li"); if (b) openLead(b.dataset.id); });
 async function loadWork() {
   try {
     if (!configured()) return;
@@ -1684,7 +2321,7 @@ async function loadWork() {
     if (!window._wvAt || Date.now() - window._wvAt > 300000) { window._wvAt = Date.now(); try { await api("wiedervorlagen"); } catch {} }
     WALL = await api("work");
     for (const x of NEUE_STATUS) if (!(WALL.status_liste || []).some((y) => norm(y) === norm(x))) (WALL.status_liste = WALL.status_liste || []).push(x);
-    applyBereich(); renderWork(); loadTrq(); loadTra();
+    applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu(); loadIm(); loadOrte();
   } catch (e) { if (e.message !== "Nicht eingerichtet") toast(e.message, true); }
 }
 // ---------- Bereiche: Ihro / Transa / HeyRecruit ----------
@@ -1704,7 +2341,7 @@ function applyBereich() {
   $("tTransa").textContent = nt; $("tTransa").hidden = !nt; $("tHey").textContent = nh; $("tHey").hidden = !nh;
   $("bcI").textContent = ni || ""; $("bcT").textContent = nt || ""; $("bcH").textContent = nh || "";
   $("berSeg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.b === BER));
-  document.body.dataset.ber = BER;
+  document.body.dataset.ber = BER; if (typeof renderTrBoard === "function") renderTrBoard();
   renderKpiBer();
   if (typeof OV !== "undefined" && OV && OV.bereiche) renderBereiche();
 }
@@ -1712,7 +2349,7 @@ function setBereich(b) {
   if (b === BER) return;
   BER = b; campF = "";
   if (QST[qf] && b !== "transa") { qf = "alle"; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === "alle")); }
-  if (b === "transa") { loadTrq(); loadTra(); }
+  if (b === "transa") { if (trDesk() && !QST[qf]) qf = store.get("tc_trbrd") || "jetzt"; loadTrq(); loadTra(); }
   if (!searchRes) { selId = null; cur = null; document.body.classList.remove("mcard"); }
   applyBereich(); renderWork();
   $("tabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.v === "vWork" && (x.dataset.b || "ihro") === BER));
@@ -1721,7 +2358,8 @@ function setBereich(b) {
 $("berSeg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setBereich(b.dataset.b); });
 function renderWork() {
   {
-    $("kQueue").textContent = W.arbeitsliste_gesamt;
+    const imn = W.arbeitsliste.filter(isMailWarte).length; $("imN").textContent = imn || ""; $("imN").hidden = !imn;
+    $("kQueue").textContent = W.arbeitsliste_gesamt - imn;
     const ptn = (W.probetag_planen || []).length; $("ptN").textContent = ptn || ""; $("ptN").hidden = !ptn;
     const tfs = tfSplit(); renderTf();
     const due = W.arbeitsliste.filter((l) => l.followup_at && new Date(l.followup_at) <= new Date()).length;
@@ -1736,7 +2374,7 @@ function renderWork() {
 }
 $("qFilter").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); qf = b.dataset.f; renderQueue(); });
 $("campFilter").addEventListener("change", (e) => { campF = e.target.value; renderQueue(); });
-$("trStand").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; qf = b.dataset.f; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderStand(); renderQueue(); });
+$("trStand").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; if (b.dataset.zu) { standZu = !standZu; store.set("tc_standzu", standZu ? "1" : "0"); renderStand(); return; } qf = b.dataset.f; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderStand(); renderQueue(); });
 $("trSort").value = trSort;
 $("trSort").addEventListener("change", (e) => { trSort = e.target.value; store.set("tc_trsort", trSort); renderQueue(); });
 for (const id of ["queue", "newest", "planned", "trials"]) $(id).addEventListener("click", (e) => { const b = e.target.closest(".li"); if (b) openLead(b.dataset.id); });
@@ -1784,7 +2422,7 @@ function fill(tpl, l, extra = {}) {
 }
 async function openLead(id) {
   stopRec(true);
-  selId = id;
+  selId = id; setTrMode();
   if (window.matchMedia("(max-width:860px)").matches) { document.body.classList.add("mcard"); window.scrollTo({ top: 0 }); }
   document.querySelectorAll(".li").forEach((b) => b.classList.toggle("on", b.dataset.id === id));
   showView("vWork");
@@ -1794,8 +2432,9 @@ async function openLead(id) {
     const lb = berL(r.lead);
     if (lb !== BER && WALL) { BER = lb; applyBereich(); renderWork(); $("tabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.v === "vWork" && (x.dataset.b || "ihro") === BER)); }
     renderCard(r);
+    if (!ORTE[id]?.gesucht) loadOrte();
   }
-  catch (e) { $("card").innerHTML = `<div class="placeholder"><b>Konnte nicht geladen werden</b><span>${esc(e.message)}</span></div>`; }
+  catch (e) { $("card").innerHTML = `${trBoardAn() ? `<button type="button" class="btn sm quiet trback" data-trback="1">← Zurück zur Liste</button>` : ""}<div class="placeholder"><b>Konnte nicht geladen werden</b><span>${esc(e.message)}</span></div>`; }
 }
 function renderCard(r) {
   const l = r.lead, k = statusKind(l.status);
@@ -1805,7 +2444,7 @@ function renderCard(r) {
   const PRIM = primFor(l);
   const others = all.filter((s) => !PRIM.some((p) => norm(p) === norm(s)) && !/^nichterreicht/.test(norm(s)));
   const wa = (W.wa_vorlagen || []);
-  $("card").innerHTML = `
+  $("card").innerHTML = `${trBoardAn() ? `<button type="button" class="btn sm quiet trback" data-trback="1">← Zurück zur Liste <small style="opacity:.6">(Esc)</small></button>` : ""}
     <div class="card-head">
       <div style="min-width:0"><h2>${esc(l.name || "Ohne Namen")}</h2>
         <div class="meta">${pillFor(l.status)}<span>${esc(l.kampagne)}</span><span>beworben ${rel(l.lead_created_at)}</span>${l.last_status_change ? `<span>letzte Änderung ${rel(l.last_status_change)}</span>` : ""}</div></div>
@@ -1814,13 +2453,15 @@ function renderCard(r) {
     <div class="contact">
       ${l.phone ? `<a class="tel" id="telLink" href="${telHref(l.phone)}" title="Anrufen (Leertaste)">${ICON.phone}${esc(l.phone)}<kbd>␣</kbd></a>` : `<span class="empty">Keine Telefonnummer</span>`}
       ${l.phone ? `<div class="menu" id="waMenu"><button class="btn" id="waBtn">${ICON.wa}WhatsApp</button><div class="menu-list">
-        <button data-i="danke">Danke + Kontaktdaten</button>${wa.map((t, i) => `<button data-i="${i}">${esc(t.titel)}</button>`).join("")}<button data-i="-1">Ohne Vorlage</button></div></div>` : ""}
+        ${isTransa(l) ? `<button data-i="vg">Link zum Vorgespräch</button>` : ""}<button data-i="danke">Danke + Kontaktdaten</button>${wa.map((t, i) => `<button data-i="${i}">${esc(t.titel)}</button>`).join("")}<button data-i="-1">Ohne Vorlage</button></div></div>` : ""}
       ${l.email ? `<a class="btn" href="mailto:${esc(l.email)}">${ICON.mail}E-Mail</a>` : ""}
       <button class="btn" id="dispBtn">${ICON.truck}Disponent fragen</button>
       <button class="btn" id="terminBtn">${ICON.cal}Termin</button>
       <button class="btn" id="calledBtn" title="Dieser Bewerber hat bei dir angerufen – zählt als eingehender Anruf">${ICON.phone}Hat angerufen</button>
       ${isTransa(l) ? `<button class="btn blue" id="trLfBtn" title="Gesprächsfenster mit Leitfaden und Scoring">Leitfaden</button>` : ""}
     </div>
+    ${ihBlock(l)}
+    ${trAbBlock(l)}
     ${(r.frueher || []).length ? `<div class="dupe"><b>Schon bekannt: ${r.frueher.length === 1 ? "eine frühere Bewerbung" : r.frueher.length + " frühere Bewerbungen"}</b>${r.frueher.map((f) => `<button data-open="${esc(f.lead_id)}"><span class="n">${esc(f.kampagne)}</span>, ${f.lead_created_at ? new Date(f.lead_created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : ""}, ${esc(f.status || "")}${f.description ? `<span class="d">${esc(f.description)}</span>` : ""}</button>`).join("")}</div>` : ""}
     ${post && post.id === l.lead_id ? `<div class="postbar"><b>${esc(post.msg)}</b><span class="grow"></span>
       ${post.probetag ? `<button class="btn sm blue" id="ptOpen">Probetag eintragen</button>` : ""}
@@ -1879,6 +2520,7 @@ function renderCard(r) {
   $("nextLead").addEventListener("click", nextLead);
   bindHireBox();
   $("calledBtn").addEventListener("click", () => openCall(cur));
+  if (isTransa(l) && l.phone) vgLaden(l.lead_id);
   if (isTransa(l)) { // Transa: Anruf öffnet zusätzlich das Gesprächsfenster (Telefon wählt trotzdem)
     if ($("telLink")) $("telLink").addEventListener("click", () => openTr(cur, true));
     if ($("mTel")) $("mTel").addEventListener("click", () => openTr(cur, true));
@@ -1922,6 +2564,7 @@ function renderCard(r) {
     $("waBtn").addEventListener("click", (e) => { e.stopPropagation(); $("waMenu").classList.toggle("open"); });
     $("waMenu").querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.i === "danke") { sendDanke(cur); $("waMenu").classList.remove("open"); return; }
+      if (b.dataset.i === "vg") { sendVgLink(cur); $("waMenu").classList.remove("open"); return; }
       const i = Number(b.dataset.i), text = i >= 0 ? fill(wa[i].text, cur) : "";
       window.open(`https://wa.me/${waNumber(cur.phone)}${text ? "?text=" + encodeURIComponent(text) : ""}`, "_blank");
       $("waMenu").classList.remove("open");
@@ -1929,6 +2572,7 @@ function renderCard(r) {
   }
 }
 document.addEventListener("click", () => document.querySelectorAll(".menu.open").forEach((m) => m.classList.remove("open")));
+$("card").addEventListener("click", (e) => { const b = e.target.closest("[data-ihwa]"); if (b) ihSend(b.dataset.ihwa); });
 
 // ---------- Probetag-Erinnerung am Vortag ----------
 const berlinDayOf = (x) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(new Date(x));
@@ -2280,8 +2924,26 @@ const TR_DEF = {
   ],
 };
 const TR_STATI = ["Qualifiziert", "Nicht qualifiziert"];
+// ---------- Link zum Online-Vorgespräch per WhatsApp (Transa, 07.11.2026) ----------
+// Den Prüfcode rechnet die Function transa-gespraech (Aktion transa_vg_link, Salz nur als Secret) – nie im Cockpit.
+const vgCache = {};
+function vgLaden(id) {
+  if (vgCache[id] && !vgCache[id].err) return;
+  vgCache[id] = { laedt: true };
+  api("transa_vg_link", { id }).then((r) => { vgCache[id] = { link: r.link, vorname: r.vorname }; }).catch((e) => { vgCache[id] = { err: e.message }; });
+}
+const TR_VG_WA = "Hallo {vorname}, hier ist Dennis von TALENTJAGD. Danke für deine Bewerbung als LKW-Fahrer im Fernverkehr!\n\nHier ist dein Link zum Vorgespräch (2 Minuten). Damit prüfen wir, wo dein LKW stehen kann:\n{link}\n\nViele Grüße\nDennis";
+function sendVgLink(l) {
+  const v = vgCache[l.lead_id];
+  if (!v || v.laedt) { toast("Link wird noch geladen – bitte gleich nochmal tippen", true); vgLaden(l.lead_id); return; }
+  if (v.err) { toast("Link konnte nicht erstellt werden: " + v.err, true); delete vgCache[l.lead_id]; vgLaden(l.lead_id); return; }
+  const vn = v.vorname || String(l.name || "").trim().split(/\s+/)[0] || "";
+  const text = TR_VG_WA.replace("{vorname}", vn).replace("Hallo , ", "Hallo, ").replace("{link}", v.link);
+  window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  api("lead_note", { id: l.lead_id, text: "Link zum Online-Vorgespräch per WhatsApp geschickt" }).catch(() => {});
+}
 const TR_DANKE = "Guten Tag,\n\nvielen Dank für das nette Gespräch! Wie besprochen bekommen Sie in Kürze eine E-Mail mit den weiteren Infos zum Projekt.\n\nBei Fragen erreichen Sie mich jederzeit hier per WhatsApp oder telefonisch unter 0175 1009 008.\n\nViele Grüße\nDennis Mende, Talentjagd";
-const TR_REG = [["fulda", "Fulda/Bad Hersfeld", /fulda|hersfeld/i], ["ruhr", "Ruhrgebiet", /ruhr/i], ["rheinmain", "Rhein-Main", /rhein[\s-]*main/i], ["osnabrueck", "Raum Osnabrück", /osnabr/i], ["halle", "Halle/Leipzig", /halle|leipzig/i]];
+const TR_REG = [["fulda", "Fulda/Bad Hersfeld", /fulda|hersfeld/i], ["ruhr", "Ruhrgebiet", /ruhr/i], ["rheinmain", "Rhein-Main", /rhein[\s-]*main/i], ["osnabrueck", "Raum Osnabrück", /osnabr/i], ["halle", "Halle/Leipzig", /halle|leipzig/i], ["a6", "A6-Korridor", /\ba6\b|korridor/i]];
 const trRegion = (k) => (TR_REG.find((r) => r[2].test(k || "")) || [null, "Allgemein"])[1];
 let TR = null, trTick = null, trCfg = null;
 const isTransa = (l) => l && berL(l) === "transa";
@@ -3634,7 +4296,10 @@ const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
-  navigator.serviceWorker.addEventListener("message", (e) => { if (e.data && e.data.type === "refresh" && configured()) { loadStats(); loadWork(); } });
+  navigator.serviceWorker.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "refresh" && configured()) { loadStats(); loadWork(); }
+    if (e.data && e.data.type === "open" && e.data.lead && configured()) { loadStats(); loadWork(); openLead(e.data.lead); }
+  });
 }
 function b64ToBytes(s) { const p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, (c) => c.charCodeAt(0)); }
 async function pushStatus() {
@@ -4234,7 +4899,12 @@ setDate();
     catch (e) { openSetup("Verbindung mit dem QR-Code hat nicht geklappt: " + e.message); return; }
     if (/iphone|ipad|android/i.test(navigator.userAgent) && !(navigator.standalone || matchMedia("(display-mode: standalone)").matches)) $("hsOv").classList.add("show");
   }
-  if (configured()) { loadAll(); setTimeout(dictOffen, 1500); } else openSetup();
+  if (configured()) {
+    loadAll(); setTimeout(dictOffen, 1500);
+    // Klick auf eine Push-Nachricht (09.11.2026): ./?lead=<id> öffnet direkt den Bewerber
+    const lid = new URLSearchParams(location.search).get("lead");
+    if (/^[a-f0-9]{24}$/i.test(lid || "")) { history.replaceState(null, "", location.pathname); openLead(lid); }
+  } else openSetup();
 })();
 </script>
 </body>
