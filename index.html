@@ -213,7 +213,8 @@
   .tb-titel span{font-size:12.5px;color:var(--ink3,#8a8f98)}
   .tb-tab{width:100%;border-collapse:collapse;font-size:13.5px}
   .tb-tab th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3,#8a8f98);padding:6px 10px;border-bottom:1px solid var(--sep-strong)}
-  .tb-tab td{padding:9px 10px;border-bottom:1px solid var(--sep);vertical-align:top}
+  .tb-tab td{padding:9px 10px;border-bottom:1px solid var(--sep);vertical-align:top;text-align:left}
+  .tb-tab td .pill{white-space:nowrap}
   .tb-tab tbody tr.l{cursor:pointer}
   .tb-tab tbody tr.l:hover td{background:var(--blue-tint)}
   .tb-tab tr.reg td{font-size:12px;font-weight:700;color:var(--ink2);background:var(--field);padding:6px 10px}
@@ -1433,7 +1434,7 @@ async function api(action, data = {}) {
   };
   // Am Handy reißt die Verbindung kurz ab (Funkloch, Wechsel LTE/5G/WLAN, App aus dem Hintergrund) – Safari meldet dann „Load failed“.
   // Lesende Abfragen werden still wiederholt, beim Speichern kommt eine verständliche Meldung.
-  const lesend = /^(work|stats|overview|overview_getrennt|heute_bereiche|neue_seit|info_mails|push_log|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
+  const lesend = /^(ihro_board|work|stats|overview|overview_getrennt|heute_bereiche|neue_seit|info_mails|push_log|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
   let r;
   for (let i = 0; ; i++) {
     try { r = await fetch(url, opt); break; }
@@ -1784,7 +1785,10 @@ function abKurz(l) {
 // Nur am PC (ab 861 px). Am Handy bleibt alles wie bisher (Liste links bzw. eigene Karten-Ansicht).
 const trDesk = () => !window.matchMedia("(max-width:860px)").matches;
 const trBoardAn = () => BER === "transa" && trDesk() && !searchRes;
-function setTrMode() { document.body.classList.toggle("trbrd", trBoardAn() && !selId); document.body.classList.toggle("trcrd", trBoardAn() && !!selId); }
+// Ihro-Board (10.11.2026): gleiche Ansicht für die Ihro-Kampagnen (Reiter „Arbeiten“), siehe renderIhBoard
+const ihBoardAn = () => BER === "ihro" && trDesk() && !searchRes;
+const boardAn = () => trBoardAn() || ihBoardAn();
+function setTrMode() { document.body.classList.toggle("trbrd", boardAn() && !selId); document.body.classList.toggle("trcrd", boardAn() && !!selId); }
 const TB_STUFEN = [
   { k: "offen", t: "Vorgespräch offen", hint: "Einladung oder Erinnerung ist raus, noch keine Antwort", f: ["mail", "erinn", "kr"], unter: "nach Wohnort (laut PLZ)", f2: ["of_frei", "of_ent", "of_aus", "of_pz"] },
   { k: "bereit", t: "Bereit fürs Angebot", hint: "online oder am Telefon „ja“, Abstellort passt – anrufen", f: ["bf", "be"], haupt: 1 },
@@ -1826,6 +1830,7 @@ function tbHinweis(l) {
 }
 function renderTrBoard() {
   setTrMode();
+  if (BER === "ihro") return renderIhBoard();
   const el = $("trBoard"); if (!el || !trBoardAn()) return;
   const f = qf, cnt = (k) => (TRQ ? trqList(k).length : null);
   const chip = (k, kurz) => { const x = tbX(k), n = cnt(k); return `<button type="button" data-tb="${k}" class="${f === k ? "on" : ""}${n === 0 && f !== k ? " z" : ""}" title="${esc(x.st || "")}"><i style="background:${x.c}"></i>${esc(kurz || x.t)} <b>${n ?? "…"}</b></button>`; };
@@ -1950,6 +1955,7 @@ $("feed").addEventListener("click", (e) => { const ev = e.target.closest(".ev[da
 $("feed").addEventListener("keydown", (e) => { const ev = e.target.closest(".ev[data-at]"); if (ev && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); evOeffnen(ev.dataset.at); } });
 function trZurListe() { selId = null; cur = null; renderTrBoard(); renderQueue(); requestAnimationFrame(() => window.scrollTo({ top: tbScroll })); }
 $("trBoard").addEventListener("click", (e) => {
+  if (BER === "ihro") return ihBoardKlick(e);
   const c = e.target.closest("[data-tb]");
   const box = !c && e.target.closest("[data-tbst]");
   if (box) { qf = box.dataset.tbst; store.set("tc_trbrd", qf); $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderTrBoard(); renderStand(); renderQueue(); return; }
@@ -1964,6 +1970,102 @@ $("card").addEventListener("click", (e) => { if (e.target.closest("[data-trback]
 $("listNote").addEventListener("click", (e) => { if (e.target.closest("#tbWaM")) waSerieStart(); else if (e.target.closest("#tbAusM")) { ausSetzen(); } });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("trcrd") && !document.querySelector(".ov.show, dialog[open], .modal.show") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) trZurListe(); });
 window.matchMedia("(max-width:860px)").addEventListener("change", () => renderTrBoard());
+
+// ---------- Ihro-Board (10.11.2026): Übersicht und Liste in der Mitte wie bei Transa, Klick öffnet die Bewerberkarte ----------
+// Nur am PC (ab 861 px). Einteilung nach dem nächsten Schritt; die LeadTable-Status bleiben unverändert.
+// Daten: ihro-anrufliste → ihro_board (alle Bewerber der Ihro-Kampagnen, ohne Transa/HeyRecruit und ohne ausgeblendete Kampagnen).
+let IHQ = null, ihF = store.get("tc_ihbrd") || "st_jetzt";
+const IH_G = { // LeadTable-Status je Unterpunkt
+  mail: ["Info verschickt"], erinn: ["Erinnerungsmail verschickt"], wa: ["Per Whatsapp bearbeitet"],
+  rr: ["Möchte Rückruf"], neu: ["Unbearbeitet"], anr: ["Anrufen", "Vasile Anruf"], nf: ["Nachfassen bitte"],
+  ne: ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3"],
+  kon: ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Nachgefasst", "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat", "Tendenz gut", "Tendenz Absage", "Angebot unterbreitet.", "Reaktivierung", "Manuell Bearbeitung", "Unterlagen erhalten"],
+  term: ["Termin", "Termin gebucht"],
+  ptp: ["Probetag vereinbaren"], ptv: ["Probetag vereinbart", "Probetag durchgeführt"], vgs: ["Vorstellungsgespr. NEUENSTEIN"],
+  ein: ["Mündliche Zusage", "Eingestellt"], absb: ["Absage durch Bewerber"], absi: ["Absage Ihro", "No-Show"], tpl: ["Talentpool-Angebot", "Talentpool bestätigt"] };
+const IH_VON = {}; for (const [k, w] of Object.entries(IH_G)) for (const st of w) IH_VON[norm(st)] = k;
+const ihTopf = (l) => IH_VON[norm(l.status)] || "son"; // unbekannter Status → „Sonstige“, damit niemand aus dem Board fällt
+const IH_ZU = ["ein", "absb", "absi", "tpl"];
+const ihFaellig = (l) => !!l.followup_at && new Date(l.followup_at) <= new Date() && !IH_ZU.includes(ihTopf(l));
+const IH_X = {
+  mail: { t: "Mail raus", c: "#facc15", st: "Info verschickt – Detail-Mail ist raus, noch kein Klick" }, erinn: { t: "Erinnerung", c: "#f97316", st: "Erinnerungsmail verschickt" },
+  wa: { t: "WhatsApp raus", c: "#22c55e", st: "Per Whatsapp bearbeitet – wartet auf Antwort" },
+  wv: { t: "Wiedervorlage", c: "#dc2626", st: "Wiedervorlage ist fällig (egal in welchem Status, außer abgeschlossen)" },
+  rr: { t: "Rückruf", c: "#0ea5e9", st: "Möchte Rückruf" }, neu: { t: "Neu", c: "#2563eb", st: "Unbearbeitet" }, anr: { t: "Anrufen", c: "#16a34a", st: "Anrufen" }, nf: { t: "Nachfassen", c: "#a855f7", st: "Nachfassen bitte" },
+  ne: { t: "Nicht erreicht", c: "#dc2626", st: "Nicht-Erreicht 1–3" }, kon: { t: "Bedenkzeit / in Kontakt", c: "#0ea5e9", st: "in Kontakt, Bedenkzeit, Nachgefasst, Tendenz gut/Absage …" },
+  term: { t: "Termin", c: "#16a34a", st: "Termin (Einladung raus) oder Termin gebucht" }, son: { t: "Sonstige", c: "#a3a3a3", st: "Status, der keiner Stufe zugeordnet ist" },
+  ptp: { t: "Probetag planen", c: "#eab308", st: "Probetag vereinbaren – Termin noch abstimmen" }, ptv: { t: "Probetag steht", c: "#16a34a", st: "Probetag vereinbart oder durchgeführt" }, vgs: { t: "Vorstellungsgespräch", c: "#0369a1", st: "Vorstellungsgespr. NEUENSTEIN" },
+  ein: { t: "Zusage / Eingestellt", c: "#0369a1", st: "Mündliche Zusage, Eingestellt" }, absb: { t: "Absage Bewerber", c: "#6b7280", st: "Absage durch Bewerber" },
+  absi: { t: "Absage Ihro", c: "#111827", st: "Absage Ihro, No-Show" }, tpl: { t: "Talentpool", c: "#8b5cf6", st: "Talentpool-Angebot, Talentpool bestätigt" } };
+const IH_STUFEN = [
+  { k: "mail", t: "Info-Mail offen", hint: "Details sind raus, noch keine Antwort", f: ["mail", "erinn", "wa"] },
+  { k: "jetzt", t: "Jetzt anrufen", hint: "will Rückruf, ist neu oder die Wiedervorlage ist fällig", f: ["wv", "rr", "neu", "anr", "nf"], haupt: 1 },
+  { k: "gespr", t: "Im Gespräch", hint: "angerufen – nach dem Ergebnis", f: ["ne", "kon", "term", "son"] },
+  { k: "pt", t: "Probetag", hint: "Probetag oder Vorstellungsgespräch", f: ["ptp", "ptv", "vgs"] },
+  { k: "erg", t: "Ergebnis", hint: "abgeschlossen", f: ["ein", "absb", "absi", "tpl"] }];
+const ihStufeVon = (f) => IH_STUFEN.find((st) => "st_" + st.k === f || st.f.includes(f));
+const ihTitel = (f) => { const st = ihStufeVon(f); return !st ? f : f === "st_" + st.k ? st.t + (st.k === "jetzt" ? "" : " – alle") : st.t + " – " + IH_X[f].t; };
+function ihList(f) {
+  if (!IHQ) return [];
+  if (/^st_/.test(f)) { const st = ihStufeVon(f); if (!st) return []; const ids = new Set(), out = [];
+    for (const k of st.f) for (const l of ihList(k)) if (!ids.has(l.lead_id)) { ids.add(l.lead_id); out.push(l); } return out; }
+  if (f === "wv") return IHQ.filter(ihFaellig);
+  return IHQ.filter((l) => ihTopf(l) === f);
+}
+// Reihenfolge (gilt auch für „Nächster“ und Auto-Weiter): „Jetzt anrufen“ = fällige Wiedervorlage, Rückruf, Neu, Anrufen, Nachfassen;
+// je Gruppe wer am längsten wartet. Ergebnis: Neueste zuerst.
+function ihSort(L, f) {
+  const ts = (l) => new Date(l.last_status_change || l.lead_created_at || 0).getTime();
+  const st = ihStufeVon(f);
+  if (st && st.k === "erg") return [...L].sort((a, b) => ts(b) - ts(a));
+  if (f === "wv") return [...L].sort((a, b) => new Date(a.followup_at) - new Date(b.followup_at));
+  const rg = (l) => (ihFaellig(l) ? 0 : 1 + Math.max(0, (st ? st.f : []).indexOf(ihTopf(l))));
+  return [...L].sort((a, b) => (f === "st_jetzt" ? rg(a) - rg(b) : 0) || ts(a) - ts(b));
+}
+function ihBoardListe() { let L = ihSort(ihList(ihF), ihF); if (campF) L = L.filter((l) => l.kampagne === campF); return L; }
+function ihLokal(id, patch) { const l = IHQ && IHQ.find((x) => x.lead_id === id); if (l) Object.assign(l, patch); }
+async function loadIhq() {
+  if (BER !== "ihro" || !trDesk()) return;
+  try { IHQ = (await api("ihro_board")).leads || []; if (BER === "ihro") renderTrBoard(); }
+  catch (e) { if (!IHQ) { IHQ = []; renderTrBoard(); } toast(e.message, true); }
+}
+function ihWohnort(l) {
+  const x = ihDist(l.lead_id), ort = x?.o?.ort || l.ort || "";
+  if (!ort) return "–";
+  const km = x && x.own != null ? ihFahrt(x.own) : null;
+  return esc(ort) + (km != null ? `<br><small><b class="ihkm ${km <= 30 ? "g" : km <= 55 ? "y" : "r"}">ca. ${km} km</b> bis ${IH_NAME[x.o.tour]}</small>` : "") + (x && x.alt ? `<br><small class="ent">näher an ${IH_NAME[x.alt.k]}</small>` : "");
+}
+function ihHinweis(l) {
+  const h = [], kurz = (t, n) => { t = String(t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n) + " …" : t; };
+  if (ihFaellig(l)) h.push(`<span class="warn">Wiedervorlage ${when(l.followup_at)}${l.followup_note ? ": " + esc(kurz(l.followup_note, 90)) : ""}</span>`);
+  else if (l.followup_at && new Date(l.followup_at) > new Date() && !IH_ZU.includes(ihTopf(l))) h.push(`wieder dran ${when(l.followup_at)}${l.followup_note ? ": " + esc(kurz(l.followup_note, 70)) : ""}`);
+  if (l.absage_grund && /^abs/.test(ihTopf(l))) h.push("Grund: " + esc(kurz(l.absage_grund, 80)));
+  if (l.last_note && !(l.followup_note && String(l.last_note).includes(String(l.followup_note)))) h.push(esc(kurz(l.last_note, 110)));
+  return h.join(" · ");
+}
+function renderIhBoard() {
+  const el = $("trBoard"); if (!el || !ihBoardAn()) return;
+  if (!IHQ && !loadIhq.laeuft) { loadIhq.laeuft = 1; loadIhq().finally(() => { loadIhq.laeuft = 0; }); }
+  const f = ihF, cnt = (k) => (IHQ ? ihList(k).length : null);
+  const chip = (k) => { const x = IH_X[k], n = cnt(k); if (k === "son" && !n) return ""; return `<button type="button" data-tb="${k}" class="${f === k ? "on" : ""}${n === 0 && f !== k ? " z" : ""}" title="${esc(x.st)}"><i style="background:${x.c}"></i>${esc(x.t)} <b>${n ?? "…"}</b></button>`; };
+  const stufen = IH_STUFEN.map((st) => `<div class="tb-st${st.haupt ? " haupt" : ""}${ihStufeVon(f) === st ? " an" : ""}" data-tbst="st_${st.k}" role="button" tabindex="0" title="Alle anzeigen: ${esc(st.t)}"><h3>${st.t} <b>${IHQ ? cnt("st_" + st.k) : "…"}</b></h3><p class="hint">${st.hint}</p><div class="tb-chips">${st.f.map(chip).join("")}</div></div>`).join("");
+  const camps = [...new Set((IHQ || []).map((l) => l.kampagne).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
+  const L = ihBoardListe();
+  const zeile = (l) => `<tr class="l" data-id="${l.lead_id}"><td class="n"><b>${esc(l.name || "Ohne Namen")}</b><small>${esc(l.kampagne || "")}</small></td>`
+    + `<td>${ihWohnort(l)}</td><td>${pillFor(l.status)}${ageBadge(l)}</td><td>${ihHinweis(l)}</td><td class="alt">${rel(l.last_status_change || l.lead_created_at)}</td></tr>`;
+  el.innerHTML = `<div class="tb-kopf"><h2>Ihro-Bewerber</h2><span class="note">${IHQ ? "alle Ihro-Kampagnen, nach dem nächsten Schritt" : "wird geladen …"}</span>
+      <span class="act"><select class="inp" id="tbCamp"><option value="">Alle Kampagnen</option>${camps.map((c) => `<option ${c === campF ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></span></div>
+    <div class="tb-stufen">${stufen}</div>
+    <div class="tb-titel"><h3>${esc(ihTitel(f))}</h3><span>${IHQ ? L.length + " Bewerber" : ""}${f === "st_jetzt" ? " · Wiedervorlage und Rückruf zuerst" : ""} · Klick öffnet die Karte</span></div>
+    ${!IHQ ? `<div class="sk"><i></i><i></i><i></i></div>` : !L.length ? `<div class="empty">${f === "st_jetzt" ? "Gerade niemand zum Anrufen. Gute Arbeit." : "Niemand in dieser Liste"}${campF ? " (in dieser Kampagne)" : ""}</div>`
+      : `<table class="tb-tab"><thead><tr><th>Name</th><th>Wohnort</th><th>Status</th><th>Hinweis</th><th>seit</th></tr></thead><tbody>${L.map(zeile).join("")}</tbody></table>`}`;
+}
+function ihBoardKlick(e) {
+  const c = e.target.closest("[data-tb]"), box = !c && e.target.closest("[data-tbst]");
+  if (c || box) { ihF = c ? c.dataset.tb : box.dataset.tbst; store.set("tc_ihbrd", ihF); renderTrBoard(); return; }
+  const r = e.target.closest("tr.l"); if (r) { tbScroll = window.scrollY; openLead(r.dataset.id); window.scrollTo({ top: 0 }); }
+}
+$("trBoard").addEventListener("keydown", (e) => { const b = e.target.closest("[data-tbst]"); if (b && e.target === b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); b.click(); } });
 // ---------- Transa in der Bewerberkarte (09.11.2026): Wohnort-Karte und Abstellort aus dem Telefonat ----------
 let LF = null, trMapObj = null; const trAbDraft = {};
 function leaflet() {
@@ -2176,6 +2278,7 @@ async function ihSend(art) {
   } catch (e) { toast(e.message, true); }
 }
 function filtered() {
+  if (ihBoardAn()) return ihBoardListe();
   if (!searchRes && QST[qf]) { let Q = trSortTopf(trqList(qf), qf); if (campF) Q = Q.filter((l) => l.kampagne === campF); return Q; }
   let L = searchRes ?? (qf === "ptplan" ? (W.probetag_planen || []) : W.arbeitsliste);
   if (!searchRes) {
@@ -2193,7 +2296,7 @@ function filtered() {
   return L;
 }
 function renderQueue() {
-  if (BER === "transa") renderTrBoard(); else setTrMode();
+  if (BER !== "heyrecruit") renderTrBoard(); else setTrMode();
   const L = filtered();
   if (!searchRes && QST[qf]) return renderTrq(L);
   const pt = !searchRes && qf === "ptplan", base = pt ? (W.probetag_planen || []) : W.arbeitsliste;
@@ -2351,7 +2454,7 @@ async function loadWork() {
     if (!window._wvAt || Date.now() - window._wvAt > 300000) { window._wvAt = Date.now(); try { await api("wiedervorlagen"); } catch {} }
     WALL = await api("work");
     for (const x of NEUE_STATUS) if (!(WALL.status_liste || []).some((y) => norm(y) === norm(x))) (WALL.status_liste = WALL.status_liste || []).push(x);
-    applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu(); loadIm(); loadOrte();
+    applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu(); loadIm(); loadOrte(); loadIhq();
   } catch (e) { if (e.message !== "Nicht eingerichtet") toast(e.message, true); }
 }
 // ---------- Bereiche: Ihro / Transa / HeyRecruit ----------
@@ -2475,7 +2578,7 @@ async function openLead(id) {
     renderCard(r);
     if (!ORTE[id]?.gesucht) loadOrte();
   }
-  catch (e) { $("card").innerHTML = `${trBoardAn() ? `<button type="button" class="btn sm quiet trback" data-trback="1">← Zurück zur Liste</button>` : ""}<div class="placeholder"><b>Konnte nicht geladen werden</b><span>${esc(e.message)}</span></div>`; }
+  catch (e) { $("card").innerHTML = `${boardAn() ? `<button type="button" class="btn sm quiet trback" data-trback="1">← Zurück zur Liste</button>` : ""}<div class="placeholder"><b>Konnte nicht geladen werden</b><span>${esc(e.message)}</span></div>`; }
 }
 function renderCard(r) {
   const l = r.lead, k = statusKind(l.status);
@@ -2485,7 +2588,7 @@ function renderCard(r) {
   const PRIM = primFor(l);
   const others = all.filter((s) => !PRIM.some((p) => norm(p) === norm(s)) && !/^nichterreicht/.test(norm(s)));
   const wa = (W.wa_vorlagen || []);
-  $("card").innerHTML = `${trBoardAn() ? `<button type="button" class="btn sm quiet trback" data-trback="1">← Zurück zur Liste <small style="opacity:.6">(Esc)</small></button>` : ""}
+  $("card").innerHTML = `${boardAn() ? `<button type="button" class="btn sm quiet trback" data-trback="1">← Zurück zur Liste <small style="opacity:.6">(Esc)</small></button>` : ""}
     <div class="card-head">
       <div style="min-width:0"><h2>${esc(l.name || "Ohne Namen")}</h2>
         <div class="meta">${pillFor(l.status)}<span>${esc(l.kampagne)}</span><span>beworben ${rel(l.lead_created_at)}</span>${l.last_status_change ? `<span>letzte Änderung ${rel(l.last_status_change)}</span>` : ""}</div></div>
@@ -2753,7 +2856,7 @@ function renderWoche(w) {
     <div><h4>Probetag planen</h4><div class="wkbig">${pl.length}<small>offen</small></div>
       ${pl.slice(0, 4).map((l) => `<button class="wki" data-open="${esc(l.lead_id)}"><span class="x">${esc(l.name || "Ohne Namen")} <small>${rel(l.last_status_change || l.lead_created_at)}</small></span></button>`).join("")}
       ${pl.length ? `<button class="btn sm blue" id="wkPt" style="margin-top:8px">Jetzt abarbeiten</button>` : ""}</div>`;
-  if ($("wkPt")) $("wkPt").addEventListener("click", () => { showView("vWork"); const b = $("qFilter").querySelector('[data-f="ptplan"]'); if (b) b.click(); });
+  if ($("wkPt")) $("wkPt").addEventListener("click", () => { showView("vWork"); if (ihBoardAn()) { ihF = "ptp"; store.set("tc_ihbrd", ihF); selId = null; cur = null; renderTrBoard(); return; } const b = $("qFilter").querySelector('[data-f="ptplan"]'); if (b) b.click(); });
 }
 $("wkBody").addEventListener("click", (e) => { const o = e.target.closest("[data-open]"); if (o) openLead(o.dataset.open); });
 
@@ -2873,7 +2976,7 @@ async function setStatus(s) {
   try {
     await api("lead_status", { id: lead.lead_id, status: s, followup: fu });
     toast(`${lead.name || "Bewerber"}: ${s}${fu ? ", wieder dran " + when(fu.at) : ""}`);
-    lead.status = s;
+    lead.status = s; ihLokal(lead.lead_id, { status: s, last_status_change: new Date().toISOString(), ...(fu && fu.at ? { followup_at: fu.at, followup_note: fu.note || null } : {}) });
     await loadWork(); loadStats();
     if (kind === "nicht" && W.auto_weiter !== false) {
       post = null;
