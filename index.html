@@ -952,6 +952,18 @@
   [data-theme="dark"] .modal{background:rgba(34,34,38,.98)}
   .panel:focus-within,.glass:focus-within{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(255,255,255,.95)}
   [data-theme="dark"] .panel:focus-within,[data-theme="dark"] .glass:focus-within{background:rgba(40,40,46,.97)}
+.trstelle{margin:10px 0;border:.5px solid var(--sep2, rgba(60,60,67,.26));border-radius:16px;padding:10px 14px;background:var(--card, #fff)}
+.trstelle summary{cursor:pointer;font-weight:700;font-size:14.5px} .trstelle summary span{font-weight:400;color:var(--ink3, #8a8f98);font-size:12px;margin-left:6px}
+.trstelle dl{display:grid;grid-template-columns:118px 1fr;gap:6px 12px;margin:10px 0 2px;font-size:13.5px;line-height:1.45}
+.trstelle dt{font-weight:600;color:var(--ink2, #3a3a3c)} .trstelle dd{margin:0}
+@media (max-width:600px){.trstelle dl{grid-template-columns:1fr}.trstelle dt{margin-top:4px}}
+.tb-heute{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;margin:0 0 10px;padding:8px 12px;border-radius:12px;background:rgba(0,122,255,.06)}
+.tb-heute span{color:var(--ink2, #3a3a3c)} .tb-heute .ok{color:var(--go-ink, #15803d);font-weight:600}
+.slrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0}
+.slrot{margin:6px 0;padding:10px 12px;border-radius:12px;background:rgba(220,38,38,.09);color:var(--stop-ink, #b91c1c);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.slrot .btn.stop{background:#dc2626;color:#fff}
+.slgruen{margin:6px 0;padding:10px 12px;border-radius:12px;background:rgba(22,163,74,.09);color:var(--go-ink, #15803d)}
+@media (max-width:520px){.slrow{grid-template-columns:1fr}}
 .abchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
 .abchip{border:.5px solid var(--sep2, rgba(60,60,67,.26));background:transparent;color:inherit;border-radius:999px;padding:5px 11px;font:500 13px/1.2 inherit;cursor:pointer}
 @media (hover:hover){.abchip:hover{background:rgba(0,122,255,.08)}}
@@ -1428,7 +1440,7 @@ function toast(msg, err) {
 }
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids|fg_log|chef_liste)$/.test(action) ? "cockpit-plus" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids|fg_log|chef_liste|dubletten|heute)$/.test(action) ? "cockpit-plus" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + fn, opt = {
     method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
@@ -1815,6 +1827,7 @@ function tbHinweis(l) {
   const a = abFall(l), s = stN(l.status), h = [];
   if (trWaGesendet(l)) h.push(`<span class="ok">WhatsApp ✓</span>`);
   const fg = FGLOG[l.lead_id], dt = (x) => new Date(x).toLocaleDateString("de-DE");
+  const du = DUP[l.lead_id]; if (du && du.length) h.push(`<span class="warn" title="${esc(du.map((x) => `${x.name} · ${x.kampagne} · ${x.status}`).join(" | "))}">⚠ doppelt (${du.length + 1}×)</span>`);
   if (s === stN(ST_VORG)) h.push(`<span class="warn">wartet auf Freigabe</span>`);
   else if (s === stN(ST_FOK)) h.push(`<span class="ok">freigegeben${fg && fg.entscheidung === "frei" ? ` von ${esc(fg.von)} am ${dt(fg.created_at)}` : ""} – Vertrag schicken</span>`);
   else if (s === stN(ST_FNO)) h.push(`<span class="warn">${fg && fg.entscheidung === "vorab_stopp" ? "vor dem Anruf gestoppt" : "abgelehnt"}${fg && /stopp/.test(fg.entscheidung) ? `: ${esc(fg.grund || "")} (${esc(fg.von)})` : ""}</span>`);
@@ -1853,6 +1866,7 @@ function renderTrBoard() {
   el.innerHTML = `<div class="tb-kopf"><h2>Transa-Bewerber</h2><span class="note">${TRQ ? "Abstellort aus dem Vorgespräch, sonst laut PLZ der Bewerbung" : "wird geladen …"}</span>
       <span class="act"><select class="inp" id="tbCamp"><option value="">Alle Kampagnen</option>${camps.map((c) => `<option ${c === campF ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
       <button class="btn sm" type="button" id="tbOv">Scoring-Übersicht</button></span></div>
+    ${HEUTE ? `<div class="tb-heute"><b>Heute</b><span>${HEUTE.angerufen} angerufen</span><span>${HEUTE.gespraeche} Gespräche</span><span class="ok">${HEUTE.vorgeschlagen} Abstellort vorgeschlagen</span><span>${HEUTE.qualifiziert} qualifiziert</span><span>${HEUTE.nicht_qualifiziert} nicht qualifiziert</span><span>${HEUTE.nicht_erreicht} nicht erreicht</span><span>${HEUTE.whatsapp} WhatsApp</span>${HEUTE.freigegeben ? `<span class="ok">${HEUTE.freigegeben} freigegeben</span>` : ""}</div>` : ""}
     <div class="tb-stufen">${stufen}</div>
     <div class="tb-titel"><h3>${esc(titel)}</h3>${tbAktion(f, L)}<span>${TRQ ? L.length + (L.length === 1 ? " Bewerber" : " Bewerber") : ""}${nachRegion ? " · nach Wohnort-Region" : ""} · Klick öffnet die Karte</span></div>
     ${!TRQ ? `<div class="sk"><i></i><i></i><i></i></div>` : !L.length ? `<div class="empty">Niemand in dieser Liste${campF ? " für diese Kampagne" : ""}.</div>`
@@ -2078,6 +2092,23 @@ function leaflet() {
   });
   return LF;
 }
+// Infos zur Stelle (Stand 10.11.2026, Regeln aus talentjagd-com/CLAUDE.md) – beim Anruf immer sichtbar in der Bewerberkarte
+const TR_STELLE = [
+  ["Stelle", "LKW-Fahrer (m/w/d) im Fernverkehr, Sattelzug. Start ab Januar 2027 möglich."],
+  ["Gehalt", "<b>bis zu 3.600 € brutto im Monat</b> = 3.200 € Grundgehalt + 400 € ADR-1-Zulage brutto. Die ADR-1-Zulage gibt es mit ADR-Schein Klasse 1 jeden Monat, auch ohne Gefahrgut-Tour; ohne Schein ab der bestandenen Prüfung. Nie „fest“ oder „Startgehalt“ sagen."],
+  ["Dazu", "hoher Spesensatz (intern: 27 € An-/Abreisetag, 39 € mit Übernachtung, netto – Beträge nicht nennen), Nachtzulagen, 50 € netto im Monat auf Bezahlkarte (nicht zu den 3.600 € addieren). Nicht „steuerfrei“ sagen."],
+  ["Arbeitszeit", "in der Regel Montag bis Freitag unterwegs, am Wochenende zu Hause. Überwiegend Deutschland, gelegentlich grenznahes Ausland. Keine Uhrzeiten nennen."],
+  ["Gefahrgut", "auch Klasse 1 – explosive Güter, aber nicht ausschließlich. Zuverlässigkeitsprüfung und Führungszeugnis nötig."],
+  ["ADR-Schein Kl. 1", "wird bezahlt, auch die Zeit dafür wird ausgeglichen. Schulung ein paar Tage an einem zentralen Ort, im Januar bzw. zum eigenen Start (wer im Februar anfängt, im Februar). Vertrag ist dann schon da."],
+  ["Abstellort", "wohnortnah, gemeinsam gesucht. Bis 20 km zur Autobahn frei wählbar, weiter weg ein Stück Richtung Autobahn entgegen. Keine Zeitangabe, nie „bewachter Autohof“."],
+  ["Nicht nennen", "Kunden/Spedition, Ort und Partner der ADR-Schulung, Anzahl der Stellen."],
+];
+function trStelleBox() {
+  let auf = true; try { auf = localStorage.getItem("tc_stelle_zu") !== "1"; } catch {}
+  return `<details class="trstelle" id="trStelle"${auf ? " open" : ""}><summary>Infos zur Stelle <span>Stand 10.11.2026</span></summary>
+    <dl>${TR_STELLE.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl></details>`;
+}
+document.addEventListener("toggle", (e) => { if (e.target && e.target.id === "trStelle") { try { localStorage.setItem("tc_stelle_zu", e.target.open ? "0" : "1"); } catch {} } }, true);
 function trAbBlock(l) {
   if (!l || !isTransa(l)) return `<div id="trAb" hidden></div>`;
   const t = (TRQ || []).find((x) => x.lead_id === l.lead_id) || l, p = TRPLZ[l.lead_id];
@@ -2131,10 +2162,14 @@ $("card").addEventListener("click", (e) => {
 });
 $("card").addEventListener("input", (e) => { if (e.target.id === "trAbIn" && cur) trAbDraft[cur.lead_id] = e.target.value; });
 $("card").addEventListener("keydown", (e) => { if (e.target.id === "trAbIn" && e.key === "Enter") { e.preventDefault(); trAbSpeichern(false); } });
+let DUP = {}, DUP_AT = 0, HEUTE = null;
 async function loadTrq() {
   if (BER !== "transa") return;
   try {
     api("fg_log").then((r) => { FGLOG = r.log || {}; if (BER === "transa") renderTrBoard(); }).catch(() => {});
+    // Doppelte Bewerber (gleiche Nummer/Mail, alle Kampagnen) und Tageszähler, 10.11.2026
+    if (Date.now() - DUP_AT > 3e5) api("dubletten").then((r) => { DUP = r.dubletten || {}; DUP_AT = Date.now(); if (BER === "transa") renderTrBoard(); }).catch(() => {});
+    api("heute").then((r) => { HEUTE = r; if (BER === "transa") renderTrBoard(); }).catch(() => {});
     const plz = Date.now() - TRPLZ_AT > 6e5 ? api("abst_plz").then((p) => { TRPLZ = p.abst || {}; TRPLZ_AT = Date.now(); }).catch(() => {}) : null;
     const r = await api("transa_status_liste", { alle: true, stati: TR_HOLEN, mitText: true }); await plz; TRQ = r.leads || []; TRSTAND = r.stand || null;
     const n1 = trqList("qual").length, n2 = trqList("nq").length, n0 = trqList("jetzt").length;
@@ -2344,7 +2379,7 @@ function renderTrq(L) {
     for (const l of S) {
       if (reg(l) !== last) { last = reg(l); h += `<div class="lidiv reg">${esc(last)} · ${S.filter((x) => reg(x) === last).length}</div>`; }
       const v = vgInfo(l);
-      const sb = [wo(l), abKurz(l), v.erreichbar ? "erreichbar: " + v.erreichbar : ""].filter(Boolean).map(esc).join(" · ") + (v.warn.length ? ` <span class="trwarn" title="${esc(v.warn.join(" | "))}">⚠ Bitte prüfen</span>` : "");
+      const sb = [wo(l), abKurz(l), v.erreichbar ? "erreichbar: " + v.erreichbar : ""].filter(Boolean).map(esc).join(" · ") + (v.warn.length ? ` <span class="trwarn" title="${esc(v.warn.join(" | "))}">⚠ Bitte prüfen</span>` : "") + ((DUP[l.lead_id] || []).length ? ` <span class="trwarn">⚠ doppelt</span>` : "");
       h += liHtml(l, sb, `<span class="age" title="seit dann online vorqualifiziert">${rel(l.last_status_change || l.lead_created_at)}</span>`);
     }
     $("queue").innerHTML = h;
@@ -2606,6 +2641,7 @@ function renderCard(r) {
       ${isTransa(l) ? `<button class="btn blue" id="trLfBtn" title="Gesprächsfenster mit Leitfaden und Scoring">Leitfaden</button>` : ""}
     </div>
     ${ihBlock(l)}
+    ${isTransa(l) ? trStelleBox() : ""}
     ${trAbBlock(l)}
     ${(r.frueher || []).length ? `<div class="dupe"><b>Schon bekannt: ${r.frueher.length === 1 ? "eine frühere Bewerbung" : r.frueher.length + " frühere Bewerbungen"}</b>${r.frueher.map((f) => `<button data-open="${esc(f.lead_id)}"><span class="n">${esc(f.kampagne)}</span>, ${f.lead_created_at ? new Date(f.lead_created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : ""}, ${esc(f.status || "")}${f.description ? `<span class="d">${esc(f.description)}</span>` : ""}</button>`).join("")}</div>` : ""}
     ${post && post.id === l.lead_id ? `<div class="postbar"><b>${esc(post.msg)}</b><span class="grow"></span>
@@ -3037,16 +3073,17 @@ const TR_DEF = {
   begruessung: "„Guten Tag {anrede}, hier ist Dennis Mende von Talentjagd. Sie haben sich bei mir als Fernfahrer beworben. Passen gerade zehn Minuten?“",
   projekt: [
     "Ich suche für einen Kunden von mir, eine Spedition, Fahrer für ein großes neues Projekt.",
-    "Start voraussichtlich Anfang 2027. Transportiert wird Gefahrgut, auch Klasse 1 (explosive Stoffe).",
+    "Start ab Januar 2027 möglich. Transportiert wird Gefahrgut, auch Klasse 1 – also auch explosive Güter, aber nicht ausschließlich.",
     "Fernverkehr: Montag bis Freitag unterwegs, überwiegend in Deutschland, gelegentlich grenznahes Ausland, keine längeren Auslandsaufenthalte.",
-    "Ihr LKW steht in Ihrer Region; den genauen Abstellort legen wir gerade fest.",
-    "3.600 € brutto im Monat, die ADR-Schulungen werden bezahlt.",
+    "Der LKW steht wohnortnah: Bis 20 km von der Autobahn wählen Sie den Abstellort frei, wer weiter weg wohnt, kommt ein Stück Richtung Autobahn entgegen.",
+    "Bis zu 3.600 € brutto im Monat: 3.200 € Grundgehalt plus 400 € ADR-1-Zulage brutto. Dazu hoher Spesensatz, Nachtzulagen und 50 € netto im Monat auf eine Bezahlkarte.",
+    "Den ADR-Schein Klasse 1 bezahlt der Arbeitgeber, auch die Zeit dafür wird ausgeglichen. Die Schulung ist im Januar bzw. zu Ihrem Start.",
     "Weil Klasse 1 transportiert wird, gibt es eine Zuverlässigkeitsprüfung.",
   ],
   offen: "Den Namen der Spedition noch nicht nennen. Noch nicht zusagen: genauer Starttermin, Abstellort, Spesen, Schulungstermine. Antwort: „Das klären wir gerade final mit meinem Kunden, Sie bekommen es schriftlich mit dem Angebot.“",
   abschluss: [
     "E-Mail-Adresse bestätigen: „Sie bekommen heute noch eine E-Mail mit den Projektinfos und den Unterlagen, die wir brauchen.“",
-    "„Sobald der Abstellort für Ihre Region feststeht, schicken wir Ihnen das konkrete Angebot und rufen Sie an.“",
+    "„Ich lasse den Abstellort jetzt bestätigen. Sobald das durch ist, bekommen Sie Ihren Vertrag.“ (keine Zeitangabe versprechen)",
     "Fragen des Bewerbers notieren.",
   ],
   staaten: "Afghanistan, Algerien, Armenien, Aserbaidschan, Belarus, China (inkl. Hongkong, Macau), Georgien, Irak, Iran, Kasachstan, Kirgisistan, Nordkorea, Kuba, Laos, Libanon, Libyen, Moldau, Pakistan, Russland, Sudan, Syrien, Tadschikistan, Turkmenistan, Ukraine, Usbekistan, Vietnam",
@@ -3064,11 +3101,53 @@ const TR_DEF = {
     { k: "fz", label: "Aktuelles Führungszeugnis + Zuverlässigkeitsprüfung ok?", o: [["ja", "ja", 0], ["nein", "nein", 0, 1]] },
     { k: "staat", label: "Pflichtfrage Staatenliste – Bezug?", staaten: 1, o: [["kein", "kein Bezug", 0], ["bezug", "Bezug", 0, 1]] },
     { k: "deutsch", label: "Deutsch – dein Eindruck", o: [["gut", "gut", 10], ["ausreichend", "ausreichend", 5], ["schwierig", "schwierig", 0]] },
-    { k: "gehalt", label: "3.600 € brutto im Monat – passt das?", o: [["ja", "ja", 10], ["nein", "nein", 0]] },
+    { k: "gehalt", label: "Bis zu 3.600 € brutto (3.200 € Grundgehalt + 400 € ADR-1-Zulage) – passt das?", o: [["ja", "ja", 10], ["nein", "nein", 0]] },
     { k: "eindruck", label: "Gesamteindruck (Motivation, Zuverlässigkeit, Auftreten)", o: [["1", "1", 2], ["2", "2", 4], ["3", "3", 6], ["4", "4", 8], ["5", "5", 10]] },
   ],
 };
 const TR_STATI = ["Abstellort vorgeschlagen", "Qualifiziert", "Nicht qualifiziert"];
+// Staatenliste-Prüfung (Dennis, 10.11.2026): Geburtsland + Staatsangehörigkeit eintippen → sofort „auf der Liste ja/nein“.
+// Die Länder selbst werden NICHT gespeichert (nur das Ergebnis „kein Bezug“ / „Bezug“), Treffer → „Nicht qualifiziert“ + Notiz.
+const SL_ALIAS = { "belarus": ["weissrussland", "weißrussland", "belarus"], "china": ["china", "volksrepublik china", "hongkong", "hong kong", "macau", "macao"],
+  "moldau": ["moldau", "moldawien", "moldova", "republik moldau"], "russland": ["russland", "russische foderation", "russische föderation", "russia"],
+  "kirgisistan": ["kirgisistan", "kirgistan", "kirgisien"], "nordkorea": ["nordkorea", "korea nord", "dvrk"], "aserbaidschan": ["aserbaidschan", "aserbeidschan"],
+  "tadschikistan": ["tadschikistan"], "usbekistan": ["usbekistan"], "turkmenistan": ["turkmenistan"], "kasachstan": ["kasachstan"], "vietnam": ["vietnam", "viet nam"],
+  "ukraine": ["ukraine"], "syrien": ["syrien"], "sudan": ["sudan", "nordsudan"], "libanon": ["libanon"], "libyen": ["libyen"], "laos": ["laos"], "kuba": ["kuba", "cuba"],
+  "irak": ["irak", "iraq"], "iran": ["iran", "persien"], "georgien": ["georgien"], "armenien": ["armenien"], "algerien": ["algerien"], "afghanistan": ["afghanistan"], "pakistan": ["pakistan"] };
+const SL_NORM = (x) => String(x || "").toLowerCase().replace(/[^a-zäöüß ]/g, " ").replace(/\s+/g, " ").trim();
+const SL_ALLE = Object.values(SL_ALIAS).flat().map(SL_NORM);
+function slTreffer(x) { const n = SL_NORM(x); if (n.length < 3) return null; for (const [k, a] of Object.entries(SL_ALIAS)) if (a.map(SL_NORM).includes(n)) return k; return null; }
+const SL_LAENDER = ["Deutschland", "Polen", "Rumänien", "Bulgarien", "Türkei", "Griechenland", "Italien", "Kroatien", "Serbien", "Bosnien und Herzegowina", "Kosovo", "Albanien", "Nordmazedonien", "Montenegro",
+  "Ungarn", "Tschechien", "Slowakei", "Slowenien", "Österreich", "Schweiz", "Niederlande", "Belgien", "Frankreich", "Spanien", "Portugal", "Litauen", "Lettland", "Estland", "Marokko", "Tunesien", "Ägypten",
+  "Eritrea", "Äthiopien", "Somalia", "Nigeria", "Ghana", "Kamerun", "Indien", "Sri Lanka", "Bangladesch", "Philippinen", "Indonesien", "Thailand", "Brasilien", "Kolumbien",
+  "Afghanistan", "Algerien", "Armenien", "Aserbaidschan", "Belarus", "China", "Hongkong", "Macau", "Georgien", "Irak", "Iran", "Kasachstan", "Kirgisistan", "Nordkorea", "Kuba", "Laos", "Libanon", "Libyen",
+  "Moldau", "Pakistan", "Russland", "Sudan", "Syrien", "Tadschikistan", "Turkmenistan", "Ukraine", "Usbekistan", "Vietnam"];
+function slPruefen() {
+  if (!TR) return;
+  const g = $("slGeb") ? $("slGeb").value : (TR.sl || {}).geb || "", a = $("slAng") ? $("slAng").value : (TR.sl || {}).ang || "";
+  TR.sl = { geb: g, ang: a };
+  const tg = slTreffer(g), ta = slTreffer(a), box = $("slErg");
+  let html = "";
+  if (tg || ta) {
+    TR.ans.staat = "bezug"; TR.from.delete("staat");
+    html = `<div class="slrot"><b>Auf der Staatenliste</b> (${esc([tg && "Geburtsland", ta && "Staatsangehörigkeit"].filter(Boolean).join(" + "))}). Sicherheitsprüfung nicht möglich.
+      <button type="button" class="btn sm stop" id="slEnde">Gespräch beenden: Staatenliste</button></div>`;
+  } else if (SL_NORM(g).length >= 3 && SL_NORM(a).length >= 3) {
+    if (TR.ans.staat !== "bezug" || TR.slAuto) { TR.ans.staat = "kein"; TR.slAuto = true; }
+    html = `<div class="slgruen"><b>Nicht auf der Liste.</b> Noch kurz fragen: „Und enge Familienangehörige?“ – bei Ja auf „Bezug“ tippen.</div>`;
+  }
+  if (box) box.innerHTML = html;
+  const q = $("trBody") && $("trBody").querySelector('[data-q="staat"]');
+  if (q) { const b = q.closest(".trq"); b.querySelectorAll("[data-q]").forEach((x) => x.classList.toggle("on", TR.ans.staat === x.dataset.v)); b.classList.toggle("ko", TR.ans.staat === "bezug"); }
+  if ($("slEnde")) $("slEnde").onclick = slBeenden;
+  TR.dirty = true; trLive();
+}
+async function slBeenden() {
+  if (!TR) return;
+  TR.ans.staat = "bezug"; TR.status = "Nicht qualifiziert";
+  TR.notiz = (String(TR.notiz || "").trim() ? TR.notiz.trim() + "\n" : "") + "Staatenliste: Bezug – Sicherheitsprüfung nicht möglich, Gespräch beendet.";
+  TR.slEnde = true; await trFinal();
+}
 // Ziel-Status am Ende des Leitfadens: qualifiziert + Abstellort eingetragen → „Abstellort vorgeschlagen“ (geht an Hr. Baumann zur Freigabe)
 const trAbTxt = () => String((TR && TR.txt.abstellort) || "").trim();
 const trAuto = (s) => s.vorschlag !== "Qualifiziert" ? s.vorschlag : trAbTxt() ? "Abstellort vorgeschlagen" : "Qualifiziert";
@@ -3091,7 +3170,7 @@ function sendVgLink(l) {
   window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
   api("lead_note", { id: l.lead_id, text: "Link zum Online-Vorgespräch per WhatsApp geschickt" }).catch(() => {});
 }
-const TR_DANKE = "Guten Tag,\n\nvielen Dank für das nette Gespräch! Wie besprochen bekommen Sie in Kürze eine E-Mail mit den weiteren Infos zum Projekt.\n\nBei Fragen erreichen Sie mich jederzeit hier per WhatsApp oder telefonisch unter 0175 1009 008.\n\nViele Grüße\nDennis Mende, Talentjagd";
+const TR_DANKE = "Hallo {vorname},\n\ndanke dir für das nette Gespräch! Wie besprochen kläre ich jetzt deinen Abstellort, danach melde ich mich mit allem Weiteren bei dir.\n\nBei Fragen erreichst du mich jederzeit hier per WhatsApp oder unter 0176 19 10 15 82.\n\nViele Grüße\nDennis Mende, TALENTJAGD";
 const TR_REG = [["fulda", "Fulda/Bad Hersfeld", /fulda|hersfeld/i], ["ruhr", "Ruhrgebiet", /ruhr/i], ["rheinmain", "Rhein-Main", /rhein[\s-]*main/i], ["osnabrueck", "Raum Osnabrück", /osnabr/i], ["halle", "Halle/Leipzig", /halle|leipzig/i], ["a6", "A6-Korridor", /\ba6\b|korridor/i]];
 const trRegion = (k) => (TR_REG.find((r) => r[2].test(k || "")) || [null, "Allgemein"])[1];
 let TR = null, trTick = null, trCfg = null;
@@ -3199,9 +3278,19 @@ function trRender() {
     <div class="row" style="gap:8px"><button class="btn blue" data-go="1">Weiter: Projekt</button>${TR.from.size >= 4 ? `<button class="btn" data-go="2">Formular schon ausgefüllt – direkt zu Qualifizieren</button>` : ""}<button class="btn quiet" data-go="3">Direkt zum Abschluss</button></div>`;
   else if (TR.step === 1) h = `<div class="trsay"><ul>${trCfg.projekt.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><p class="hintline">${esc(trCfg.offen)}</p>
     <div class="row" style="gap:8px"><button class="btn blue" data-go="2">Weiter: Qualifizieren</button></div>`;
-  else if (TR.step === 2) h = `<p class="hintline">Vorbelegt aus dem Formular – vorlesen und bestätigen lassen.${TR.wohnsitz === "nein" ? " <b>Formular: kein Wohnsitz in Deutschland (K.o.)</b>" : ""}</p>
-    ${trCfg.fragen.map((q, i) => trQ(q, i)).join("")}
+  else if (TR.step === 2) {
+    if (TR.schnell == null) TR.schnell = TR.from.size >= 4 || !!(TR.saved && TR.saved.antworten && Object.keys(TR.saved.antworten).length >= 4);
+    const idx = trCfg.fragen.map((q, i) => [q, i]);
+    const zeig = TR.schnell ? idx.filter(([q]) => q.staaten || TR.ans[q.k] == null || q.k === "start" || q.k === "code95") : idx;
+    zeig.sort((a, b) => (b[0].staaten ? 1 : 0) - (a[0].staaten ? 1 : 0));
+    const versteckt = idx.filter(([q]) => !zeig.some(([z]) => z === q));
+    h = `<div class="row" style="gap:8px;align-items:center;margin-bottom:6px"><div class="seg" id="trSchnell"><button type="button" data-sm="1" class="${TR.schnell ? "on" : ""}">Schnell: nur Offenes</button><button type="button" data-sm="0" class="${TR.schnell ? "" : "on"}">Alle Fragen</button></div></div>
+    <p class="hintline">${TR.schnell ? "Staatenliste zuerst, dann nur was noch fehlt (plus Start und Code 95 bestätigen)." : "Vorbelegt aus dem Formular – vorlesen und bestätigen lassen."}${TR.wohnsitz === "nein" ? " <b>Formular: kein Wohnsitz in Deutschland (K.o.)</b>" : ""}</p>
+    ${zeig.map(([q, i]) => trQ(q, i)).join("")}
+    ${TR.schnell && versteckt.length ? `<p class="hintline" style="margin-top:6px">Schon beantwortet: ${versteckt.map(([q]) => `${esc(q.label.replace(/ –.*|\?.*/, "").trim())}: <b>${esc(trOpt(q.k))}</b>`).join(" · ")}</p>` : ""}`;
+    h += `
     <div class="row" style="gap:8px;margin-top:6px"><button class="btn blue" data-go="3">Weiter: Abschluss</button></div>`;
+  }
   else h = `<div class="trsay"><ul>${trCfg.abschluss.map((x) => `<li>${esc(x)}</li>`).join("")}</ul><p style="margin-top:8px">E-Mail laut Bewerbung: <b>${esc(l.email || "keine – bitte erfragen")}</b></p></div>
     ${trLfAbBox(l, s)}
     <div class="trlab">Ergebnis für LeadTable <span class="hintline" style="margin:0" id="trVorsch">Vorschlag: ${esc(trAuto(s))}${s.offen.length && !ko ? ` · noch offen: Frage ${s.offen.join(", ")}` : ""}</span></div>
@@ -3236,7 +3325,11 @@ function trQ(q, i) {
   const offen = TR.zeigOffen && q.o && v == null;
   return `<div class="trq${isKo ? " ko" : ""}${offen ? " offen" : ""}" data-i="${i + 1}"><span class="n">${i + 1}</span><div class="b">
     <div class="l">${esc(q.label)}${hasKo ? '<span class="kotag">K.O.</span>' : ""}${TR.from.has(q.k) ? '<span class="fromtag">aus Formular</span>' : ""}</div>
-    ${q.staaten ? `<div class="hintline" style="margin:2px 0 6px">„Für die Sicherheitsprüfung muss ich allen Bewerbern dieselbe Frage stellen: Haben Sie über Staatsangehörigkeit, Geburtsort oder enge Familienangehörige einen Bezug zu einem der folgenden Staaten?“ ${esc(trCfg.staaten)}</div>` : ""}
+    ${q.staaten ? `<div class="hintline" style="margin:2px 0 6px">„Für die Sicherheitsprüfung muss ich allen Bewerbern dieselbe Frage stellen: Wo sind Sie geboren, welche Staatsangehörigkeit haben Sie – und haben enge Familienangehörige einen Bezug zu bestimmten Staaten?“</div>
+      <div class="slrow"><input class="inp" id="slGeb" list="slListe" autocomplete="off" placeholder="Geburtsland" value="${esc((TR.sl || {}).geb || "")}"><input class="inp" id="slAng" list="slListe" autocomplete="off" placeholder="Staatsangehörigkeit" value="${esc((TR.sl || {}).ang || "")}"></div>
+      <datalist id="slListe">${SL_LAENDER.map((x) => `<option value="${esc(x)}">`).join("")}</datalist>
+      <div id="slErg"></div>
+      <details class="hintline" style="margin:4px 0 6px"><summary>Liste der Staaten</summary>${esc(trCfg.staaten)}</details>` : ""}
     ${q.o ? `<div class="tropts">${q.o.map((o) => `<button type="button" class="${v === o[0] ? "on" : ""}${o[3] ? " bad" : ""}" data-q="${esc(q.k)}" data-v="${esc(o[0])}">${esc(o[1])}</button>`).join("")}</div>` : ""}
     ${q.t ? `<input class="inp" data-t="${esc(q.k)}" placeholder="${esc(q.t)}" value="${esc(TR.txt[q.k] || "")}">` : ""}
   </div></div>`;
@@ -3254,6 +3347,7 @@ function trBind() {
   $("trBody").querySelectorAll("[data-q]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.q, v = b.dataset.v;
     if (TR.ans[k] === v) delete TR.ans[k]; else TR.ans[k] = v;
+    if (k === "staat") TR.slAuto = false;
     TR.from.delete(k); TR.dirty = true;
     const box = b.closest(".trq"), q = trCfg.fragen.find((x) => x.k === k);
     box.querySelectorAll("[data-q]").forEach((x) => x.classList.toggle("on", TR.ans[k] === x.dataset.v));
@@ -3263,6 +3357,9 @@ function trBind() {
     trLive();
   }));
   $("trBody").querySelectorAll("[data-t]").forEach((i) => i.addEventListener("input", () => { TR.txt[i.dataset.t] = i.value; TR.dirty = true; trLive(); }));
+  if ($("trSchnell")) $("trSchnell").querySelectorAll("[data-sm]").forEach((b) => b.addEventListener("click", () => { TR.schnell = b.dataset.sm === "1"; trRender(); }));
+  ["slGeb", "slAng"].forEach((id) => { if ($(id)) $(id).addEventListener("input", slPruefen); });
+  if ((TR.sl || {}).geb || (TR.sl || {}).ang) slPruefen();
   if ($("trLfAb")) $("trLfAb").addEventListener("input", (e) => { TR.txt.abstellort = e.target.value; trAbDraft[TR.lead.lead_id] = e.target.value; TR.dirty = true; trLive(); });
   if ($("trLfAbVor")) $("trLfAbVor").addEventListener("click", (e) => { const v = e.target.dataset.v; TR.txt.abstellort = v; trAbDraft[TR.lead.lead_id] = v; TR.dirty = true; trRender(); });
   if ($("trSt")) $("trSt").querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { TR.status = b.dataset.st; TR.dirty = true; $("trSt").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); trLive(); }));
@@ -3315,7 +3412,15 @@ async function trFinal() {
   toast(st === "Abstellort vorgeschlagen" ? `${l.name || "Bewerber"}: Abstellort vorgeschlagen – wartet auf Freigabe durch Hr. Baumann` : `${l.name || "Bewerber"}: ${st} – in LeadTable eingetragen`);
   TR.sending = false; btn.disabled = false;
   trClose();
-  try { await loadWork(); loadStats(); loadTrq(); if (selId === l.lead_id) { const r = await api("lead_get", { id: l.lead_id }); cur = r.lead; renderCard(r); } } catch {}
+  // Senden & nächster (10.11.2026): danach direkt den nächsten Bewerber der Liste öffnen (abschaltbar über „Auto-Weiter“ in den Einstellungen)
+  const vorher = filtered().map((x) => x.lead_id);
+  try { await loadWork(); loadStats(); await loadTrq(); } catch {}
+  if (W.auto_weiter !== false && selId === l.lead_id) {
+    const i = vorher.indexOf(l.lead_id), jetzt = new Set(filtered().map((x) => x.lead_id));
+    const n = vorher.slice(i + 1).concat(vorher.slice(0, Math.max(0, i))).find((id) => id !== l.lead_id && jetzt.has(id));
+    if (n) { openLead(n); toast("Weiter mit dem Nächsten"); return; }
+  }
+  try { if (selId === l.lead_id) { const r = await api("lead_get", { id: l.lead_id }); cur = r.lead; renderCard(r); } } catch {}
 }
 $("trSteps").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && TR) { TR.step = Number(b.dataset.s); trRender(); $("trBody").scrollTop = 0; } });
 $("trClockBtn").addEventListener("click", () => { if (!TR) return; if (TR.start) { TR.dauer = trElapsed(); TR.start = null; } else TR.start = Date.now(); trRender(); });
