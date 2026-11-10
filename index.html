@@ -1874,7 +1874,8 @@ function naechsterWerktag9() { const d = new Date(); d.setDate(d.getDate() + 1);
 function waSerieText(l, link) {
   const v = waVor(l), ort = tbWohnort(l).ort, hi = v ? `Hi ${v}` : "Hi";
   const offen = ST_OFFEN.includes(stN(l.status));
-  if (!offen) return `${hi}, hier ist Dennis von TALENTJAGD. Danke für deine Antworten zur Stelle als LKW-Fahrer im Fernverkehr. ${ort ? `Von ${ort} aus passt das gut.` : "Dein Wohnort passt gut."} Ich würde dich gern kurz anrufen und alles Weitere besprechen. Wann passt es dir am besten: vormittags, nachmittags oder abends?`;
+  if (!offen) { const t = naechsterWerktag9(), tag = (t - new Date()) < 2 * 864e5 && t.getDate() !== new Date().getDate() && t.getDay() === (new Date().getDay() + 1) % 7 ? "morgen" : "am " + t.toLocaleDateString("de-DE", { weekday: "long" });
+    return `${hi}, hier ist Dennis von TALENTJAGD. Danke für deine Antworten zur Stelle als LKW-Fahrer im Fernverkehr. ${ort ? `Von ${ort} aus passt das gut.` : "Dein Wohnort passt gut."} Ich rufe dich ${tag} kurz an (ca. 5 Minuten), damit wir deinen LKW-Abstellort und deinen Start besprechen. Wann passt es dir am besten: vormittags, nachmittags oder abends?`; }
   return `${hi}, hier ist Dennis von TALENTJAGD. Du hattest dich als LKW-Fahrer im Fernverkehr beworben. ${ort ? `Von ${ort} aus würde das gut passen.` : "Von deinem Wohnort aus würde das gut passen."} Hast du noch Interesse? Dann ruf ich dich gern kurz an. Wann passt es dir am besten?`
     + (link ? `\n\nWenn du magst, mach vorher das 2-Minuten-Vorgespräch: ${link}` : "");
 }
