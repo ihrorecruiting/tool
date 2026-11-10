@@ -1865,6 +1865,7 @@ function renderTrBoard() {
   const titel = QTITEL[f] || tbX(f).t;
   el.innerHTML = `<div class="tb-kopf"><h2>Transa-Bewerber</h2><span class="note">${TRQ ? "Abstellort aus dem Vorgespräch, sonst laut PLZ der Bewerbung" : "wird geladen …"}</span>
       <span class="act"><select class="inp" id="tbCamp"><option value="">Alle Kampagnen</option>${camps.map((c) => `<option ${c === campF ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+      <button class="btn sm" type="button" id="tbVcf" title="Kontaktdatei (.vcf) fürs iPhone: dann zeigt WhatsApp Namen statt Nummern">Kontakte fürs Handy</button>
       <button class="btn sm" type="button" id="tbOv">Scoring-Übersicht</button></span></div>
     ${HEUTE ? `<div class="tb-heute"><b>Heute</b><span>${HEUTE.angerufen} angerufen</span><span>${HEUTE.gespraeche} Gespräche</span><span class="ok">${HEUTE.vorgeschlagen} Abstellort vorgeschlagen</span><span>${HEUTE.qualifiziert} qualifiziert</span><span>${HEUTE.nicht_qualifiziert} nicht qualifiziert</span><span>${HEUTE.nicht_erreicht} nicht erreicht</span><span>${HEUTE.whatsapp} WhatsApp</span>${HEUTE.freigegeben ? `<span class="ok">${HEUTE.freigegeben} freigegeben</span>` : ""}</div>` : ""}
     <div class="tb-stufen">${stufen}</div>
@@ -1976,13 +1977,14 @@ $("trBoard").addEventListener("click", (e) => {
   if (box) { qf = box.dataset.tbst; store.set("tc_trbrd", qf); $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderTrBoard(); renderStand(); renderQueue(); return; }
   if (c) { qf = c.dataset.tb; store.set("tc_trbrd", qf); $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === qf)); renderTrBoard(); renderStand(); renderQueue(); return; }
   if (e.target.closest("#tbOv")) { $("trOvBtn").click(); return; }
+  if (e.target.closest("#tbVcf")) { kontakteExport(); return; }
   if (e.target.closest("#tbWa")) { waSerieStart(); return; }
   if (e.target.closest("#tbAus")) { ausSetzen(); return; }
   const r = e.target.closest("tr.l"); if (r) { tbScroll = window.scrollY; openLead(r.dataset.id); window.scrollTo({ top: 0 }); }
 });
 $("trBoard").addEventListener("change", (e) => { if (e.target.id === "tbCamp") { campF = e.target.value; renderTrBoard(); renderQueue(); } });
 $("card").addEventListener("click", (e) => { if (e.target.closest("[data-trback]")) trZurListe(); });
-$("listNote").addEventListener("click", (e) => { if (e.target.closest("#tbWaM")) waSerieStart(); else if (e.target.closest("#tbAusM")) { ausSetzen(); } });
+$("listNote").addEventListener("click", (e) => { if (e.target.closest("#tbWaM")) waSerieStart(); else if (e.target.closest("#tbAusM")) { ausSetzen(); } else if (e.target.closest("#tbVcfM")) kontakteExport(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("trcrd") && !document.querySelector(".ov.show, dialog[open], .modal.show") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) trZurListe(); });
 window.matchMedia("(max-width:860px)").addEventListener("change", () => renderTrBoard());
 
@@ -2358,7 +2360,7 @@ function renderTrq(L) {
   const base = trqList(qf), q = qf === "qual";
   renderStand();
   $("listTitle").textContent = QTITEL[qf] + " · Transa" + (campF ? " · " + campF.replace(/^T_Transa[_ ]*/i, "") : "");
-  $("listNote").innerHTML = (TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …") + (trDesk() ? "" : " " + tbAktion(qf, L).replace('id="tbWa"', 'id="tbWaM"').replace('id="tbAus"', 'id="tbAusM"'));
+  $("listNote").innerHTML = (TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …") + (trDesk() ? "" : " " + tbAktion(qf, L).replace('id="tbWa"', 'id="tbWaM"').replace('id="tbAus"', 'id="tbAusM"') + ` <button class="btn sm" type="button" id="tbVcfM">Kontakte fürs Handy</button>`);
   $("clearSearch").hidden = true; $("qFilter").style.display = "";
   const kl = (l) => { const g = l.gespraech; if (!g) return `<span class="pill">ohne Gespräch</span>`; return g.klasse === "K.o." || (g.ko && g.ko.length) ? `<span class="trmini ko">K.o.</span>` : `<span class="trmini">${esc(g.klasse || "")}</span> <span class="hintline" style="margin:0">${g.punkte ?? ""} P.</span>`; };
   const sub = (l) => { const g = l.gespraech, ko = g && g.ko && g.ko.length ? " · " + g.ko.join(", ") : "", ab = abKurz(l); return esc(String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "")) + (ab ? " · " + esc(ab) : "") + (g && g.texte && g.texte.anfahrt ? " · " + esc(g.texte.anfahrt) : "") + esc(ko); };
@@ -2593,6 +2595,30 @@ function autoFollowup(s) {
 }
 function nextNE(s) { const n = norm(s); return n === "nichterreicht1" ? "Nicht-Erreicht 2" : (n === "nichterreicht2" || n === "nichterreicht3") ? "Nicht-Erreicht 3" : "Nicht-Erreicht 1"; }
 const telHref = (p) => "tel:" + String(p || "").replace(/[^\d+]/g, "");
+// Kontakte fürs Handy (10.11.2026): Transa-Bewerber als .vcf, damit WhatsApp/Telefon Namen statt Nummern zeigen.
+// Kein Google, keine Make-Operationen: Datei wird im Browser erzeugt. Standard: nur neue seit dem letzten Export (tc_vcf_bis).
+function vcfEsc(x) { return String(x || "").replace(/\\/g, "\\\\").replace(/[,;]/g, (c) => "\\" + c).replace(/\r?\n/g, " "); }
+async function kontakteExport() {
+  const alle = (TRQ || []).filter((l) => l.phone && !/\btest\b/i.test(l.name || ""));
+  let bis = ""; try { bis = localStorage.getItem("tc_vcf_bis") || ""; } catch {}
+  const neu = bis ? alle.filter((l) => String(l.lead_created_at || "") > bis) : alle;
+  let L = neu;
+  if (!neu.length || (bis && !confirm(`${neu.length} neue Bewerber seit dem letzten Export.\n\nOK = nur die neuen · Abbrechen = alle ${alle.length}`))) L = alle;
+  if (!L.length) { toast("Keine Bewerber mit Telefonnummer"); return; }
+  const seen = new Set(), karten = [];
+  for (const l of L) {
+    const tel = "+" + waNumber(l.phone); if (seen.has(tel)) continue; seen.add(tel);
+    const teile = String(l.name || "Bewerber").trim().split(/\s+/), vor = teile.slice(0, -1).join(" ") || teile[0], nach = teile.length > 1 ? teile[teile.length - 1] : "";
+    const reg = String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "") || "Transa";
+    karten.push(["BEGIN:VCARD", "VERSION:3.0", `N:${vcfEsc(nach)};${vcfEsc("TJ " + vor)};;;`, `FN:${vcfEsc(`TJ ${l.name || "Bewerber"} (${reg})`)}`,
+      `TEL;TYPE=CELL:${tel}`, l.email ? `EMAIL:${vcfEsc(l.email)}` : "", `ORG:TALENTJAGD ${vcfEsc(reg)}`, `NOTE:${vcfEsc("Transa-Bewerber, beworben " + (l.lead_created_at ? new Date(l.lead_created_at).toLocaleDateString("de-DE") : ""))}`, "END:VCARD"].filter(Boolean).join("\r\n"));
+  }
+  const name = `TJ-Bewerber-${new Date().toISOString().slice(0, 10)}.vcf`, file = new File([karten.join("\r\n") + "\r\n"], name, { type: "text/vcard" });
+  try { localStorage.setItem("tc_vcf_bis", alle.map((l) => String(l.lead_created_at || "")).sort().pop() || ""); } catch {}
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); toast(`${karten.length} Kontakte geteilt – in „Kontakte“ auf „Alle hinzufügen“ tippen`); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  toast(`${karten.length} Kontakte als ${name} gespeichert – auf dem iPhone öffnen und „Alle hinzufügen“`);
+}
 function waNumber(p) { let d = String(p || "").replace(/\D/g, ""); if (d.startsWith("00")) d = d.slice(2); else if (d.startsWith("0")) d = "49" + d.slice(1); return d; }
 function fill(tpl, l, extra = {}) {
   const vor = String(l.name || "").trim().split(/\s+/)[0] || "";
