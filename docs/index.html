@@ -1064,7 +1064,7 @@
     <div class="kpi"><div class="l">Bewerbungen heute</div><div class="v" id="tkNeu">–</div><div class="s" id="tkNeuS"></div></div>
     <div class="kpi"><div class="l">Online-Vorgespräch beantwortet</div><div class="v" id="tkQuote">–</div><div class="meter"><i id="tkMeter"></i></div><div class="s" id="tkQuoteS"></div></div>
     <div class="kpi"><div class="l">Qualifiziert / nicht qualifiziert</div><div class="v" id="tkQual">–</div><div class="s" id="tkQualS"></div></div>
-    <div class="kpi"><div class="l">Anrufe heute (Qualifizierte)</div><div class="v" id="tkAnr">–</div><div class="s" id="tkAnrS"></div></div>
+    <div class="kpi"><div class="l">Anrufe heute</div><div class="v" id="tkAnr">–</div><div class="s" id="tkAnrS"></div></div>
     <div class="kpi"><div class="l">Kosten je Bewerbung heute</div><div class="v" id="tkCpl">–</div><div class="s" id="tkCplS"></div><div class="hint" id="tkCplH"></div></div>
     <div class="kpi"><div class="l">Online-Vorgespräch Schritte</div><div class="trfun" id="tkFun"><div class="s">–</div></div></div>
   </div>
@@ -1587,8 +1587,11 @@ function renderTrKpi() {
   } else $("tkQualS").innerHTML = `<span><b>${abFrei}</b> Abstellort frei${q.abst_entgegen ? ` (davon ${q.abst_entgegen} kommt entgegen)` : ""}</span><span><b>${abPr}</b> Standort prüfen</span>`
     + `<span title="${q.online_alt ?? "?"} online vorqualifiziert (alt) + ${q.telefon} am Telefon qualifiziert – für die Abstellort-Nachfrage-Mail"><b>${abOff}</b> Abstellort offen (${q.online_alt ?? "?"} alt + ${q.telefon} Telefon)</span>`;
   const t = HB ? HB.transa : null;
-  $("tkAnr").textContent = t ? t.anrufe : "–";
-  $("tkAnrS").innerHTML = (t ? `<span class="dot go"><span>${t.erreicht} erreicht</span></span><span class="dot stop"><span>${t.nicht} nicht</span></span>` : "") + `<span>${(TRQ ? trqList("jetzt").length : abFrei) ? `<b>${TRQ ? trqList("jetzt").length : abFrei}</b> bereit fürs Angebot` : "noch niemand bereit fürs Angebot"}</span>`;
+  // Anrufe heute (11.11.2026): aus allen Statuswechseln des Tages (PC, Handy, direkt in LeadTable) – cockpit-plus „heute“
+  let ha = null; try { ha = HEUTE && HEUTE.anrufe; } catch { /* HEUTE noch nicht angelegt */ }
+  $("tkAnr").innerHTML = ha ? `${ha.versuche}<small> Versuche</small>` : (t ? t.anrufe : "–");
+  $("tkAnrS").innerHTML = (ha ? `<span class="dot go"><span>${ha.erreicht} erreicht</span></span><span class="dot stop"><span>${ha.nicht} nicht erreicht</span></span><span><b style="color:#16a34a">${ha.qualifiziert}</b> qualifiziert · <b style="color:#dc2626">${ha.nicht_qualifiziert}</b> nicht qualifiziert${ha.sonst ? ` · ${ha.sonst} Rückruf/Bedenkzeit/Absage` : ""}</span>`
+    : t ? `<span class="dot go"><span>${t.erreicht} erreicht</span></span><span class="dot stop"><span>${t.nicht} nicht</span></span>` : "") + `<span>${(TRQ ? trqList("jetzt").length : abFrei) ? `<b>${TRQ ? trqList("jetzt").length : abFrei}</b> bereit fürs Angebot` : "noch niemand bereit fürs Angebot"}</span>`;
   $("tkCpl").textContent = eur(c.cpl_heute);
   $("tkCplS").innerHTML = `<span>7 Tage: <b>${eur(c.cpl_d7)}</b></span><span>Wochenende: <b>${eur(c.cpl_we)}</b></span>`;
   $("tkCplH").textContent = "Ab 08.11. nur Bewerber mit Fernverkehr + CE – Kosten je Bewerbung davor nicht vergleichbar.";
@@ -1872,7 +1875,7 @@ function renderTrBoard() {
       <span class="act"><select class="inp" id="tbCamp"><option value="">Alle Kampagnen</option>${camps.map((c) => `<option ${c === campF ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
       <button class="btn sm" type="button" id="tbVcf" title="Kontaktdatei (.vcf) fürs iPhone: dann zeigt WhatsApp Namen statt Nummern">Kontakte fürs Handy</button>
       <button class="btn sm" type="button" id="tbOv">Scoring-Übersicht</button></span></div>
-    ${HEUTE ? `<div class="tb-heute"><b>Heute</b><span>${HEUTE.angerufen} angerufen</span><span>${HEUTE.gespraeche} Gespräche</span><span class="ok">${HEUTE.vorgeschlagen} Abstellort vorgeschlagen</span><span>${HEUTE.qualifiziert} qualifiziert</span><span>${HEUTE.nicht_qualifiziert} nicht qualifiziert</span><span>${HEUTE.nicht_erreicht} nicht erreicht</span><span>${HEUTE.whatsapp} WhatsApp</span>${HEUTE.freigegeben ? `<span class="ok">${HEUTE.freigegeben} freigegeben</span>` : ""}</div>` : ""}
+    ${HEUTE ? `<div class="tb-heute"><b>Heute</b><span>${HEUTE.anrufe ? HEUTE.anrufe.versuche + " Versuche" : HEUTE.angerufen + " angerufen"}</span><span>${HEUTE.anrufe ? HEUTE.anrufe.erreicht : HEUTE.gespraeche} erreicht</span><span class="ok">${HEUTE.vorgeschlagen} Abstellort vorgeschlagen</span><span>${HEUTE.anrufe ? HEUTE.anrufe.qualifiziert : HEUTE.qualifiziert} qualifiziert</span><span>${HEUTE.anrufe ? HEUTE.anrufe.nicht_qualifiziert : HEUTE.nicht_qualifiziert} nicht qualifiziert</span><span>${HEUTE.nicht_erreicht} nicht erreicht</span><span>${HEUTE.whatsapp} WhatsApp</span>${HEUTE.freigegeben ? `<span class="ok">${HEUTE.freigegeben} freigegeben</span>` : ""}</div>` : ""}
     <div class="tb-stufen">${stufen}</div>
     <div class="tb-titel"><h3>${esc(titel)}</h3>${tbAktion(f, L)}<span>${TRQ ? L.length + (L.length === 1 ? " Bewerber" : " Bewerber") : ""}${nachRegion ? " · nach Wohnort-Region" : ""} · Klick öffnet die Karte</span></div>
     ${!TRQ ? `<div class="sk"><i></i><i></i><i></i></div>` : !L.length ? `<div class="empty">Niemand in dieser Liste${campF ? " für diese Kampagne" : ""}.</div>`
@@ -2182,7 +2185,7 @@ async function loadTrq() {
     api("fg_log").then((r) => { FGLOG = r.log || {}; if (BER === "transa") renderTrBoard(); }).catch(() => {});
     // Doppelte Bewerber (gleiche Nummer/Mail, alle Kampagnen) und Tageszähler, 10.11.2026
     if (Date.now() - DUP_AT > 3e5) api("dubletten").then((r) => { DUP = r.dubletten || {}; DUP_AT = Date.now(); if (BER === "transa") renderTrBoard(); }).catch(() => {});
-    api("heute").then((r) => { HEUTE = r; if (BER === "transa") renderTrBoard(); }).catch(() => {});
+    api("heute").then((r) => { HEUTE = r; if (BER === "transa") { renderTrBoard(); if (TRK) renderTrKpi(); } }).catch(() => {});
     const plz = Date.now() - TRPLZ_AT > 6e5 ? api("abst_plz").then((p) => { TRPLZ = p.abst || {}; TRPLZ_AT = Date.now(); }).catch(() => {}) : null;
     const r = await api("transa_status_liste", { alle: true, stati: TR_HOLEN, mitText: true }); await plz; TRQ = r.leads || []; TRSTAND = r.stand || null;
     const n1 = trqList("qual").length, n2 = trqList("nq").length, n0 = trqList("jetzt").length;
