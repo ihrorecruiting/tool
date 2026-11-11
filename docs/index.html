@@ -1437,7 +1437,7 @@ let cfg = { url: store.get("tc_url") || "https://mpsobinfzfjxorfbdzae.supabase.c
 // Ein Kollege telefoniert Transa-Bewerber ab. Eigener Schlüssel (Tabelle helfer_zugang), eigener Name, Function helfer-api prüft jede Aktion.
 // Nur Transa-Board, Bewerberkarte, Leitfaden, WhatsApp, „Nicht erreicht“ – keine Übersicht, Statistik, Kosten, Einstellungen, kein Ihro.
 const HELFER = new URLSearchParams(location.search).has("helfer");
-const HELFER_OK = /^(work|lead_get|lead_history|lead_status|lead_note|lead_followup|lead_description|lead_description_refresh|search|transa_get|transa_save|transa_list|transa_antworten|transa_status_liste|transa_vg_link|abst_plz|fg_log|dubletten|heute|lock|unlock|locks)$/;
+const HELFER_OK = /^(work|lead_get|lead_history|lead_status|lead_note|lead_followup|lead_description|lead_description_refresh|search|transa_get|transa_save|transa_list|transa_antworten|transa_status_liste|transa_vg_link|abst_plz|fg_log|dubletten|heute|lock|unlock|locks|anruf)$/;
 if (HELFER) {
   const hh = new URLSearchParams(location.hash.slice(1));
   if (hh.get("hk")) { store.set("tc_helfer_key", hh.get("hk")); history.replaceState(null, "", location.pathname + location.search); }
@@ -1454,10 +1454,16 @@ function toast(msg, err) {
   t.className = "toast show" + (err ? " err" : "");
   clearTimeout(toast.h); toast.h = setTimeout(() => (t.className = "toast" + (err ? " err" : "")), err ? 5000 : 2600);
 }
+// Anruf-Protokoll (11.11.2026): jedes Antippen der Nummer speichert Bewerber + Startzeit (Tabelle anruf_log).
+// Damit ordnet Claude die Plaud-Aufnahmen dem richtigen Bewerber zu, auch bei mehreren Anrufen hintereinander.
+function anrufLog(l) {
+  if (!l || !l.lead_id) return;
+  api("anruf", { id: l.lead_id, quelle: matchMedia("(pointer:coarse)").matches ? "handy" : "pc" }).catch(() => {});
+}
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
   if (HELFER && !HELFER_OK.test(action)) throw new Error("Nicht eingerichtet"); // im Kollegen-Zugang still übergehen
-  const helferWeg = HELFER || /^(lock|unlock|locks)$/.test(action);
+  const helferWeg = HELFER || /^(lock|unlock|locks|anruf)$/.test(action);
   const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids|fg_log|chef_liste|dubletten|heute)$/.test(action) ? "cockpit-plus" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + (helferWeg ? "helfer-api" : fn), opt = {
     method: "POST", headers: HELFER ? { "Content-Type": "application/json", "x-helfer-key": cfg.token, "x-helfer-name": encodeURIComponent(helferName()) } : { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
@@ -2768,6 +2774,7 @@ function renderCard(r) {
   bindHireBox();
   $("calledBtn").addEventListener("click", () => openCall(cur));
   if (isTransa(l) && l.phone) vgLaden(l.lead_id);
+  ["telLink", "mTel"].forEach((k) => $(k) && $(k).addEventListener("click", () => anrufLog(cur))); // alle Kampagnen: Startzeit für Plaud
   if (isTransa(l)) { // Transa: Anruf öffnet zusätzlich das Gesprächsfenster (Telefon wählt trotzdem)
     if ($("telLink")) $("telLink").addEventListener("click", () => openTr(cur, true));
     if ($("mTel")) $("mTel").addEventListener("click", () => openTr(cur, true));
