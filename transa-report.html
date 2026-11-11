@@ -357,14 +357,13 @@ function vqBind(key) { for (const [id, g] of [["vqG1", "stand"], ["vqG2", "start
 /* Die Regel als Kasten (Reiter „Alle Regionen“ und „Abgleich“) */
 function regelBox(kurz) {
   const regs = DATA.regionen.filter((r) => r.ziel && !["fulda"].includes(r.key));
-  const liste = regs.map((r) => `${esc(r.name)} (${r.ziel.radius || 60} km um ${esc(r.ziel.name)})`).join(", ");
-  const bsp = [[12, "frei wählbar"], [20, "frei wählbar"], [28, "kommt 8 km entgegen"], [35, "kommt 15 km entgegen"]];
+  // A6-Korridor: 5 Standorte mit je 20 km – so rechnen Vorgespräch und Prüfung (Meta meldet den Radius teils anders)
+  const liste = regs.map((r) => r.key === "a6" ? `${esc(r.name)} (je 20 km um 5 Standorte)` : `${esc(r.name)} (${r.ziel.radius || 60} km um ${esc(r.ziel.name)})`).join(", ");
   return `<div class="card" style="border-left:5px solid #16a34a;margin-bottom:14px">
     <h2 style="margin-bottom:6px">Die Regel für Wohnort und LKW-Abstellort</h2>
     <p style="margin:4px 0"><b>Regel 1 – Region:</b> Der Fahrer wohnt innerhalb des Meta-Umkreises einer Kampagne: ${liste}. Wer außerhalb wohnt, passt aktuell nicht (Talentpool).</p>
     <p style="margin:4px 0"><b>Regel 2 – Abstellort:</b> Wohnt der Fahrer <b>höchstens 20 km</b> von der nächsten Autobahn-Anschlussstelle entfernt, wählt er seinen Abstellort <b>frei</b>. Wohnt er weiter weg, <b>kommt er Richtung Autobahn entgegen, bis er wieder 20 km davor ist</b> – dort steht dann der LKW.</p>
-    ${kurz ? "" : `<div style="overflow-x:auto"><table style="max-width:560px;margin-top:6px"><thead><tr><th>Wohnort bis zur Autobahn</th><th>Ergebnis</th></tr></thead><tbody>${bsp.map(([k, t]) => `<tr><td>${k} km</td><td>${t}</td></tr>`).join("")}</tbody></table></div>
-    <p class="note">Gerechnet wird in Luftlinie vom PLZ-Mittelpunkt zur nächsten Anschlussstelle einer Autobahn (A-Nummer). Auf der Straße ist es meist rund ein Viertel mehr.</p>`}</div>`;
+    <p class="note">Für alle Regionen gleich, auch den A6-Korridor: bis 20 km zur Autobahn frei, darüber kommt der Fahrer entgegen. Gerechnet wird in Luftlinie vom PLZ-Mittelpunkt zur nächsten Anschlussstelle einer Autobahn (A-Nummer).</p></div>`;
 }
 
 /* Reiter „Abgleich“ (Dennis / Herr Schmuck, 06.11.2026):
@@ -1003,11 +1002,6 @@ function renderRegion(r, L, K) {
       <h2 style="margin-top:18px">Entfernung zur Autobahn</h2>${hbars(autobahnBalken(L))}
       <p class="note">Grün = Abstellort frei, orange = Fahrer kommt entgegen. Im Meta-Umkreis wohnen ${pct(s.inR, s.mitKm)} (${s.inR} von ${s.mitKm}). ${L.filter((l) => l.lat == null).length ? L.filter((l) => l.lat == null).length + " Bewerber ohne gültige PLZ." : ""}</p></div>
   </div>
-  <div class="card" style="margin-top:14px"><h2>Häufungen (Umkreis 15 km)</h2><p class="sub">Bewerber, die nah beieinander wohnen, zusammengefasst. Hilft zu sehen, ob ein Gebiet besonders gut zieht.</p>
-    <div style="overflow-x:auto"><table><thead><tr><th>Gebiet / Orte</th><th class="n">Bewerber</th><th>Meta-Umkreis</th><th>zur Autobahn</th><th>Anteil</th></tr></thead>
-    <tbody>${cl.map((x) => `<tr><td>${esc(x.orte.join(", "))}<br><span class="note" style="margin:0">PLZ ${[...new Set(x.pts.map((p) => p.plz))].join(", ")}</span></td><td class="n"><b>${x.n}</b>${(() => { const q = x.pts.filter((p) => ["q", "online"].includes(qOf(p))).length, nn = x.pts.filter((p) => qOf(p) === "n").length; return q || nn ? `<br><span class="note" style="margin:0">${q ? `<span style="color:#16a34a">${q} qualifiziert</span>` : ""}${q && nn ? " · " : ""}${nn ? `<span style="color:#dc2626">${nn} nicht</span>` : ""}</span>` : ""; })()}</td>
-      <td>${x.km <= rad ? '<span style="color:#16a34a;font-weight:600">✓ drin</span>' : `<span style="color:#b45309;font-weight:600">${Math.round(x.km - rad)} km außerhalb</span>`}</td>
-      <td>${(() => { const d = x.pts.reduce((s, p) => s + abKm(p.lat, p.lon), 0) / x.n; return d <= AB_FREI ? `<span style="color:#16a34a">frei</span> <span class="note" style="margin:0">(${kmA(d)})</span>` : `<span style="color:#b45309">kommt ca. ${Math.round(d - AB_FREI)} km entgegen</span>`; })()}</td><td><div class="bar"><i style="width:${x.n / Math.max(1, L.length) * 100}%;background:${c}"></i></div></td></tr>`).join("") || '<tr><td colspan="5" class="note">Keine Bewerber mit PLZ.</td></tr>'}</tbody></table></div></div>
   <div class="grid two" style="margin-top:14px">
     <div class="card"><h2>Bewerbungen je Tag</h2><p class="sub">${esc(r.name)}</p>${daysChart(L, K)}</div>
     <div class="card"><h2>Qualität laut Formular</h2>
@@ -1017,6 +1011,11 @@ function renderRegion(r, L, K) {
       <p class="note">CE + Code 95: ${pct(s.ce95, s.n)} · Wohnsitz in Deutschland: ${pct(L.filter((l) => /^ja/i.test(l.wohnsitz_de)).length, s.n)}</p></div>
   </div>
   ${vqCard(r.key)}
+  <div class="card" style="margin-top:14px"><h2>Häufungen (Umkreis 15 km)</h2><p class="sub">Bewerber, die nah beieinander wohnen, zusammengefasst. Hilft zu sehen, ob ein Gebiet besonders gut zieht.</p>
+    <div style="overflow-x:auto"><table><thead><tr><th>Gebiet / Orte</th><th class="n">Bewerber</th><th>Meta-Umkreis</th><th>zur Autobahn</th><th>Anteil</th></tr></thead>
+    <tbody>${cl.map((x) => `<tr><td>${esc(x.orte.join(", "))}<br><span class="note" style="margin:0">PLZ ${[...new Set(x.pts.map((p) => p.plz))].join(", ")}</span></td><td class="n"><b>${x.n}</b>${(() => { const q = x.pts.filter((p) => ["q", "online"].includes(qOf(p))).length, nn = x.pts.filter((p) => qOf(p) === "n").length; return q || nn ? `<br><span class="note" style="margin:0">${q ? `<span style="color:#16a34a">${q} qualifiziert</span>` : ""}${q && nn ? " · " : ""}${nn ? `<span style="color:#dc2626">${nn} nicht</span>` : ""}</span>` : ""; })()}</td>
+      <td>${x.km <= rad ? '<span style="color:#16a34a;font-weight:600">✓ drin</span>' : `<span style="color:#b45309;font-weight:600">${Math.round(x.km - rad)} km außerhalb</span>`}</td>
+      <td>${(() => { const d = x.pts.reduce((s, p) => s + abKm(p.lat, p.lon), 0) / x.n; return d <= AB_FREI ? `<span style="color:#16a34a">frei</span> <span class="note" style="margin:0">(${kmA(d)})</span>` : `<span style="color:#b45309">kommt ca. ${Math.round(d - AB_FREI)} km entgegen</span>`; })()}</td><td><div class="bar"><i style="width:${x.n / Math.max(1, L.length) * 100}%;background:${c}"></i></div></td></tr>`).join("") || '<tr><td colspan="5" class="note">Keine Bewerber mit PLZ.</td></tr>'}</tbody></table></div></div>
   ${abCard(r.key)}`;
   vqBind(r.key); abBind(r.key);
   baseMap(r.ziel ? [r.ziel.lat, r.ziel.lon] : [51.2, 9.6], r.ziel ? 8 : 6);
