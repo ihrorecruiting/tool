@@ -47,6 +47,10 @@
   .grund .row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
   .umschalt{margin-top:8px;font-size:14px} .umschalt a{color:var(--blue);text-decoration:none;font-weight:600}
   .stat{font-size:12.5px;color:var(--ink3);margin-top:4px}
+  .abschnitt{margin:26px 0 4px;padding:12px 14px;border-radius:14px;background:var(--card);border-left:5px solid var(--go)} .abschnitt.b{border-left-color:var(--warn)}
+  .abschnitt h2{margin:0;font-size:20px} .abschnitt p{margin:4px 0 0;color:var(--ink2);font-size:14px}
+  .vorschlag.hilfe{background:var(--warn-t)} .idee{margin-top:10px;padding:9px 12px;border-radius:12px;background:var(--go-t);font-size:14px} .idee span{color:var(--ink3);font-size:12.5px;display:block}
+  .ideein{display:flex;gap:8px;margin-top:10px} .ideein input{flex:1;border:.5px solid var(--sep2);border-radius:12px;padding:9px 10px;font:15px inherit;background:var(--bg);color:var(--ink);min-width:0}
   .leer{background:var(--card);border-radius:18px;padding:30px;text-align:center;color:var(--ink3)}
   .fehler{background:var(--stop-t);color:var(--stop);border-radius:14px;padding:14px 16px;margin:10px 0}
   .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:11px 18px;border-radius:14px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw}
@@ -112,6 +116,8 @@ function fakten(l) {
   if (l.gespraech && l.gespraech.klasse) x.push(`<span>Gespräch: ${esc(l.gespraech.klasse)}${l.gespraech.punkte != null ? " · " + l.gespraech.punkte + " P." : ""}</span>`);
   return x.length ? `<div class="fakten">${x.join("")}</div>` : "";
 }
+// Hilfe-Fall (11.11.2026): kein konkreter Ort – Fahrer findet nichts / möchte Hilfe. Hr. Baumann kann eine Abstellort-Idee eintragen.
+const hilfeFall = (l) => !l.vorschlag || /hilfe|braucht|findet nichts|weiß nicht|unklar|keine idee/i.test(l.vorschlag);
 const GRUENDE = ["Abstellort passt nicht", "Region aktuell nicht geplant", "Profil passt nicht", "Bitte erst Rücksprache"];
 function kartenHtml(l) {
   const e = l.entscheidung, offen = offenGrund === l.lead_id;
@@ -126,7 +132,9 @@ function kartenHtml(l) {
   return `<div class="karte" id="k-${l.lead_id}">
     <div class="k1"><div class="wer"><b>${esc(l.name || "Ohne Namen")}</b><div class="ort">${esc(l.ort || "")} ${esc(l.plz || "")}</div>${unter ? `<div class="stat">${unter}</div>` : ""}${lage(l.abst)}</div>
       <div class="knoepfe">${knoepfe}</div></div>
-    ${NEU ? "" : l.vorschlag ? `<div class="vorschlag"><span>Abstellort-Vorschlag</span>${esc(l.vorschlag)}</div>` : `<div class="vorschlag"><span>Abstellort-Vorschlag</span>– noch kein konkreter Ort eingetragen –</div>`}
+    ${NEU ? "" : l.vorschlag ? `<div class="vorschlag${hilfeFall(l) ? " hilfe" : ""}"><span>Abstellort-Vorschlag</span>${esc(l.vorschlag)}</div>` : `<div class="vorschlag hilfe"><span>Abstellort-Vorschlag</span>– noch kein konkreter Ort, der Fahrer braucht Hilfe –</div>`}
+    ${!NEU && l.idee ? `<div class="idee"><span>Ihre Abstellort-Idee (${esc(l.idee.von)}, ${dt(l.idee.am)})</span>${esc(l.idee.text)}</div>` : ""}
+    ${!NEU && tab === "w" && hilfeFall(l) ? `<div class="ideein"><input id="idee-${l.lead_id}" placeholder="Idee für einen Abstellort, z. B. Firmenhof, Autohof, Gewerbegebiet …"><button class="btn sm" data-idee="${l.lead_id}">Idee an Dennis</button></div>` : ""}
     ${fakten(l)}${info}
     ${offen ? `<div class="grund"><div class="chips">${GRUENDE.map((g) => `<button type="button" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
       <textarea id="gt" placeholder="Grund (Dennis sieht ihn im Cockpit und in LeadTable)"></textarea>
@@ -144,10 +152,16 @@ function render() {
   if (!A.length) $("liste").innerHTML = `<div class="leer">${tab === "w" ? (NEU ? "Keine offenen Bewerbungen ohne Entscheidung." : "Gerade wartet niemand auf Freigabe. Sobald Dennis einen Abstellort vorschlägt, steht der Bewerber hier.") : "Noch niemand."}</div>`;
   else {
     let html = "", last = null;
-    for (const l of A) {
-      if (l.kampagne !== last) { last = l.kampagne; const n = A.filter((x) => x.kampagne === last).length, m = NEU ? A.filter((x) => x.kampagne === last && x.abst && x.abst.fall !== "aus").length : n;
-        html += `<div class="gruppe"><h2>${esc(last || "ohne Kampagne")}</h2><span class="n">${n}</span>${tab === "w" && m > 1 ? `<button class="btn sm" data-alle="${esc(last)}">Alle ${m}${NEU && m < n ? " im Umkreis" : ""} freigeben</button>` : ""}</div>`; }
+    // Abstellort-Freigabe (11.11.2026): A) konkreter Ort vorgeschlagen, B) Fahrer braucht Hilfe bei der Suche
+    const teile = !NEU && tab === "w" ? [["a", "A) Konkreter Abstellort vorgeschlagen", "Bitte freigeben oder stoppen.", A.filter((l) => !hilfeFall(l))],
+      ["b", "B) Braucht Hilfe bei der Suche", "Der Fahrer passt, findet aber selbst keinen Platz. Wenn Sie eine Idee haben (Firmenhof, Autohof, Gewerbegebiet …), tragen Sie sie ein – Dennis bekommt sie sofort. Freigeben geht trotzdem: Den genauen Platz suchen wir dann gemeinsam vor dem Start.", A.filter(hilfeFall)]] : [[null, "", "", A]];
+    for (const [tk, tt, tp, TL] of teile) {
+    if (tk) { html += `<div class="abschnitt ${tk}"><h2>${tt} <span class="n" style="font-size:15px;color:var(--ink3)">${TL.length}</span></h2><p>${tp}</p></div>`; last = null; if (!TL.length) { html += `<div class="leer" style="padding:16px">Niemand.</div>`; continue; } }
+    for (const l of TL) {
+      if (l.kampagne !== last) { last = l.kampagne; const n = TL.filter((x) => x.kampagne === last).length, m = NEU ? TL.filter((x) => x.kampagne === last && x.abst && x.abst.fall !== "aus").length : n;
+        html += `<div class="gruppe"><h2>${esc(last || "ohne Kampagne")}</h2><span class="n">${n}</span>${tab === "w" && m > 1 && tk !== "b" ? `<button class="btn sm" data-alle="${esc(last)}">Alle ${m}${NEU && m < n ? " im Umkreis" : ""} freigeben</button>` : ""}</div>`; }
       html += kartenHtml(l);
+    }
     }
     $("liste").innerHTML = html;
   }
@@ -192,9 +206,11 @@ document.addEventListener("click", (e) => {
   if (t.dataset.stopp) { offenGrund = t.dataset.stopp; render(); setTimeout(() => { const g = $("gt"); if (g) g.focus(); }, 0); return; }
   if (t.dataset.g) { const g = $("gt"); g.value = g.value ? g.value + ", " + t.dataset.g : t.dataset.g; g.focus(); return; }
   if (t.dataset.abbr) { offenGrund = null; render(); return; }
+  if (t.dataset.idee) { const inp = $("idee-" + t.dataset.idee), text = (inp && inp.value || "").trim(); if (!text) { toast("Bitte kurz die Idee eintragen"); return; }
+    t.disabled = true; api("chef_vorschlag", { id: t.dataset.idee, text }).then(() => { toast("Danke – Dennis bekommt die Idee"); laden(); }).catch((e) => { toast(e.message); t.disabled = false; }); return; }
   if (t.dataset.stoppok) { const g = ($("gt").value || "").trim(); if (!g) { toast("Bitte kurz einen Grund angeben"); return; } t.disabled = true; entscheiden([t.dataset.stoppok], "stopp", g); return; }
   if (t.dataset.alle) {
-    const ids = (D.leads || []).filter((l) => reiter(l) === "w" && l.kampagne === t.dataset.alle && (!NEU || (l.abst && l.abst.fall !== "aus"))).map((l) => l.lead_id);
+    const ids = (D.leads || []).filter((l) => reiter(l) === "w" && l.kampagne === t.dataset.alle && (!NEU || (l.abst && l.abst.fall !== "aus")) && (NEU || !hilfeFall(l))).map((l) => l.lead_id);
     if (ids.length && confirm(`Alle ${ids.length} Bewerber in „${t.dataset.alle}“ freigeben?${NEU ? " (ohne die außerhalb des Umkreises)" : ""}`)) { t.disabled = true; entscheiden(ids, "frei"); }
   }
 });
