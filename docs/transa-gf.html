@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Transa – Bewerberlage für die Geschäftsführung</title>
+<link rel="stylesheet" href="lib/leaflet/leaflet.css">
+<style>
+  /* GF-Bericht Transa (11.11.2026): bereinigte Zahlen ohne Tests und Doppelte, Daten aus cockpit-plus (gf_report), keine Namen */
+  :root{
+    --bg:#f6f6f4;--card:#fff;--ink:#16181d;--ink2:#4a505c;--muted:#7b8494;--line:#e3e4e0;
+    --frei:#0f8a6c;--entg:#d97706;--aus:#7b8494;--acc:#16181d;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+    --num:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 22px 60px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px}
+  h1{margin:0;font-size:30px;letter-spacing:-.03em;line-height:1.05}
+  .sub{color:var(--ink2);margin-top:6px}
+  .stand{color:var(--muted);font-size:13px;text-align:right}
+  .stand button{font:inherit;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:5px 10px;cursor:pointer;margin-top:6px}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:22px 0 8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .kpi{padding:16px 16px 14px;border-left:1px solid var(--line)}
+  .kpi:first-child{border-left:0;padding-left:0}
+  .kpi .l{font-size:12.5px;color:var(--ink2);font-weight:600}
+  .kpi .v{font-family:var(--num);font-weight:700;font-size:34px;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .kpi .n{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .kpi.hl .v{color:var(--frei)}
+  .aussagen{margin:18px 0 26px;padding:0;list-style:none;display:grid;gap:8px}
+  .aussagen li{padding-left:16px;position:relative;color:var(--ink)}
+  .aussagen li::before{content:"";position:absolute;left:0;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--ink)}
+  .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:26px;align-items:start}
+  h2{font-size:17px;margin:0 0 10px;letter-spacing:-.01em}
+  .karte{position:relative}
+  #map{height:560px;border-radius:10px;border:1px solid var(--line);background:#e9ecef}
+  .mapbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:0 0 8px;font-size:13px;color:var(--ink2)}
+  .lg{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+  .seg{margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+  .seg button{font:inherit;font-size:12.5px;border:0;background:none;padding:5px 10px;cursor:pointer;color:var(--ink2)}
+  .seg button.on{background:var(--ink);color:#fff}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;text-align:right;padding:6px 6px;border-bottom:1px solid var(--ink)}
+  th:first-child,td:first-child{text-align:left;padding-left:0}
+  td{text-align:right;padding:9px 5px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td:first-child{white-space:normal}
+  th{white-space:nowrap}
+  tr.off td{color:var(--muted)}
+  tr.sum td{font-weight:700;border-bottom:0;border-top:1px solid var(--ink)}
+  .tag{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:4px}
+  .bar{height:6px;background:#ecedea;border-radius:3px;margin-top:5px;display:flex;gap:2px;overflow:hidden}
+  .bar i{display:block;height:100%}
+  .trichter{margin-top:26px}
+  .tr-row{display:grid;grid-template-columns:200px 1fr 70px;gap:12px;align-items:center;padding:6px 0;font-size:14px}
+  .tr-row .t{color:var(--ink2)}
+  .tr-row .b{height:22px;background:#ecedea;border-radius:0 4px 4px 0;position:relative}
+  .tr-row .b i{position:absolute;left:0;top:0;bottom:0;background:var(--ink);border-radius:0 4px 4px 0;min-width:2px}
+  .tr-row .w{text-align:right;font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums}
+  .tr-row .w small{display:block;font-family:var(--sans);font-weight:400;color:var(--muted);font-size:11.5px}
+  .fuss{margin-top:30px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:grid;gap:4px}
+  .hinweis{background:#fff7e6;border:1px solid #f3d9a4;border-radius:8px;padding:8px 12px;font-size:13px;margin:10px 0 0;color:#6b4a00}
+  #login{max-width:420px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;display:none}
+  #login input{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;margin:10px 0}
+  #login button{font:inherit;background:var(--ink);color:#fff;border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
+  #err{color:#b42318;font-size:13px;margin-top:8px}
+  .laden{color:var(--muted);padding:60px 0;text-align:center}
+  .leaflet-tooltip{font:12.5px/1.35 var(--sans)}
+  @media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi{border-left:0;padding-left:0;border-bottom:1px solid var(--line)}.grid{grid-template-columns:1fr}#map{height:420px}.tr-row{grid-template-columns:130px 1fr 60px}}
+  @media print{body{background:#fff}.stand button,.seg{display:none}#map{height:480px}.wrap{padding:0}}
+</style>
+</head>
+<body>
+<div id="login">
+  <h2>Transa – Bewerberlage</h2>
+  <div style="color:var(--ink2);font-size:14px">Auf diesem Gerät ist das Cockpit nicht angemeldet. Bitte den Cockpit-Schlüssel eingeben (wird nur auf diesem Gerät gespeichert).</div>
+  <input id="tok" type="password" autocomplete="off" placeholder="Schlüssel">
+  <button id="go">Anzeigen</button>
+  <div id="err"></div>
+</div>
+<div class="wrap" id="app">
+  <div class="laden" id="laden">Zahlen werden geladen …</div>
+</div>
+<script src="lib/leaflet/leaflet.js"></script>
+<script src="lib/leaflet/leaflet-heat.js"></script>
+<script>
+const URL0 = "https://mpsobinfzfjxorfbdzae.supabase.co";
+const $ = (id) => document.getElementById(id);
+const nf = (v, d = 0) => v == null || !isFinite(v) ? "–" : v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const eur = (v) => v == null || !isFinite(v) ? "–" : nf(v, v < 100 ? 2 : 0) + " €";
+const pct = (a, b) => b ? Math.round(a / b * 100) + " %" : "–";
+const dmy = (iso) => iso ? new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "–";
+const FARBE = { frei: "#0f8a6c", entgegen: "#d97706", aus: "#7b8494" };
+
+function verbindung() {
+  const get = (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
+  if (get("tc_token")) return { url: get("tc_url") || URL0, token: get("tc_token") };
+  try { const c = JSON.parse(get("ihro_cockpit_conn") || "{}"); if (c.token) return { url: c.url || URL0, token: c.token }; } catch {}
+  if (get("tc_gf_token")) return { url: URL0, token: get("tc_gf_token") };
+  return null;
+}
+async function laden() {
+  const c = verbindung();
+  if (!c) { $("login").style.display = "block"; $("app").style.display = "none"; return; }
+  const r = await fetch(c.url + "/functions/v1/cockpit-plus", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "gf_report" }) });
+  if (r.status === 401) { try { localStorage.removeItem("tc_gf_token"); } catch {} $("app").style.display = "none"; $("login").style.display = "block"; $("err").textContent = "Schlüssel stimmt nicht."; return; }
+  const d = await r.json();
+  if (d.error) { $("laden").textContent = "Fehler: " + d.error; return; }
+  zeigen(d);
+}
+$("go").onclick = () => { const t = $("tok").value.trim(); if (!t) return; try { localStorage.setItem("tc_gf_token", t); } catch {} $("login").style.display = "none"; $("app").style.display = "block"; $("err").textContent = ""; laden(); };
+
+function aussagen(d) {
+  const g = d.gesamt, out = [];
+  const akt = d.regionen.filter((r) => r.aktiv && r.bewerber >= 5);
+  out.push(`Von ${g.bewerber} echten Bewerbern wohnen <b>${g.umkreis} (${pct(g.umkreis, g.bewerber)})</b> im Umkreis einer Region, ${g.aus} wohnen außerhalb.`);
+  if (akt.length) {
+    const best = [...akt].sort((a, b) => a.kosten / (a.umkreis || .1) - b.kosten / (b.umkreis || .1))[0];
+    const schl = [...akt].sort((a, b) => b.aus / b.bewerber - a.aus / a.bewerber)[0];
+    out.push(`Günstigste Region je passendem Bewerber: <b>${best.name}</b> mit ${eur(best.kosten / best.umkreis)} (${best.umkreis} von ${best.bewerber} im Umkreis).`);
+    if (schl.aus / schl.bewerber >= .3) out.push(`Die meisten Fehlstreuungen hat <b>${schl.name}</b>: ${schl.aus} von ${schl.bewerber} wohnen außerhalb (${pct(schl.aus, schl.bewerber)}). Die Werbung erreicht dort auch Leute von weiter weg.`);
+  }
+  const ful = d.regionen.find((r) => r.key === "mitte");
+  if (ful && ful.kosten) out.push(`Fulda / Bad Hersfeld ist beendet: ${eur(ful.kosten)} Werbekosten, ${ful.bewerber} Bewerber, ${ful.umkreis ? `davon ${ful.umkreis}` : "davon keiner"} im heutigen Umkreis.`);
+  out.push(`Im Umkreis sind <b>${g.qualifiziert}</b> Bewerber qualifiziert oder weiter, das sind ${eur(g.kosten / g.qualifiziert)} Werbekosten je qualifiziertem Fahrer.`);
+  return out;
+}
+
+function zeigen(d) {
+  const g = d.gesamt, b = d.bereinigung;
+  const kostenBis = d.zeitraum?.bis ? new Date(d.zeitraum.bis) : null;
+  const alt = kostenBis && (Date.now() - kostenBis.getTime()) > 2.5 * 864e5;
+  const regRows = d.regionen.slice().sort((a, b) => (b.aktiv - a.aktiv) || (b.bewerber - a.bewerber));
+  const sum = { bewerber: 0, umkreis: 0, qualifiziert: 0, frei: 0, entgegen: 0, aus: 0, kosten: 0 };
+  for (const r of regRows) for (const k in sum) sum[k] += r[k] || 0;
+  const zeile = (r, kl) => {
+    const w = (n) => r.bewerber ? (n / r.bewerber * 100) : 0;
+    return `<tr class="${kl || ""}"><td>${r.name}${r.aktiv === false && r.key === "mitte" ? '<span class="tag">beendet</span>' : ""}
+      <div class="bar" title="frei ${r.frei} · entgegen ${r.entgegen} · außerhalb ${r.aus}"><i style="width:${w(r.frei)}%;background:${FARBE.frei}"></i><i style="width:${w(r.entgegen)}%;background:${FARBE.entgegen}"></i><i style="width:${w(r.aus)}%;background:${FARBE.aus}"></i></div></td>
+      <td>${r.bewerber}</td><td>${r.umkreis} <span style="color:var(--muted)">${pct(r.umkreis, r.bewerber)}</span></td><td>${r.qualifiziert}</td>
+      <td>${eur(r.kosten)}</td><td>${eur(r.bewerber ? r.kosten / r.bewerber : null)}</td><td><b>${r.umkreis ? eur(r.kosten / r.umkreis) : "–"}</b></td></tr>`;
+  };
+  const stufen = [
+    ["Echte Bewerber", g.bewerber], ["Wohnen im Umkreis", g.umkreis], ["Qualifiziert", g.qualifiziert],
+    ["Abstellort vorgeschlagen", g.vorgeschlagen], ["Freigegeben", g.freigegeben], ["Vertrag", g.vertrag],
+  ];
+  $("app").innerHTML = `
+  <header>
+    <div><h1>Transa – Bewerberlage</h1>
+      <div class="sub">LKW-Fahrer im Fernverkehr · bereinigt: ohne Tests und ohne doppelte Bewerbungen</div></div>
+    <div class="stand">Stand ${new Date(d.stand).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })} Uhr<br>
+      Werbung ${dmy(d.zeitraum?.von)} bis ${dmy(d.zeitraum?.bis)}<br><button id="neu">Aktualisieren</button></div>
+  </header>
+  ${alt ? `<div class="hinweis">Die Werbekosten sind nur bis ${dmy(d.zeitraum.bis)} erfasst, die Bewerber bis heute. Die Kosten je Bewerber sind dadurch etwas zu niedrig.</div>` : ""}
+  <div class="kpis">
+    <div class="kpi"><div class="l">Echte Bewerber</div><div class="v">${g.bewerber}</div><div class="n">${b.roh} Einträge in LeadTable</div></div>
+    <div class="kpi hl"><div class="l">Davon im Umkreis</div><div class="v">${g.umkreis}</div><div class="n">${pct(g.umkreis, g.bewerber)} · ${g.frei} frei, ${g.entgegen} kommen entgegen</div></div>
+    <div class="kpi"><div class="l">Werbekosten</div><div class="v">${eur(g.kosten)}</div><div class="n">Meta, alle Regionen</div></div>
+    <div class="kpi"><div class="l">€ je Bewerber</div><div class="v">${eur(g.kosten / g.bewerber)}</div><div class="n">alle echten Bewerber</div></div>
+    <div class="kpi hl"><div class="l">€ je passendem Bewerber</div><div class="v">${eur(g.kosten / g.umkreis)}</div><div class="n">Wohnort im Umkreis</div></div>
+  </div>
+  <ul class="aussagen">${aussagen(d).map((s) => `<li>${s}</li>`).join("")}</ul>
+  <div class="grid">
+    <div class="karte">
+      <h2>Woher die Bewerber kommen</h2>
+      <div class="mapbar">
+        <span class="lg"><span class="dot" style="background:${FARBE.frei}"></span>Abstellort frei wählbar (${g.frei})</span>
+        <span class="lg"><span class="dot" style="background:${FARBE.entgegen}"></span>kommt entgegen (${g.entgegen})</span>
+        <span class="lg"><span class="dot" style="background:${FARBE.aus}"></span>außerhalb (${g.aus})</span>
+        <span class="seg"><button data-m="p" class="on">Punkte</button><button data-m="h">Dichte</button></span>
+      </div>
+      <div id="map"></div>
+    </div>
+    <div>
+      <h2>Regionen</h2>
+      <table>
+        <thead><tr><th>Region</th><th>Bewerber</th><th>im Umkreis</th><th>qualif.</th><th>Kosten</th><th>€/Bew.</th><th>€/passend</th></tr></thead>
+        <tbody>${regRows.map((r) => zeile(r, r.aktiv ? "" : "off")).join("")}
+          ${zeile({ name: "Gesamt", ...sum }, "sum")}</tbody>
+      </table>
+      <div class="trichter">
+        <h2>Vom Bewerber zum Vertrag</h2>
+        ${stufen.map(([t, v], i) => `<div class="tr-row"><div class="t">${t}</div><div class="b"><i style="width:${g.bewerber ? v / g.bewerber * 100 : 0}%"></i></div>
+          <div class="w">${v}${i ? `<small>${pct(v, stufen[i - 1][1])}</small>` : ""}</div></div>`).join("")}
+      </div>
+    </div>
+  </div>
+  <div class="fuss">
+    <div><b>Bereinigung:</b> ${b.roh} Einträge in LeadTable − ${b.tests} Test${b.tests === 1 ? "" : "s"} − ${b.doppelt_markiert + b.doppelt_offen} doppelte Bewerbungen (gleiche Handynummer oder E-Mail, gezählt wird je Person der am weitesten fortgeschrittene Eintrag) = ${b.personen} echte Bewerber.${g.unbekannt ? ` ${g.unbekannt} ohne gültige Postleitzahl.` : ""}</div>
+    <div><b>Umkreis:</b> Wohnort im Meta-Umkreis einer Kampagnen-Region. „Frei“ = bis 20 km zur Autobahn, „entgegen“ = weiter weg, kommt ein Stück Richtung Autobahn. Punkte = Mitte der Postleitzahl, keine Adressen.</div>
+    <div><b>Kosten:</b> Meta-Werbekosten laut Werbekonto, der Region nach Kampagnenname zugeordnet. Qualifiziert = im Umkreis und mindestens vorqualifiziert.</div>
+  </div>`;
+  $("neu").onclick = () => { $("app").innerHTML = '<div class="laden">Zahlen werden geladen …</div>'; laden(); };
+  karte(d);
+}
+
+let MAP = null;
+function karte(d) {
+  if (MAP) { MAP.remove(); MAP = null; }
+  MAP = L.map("map", { scrollWheelZoom: false, zoomSnap: .5 });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 13, attribution: "© OpenStreetMap" }).addTo(MAP);
+  const kreise = L.layerGroup().addTo(MAP);
+  for (const k of d.gebiete) L.circle([k.lat, k.lon], { radius: k.km * 1000, color: "#16181d", weight: 1.5, dashArray: "5 5", fill: true, fillOpacity: .04, interactive: false }).addTo(kreise);
+  const punkte = L.layerGroup();
+  const ord = { aus: 0, entgegen: 1, frei: 2 };
+  [...d.punkte].sort((a, b) => ord[a[2]] - ord[b[2]]).forEach(([la, lo, fall]) => {
+    L.circleMarker([la, lo], { radius: fall === "aus" ? 5 : 6, color: "#fff", weight: 2, fillColor: FARBE[fall] || FARBE.aus, fillOpacity: .95 })
+      .bindTooltip(fall === "frei" ? "im Umkreis · Abstellort frei" : fall === "entgegen" ? "im Umkreis · kommt entgegen" : "außerhalb des Umkreises").addTo(punkte);
+  });
+  const heat = L.heatLayer(d.punkte.map(([la, lo, fall]) => [la, lo, fall === "aus" ? .5 : 1]), { radius: 22, blur: 18, maxZoom: 9, minOpacity: .25 });
+  punkte.addTo(MAP);
+  const b = L.latLngBounds(d.gebiete.map((k) => [k.lat, k.lon]));
+  MAP.fitBounds(b.pad(.35));
+  document.querySelectorAll(".seg button").forEach((btn) => btn.onclick = () => {
+    document.querySelectorAll(".seg button").forEach((x) => x.classList.toggle("on", x === btn));
+    if (btn.dataset.m === "h") { MAP.removeLayer(punkte); heat.addTo(MAP); } else { MAP.removeLayer(heat); punkte.addTo(MAP); }
+  });
+}
+laden().catch((e) => { $("laden").textContent = "Fehler beim Laden: " + e.message; });
+</script>
+</body>
+</html>
