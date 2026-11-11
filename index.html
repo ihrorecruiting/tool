@@ -1889,6 +1889,9 @@ function tbAktion(f, L) {
     return n ? `<button class="btn sm" type="button" id="tbAus" title="Setzt in LeadTable den Status „${ST_AUS}“ und schreibt eine Notiz mit PLZ und Entfernung. Offene bekommen danach keine Erinnerungs-Mails mehr.">Alle auf „${ST_AUS}“ (${n})</button>` : "";}
   return "";
 }
+// Sie-Form mit vollem Namen (Dennis, 11.11.2026): „Guten Tag Philipp Straub,“ – neutral, ohne Herr/Frau raten zu müssen
+const anredeName = (n) => { const w = String(n || "").replace(/[\d@]/g, "").trim().split(/\s+/).filter(Boolean).map((x) => x.charAt(0).toUpperCase() + x.slice(1));
+  return w.filter((x, i) => i === 0 || x.toLowerCase() !== w[i - 1].toLowerCase()).join(" "); };
 const waVor = (l) => { const v = String(l.name || "").trim().split(/\s+/)[0] || ""; return /[\d@]/.test(v) || v.length < 2 ? "" : v.charAt(0).toUpperCase() + v.slice(1); };
 function naechsterWerktag9() { const d = new Date(); d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d; }
 function waTag() { const d = new Date(), we = d.getDay() === 0 || d.getDay() === 6; if (!we && d.getHours() < 17) return "heute";
@@ -1896,7 +1899,7 @@ function waTag() { const d = new Date(), we = d.getDay() === 0 || d.getDay() ===
   return t.toDateString() === morgen.toDateString() ? "morgen" : "am " + t.toLocaleDateString("de-DE", { weekday: "long" }); }
 function waSerieText(l, link) {
   // Sie-Form (Dennis, 11.11.2026). Frage „Können wir heute telefonieren?“ – ab 17 Uhr bzw. am Wochenende der nächste Werktag
-  const v = waVor(l), ort = tbWohnort(l).ort, hi = v ? `Hallo ${v}` : "Guten Tag", tag = waTag();
+  const v = waVor(l), ort = tbWohnort(l).ort, hi = anredeName(l.name) ? `Guten Tag ${anredeName(l.name)}` : "Guten Tag", tag = waTag();
   const offen = ST_OFFEN.includes(stN(l.status));
   if (!offen) return `${hi}, hier ist Dennis Mende von TALENTJAGD. Danke für Ihre Antworten zur Stelle als LKW-Fahrer im Fernverkehr. ${ort ? `Von ${ort} aus passt das gut.` : "Ihr Wohnort passt gut."} Können wir ${tag} kurz telefonieren (ca. 5 Minuten)? Dann besprechen wir Ihren LKW-Abstellort und Ihren Start. Wann passt es Ihnen am besten?`;
   return `${hi}, hier ist Dennis Mende von TALENTJAGD. Sie hatten sich als LKW-Fahrer im Fernverkehr beworben. ${ort ? `Von ${ort} aus würde das gut passen.` : "Von Ihrem Wohnort aus würde das gut passen."} Haben Sie noch Interesse? Können wir ${tag} kurz telefonieren? Wann passt es Ihnen am besten?`
@@ -2631,7 +2634,7 @@ function waNumber(p) { let d = String(p || "").replace(/\D/g, ""); if (d.startsW
 function fill(tpl, l, extra = {}) {
   const vor = String(l.name || "").trim().split(/\s+/)[0] || "";
   const ans = ansMit(l.answers).map((a) => `${String(a.q).replace(/[?:]\s*$/, "")}: ${a.a}`).join("\n");
-  const v = { name: l.name || "", vorname: vor, kampagne: l.kampagne || "", telefon: l.phone || "", email: l.email || "", antworten: ans, ...extra };
+  const v = { name: l.name || "", vorname: vor, anrede: anredeName(l.name), kampagne: l.kampagne || "", telefon: l.phone || "", email: l.email || "", antworten: ans, ...extra };
   return String(tpl || "").replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
 }
 async function openLead(id) {
@@ -3046,8 +3049,8 @@ function neFollowup(status) {
 function neWaText(l) {
   const vn = String(l.name || "").trim().split(/\s+/)[0] || "";
   const vorl = isTransa(l) ? TR_WA_VORL.find((v) => /nicht erreicht/i.test(v.titel)) : (W.wa_vorlagen || []).find((v) => /nicht erreicht/i.test(v.titel || ""));
-  const t = vorl ? vorl.text : "Hallo {vorname}, hier ist Dennis Mende. Ich habe gerade versucht, Sie wegen Ihrer Bewerbung als LKW-Fahrer zu erreichen. Wann passt es Ihnen {tag} für ein kurzes Telefonat?";
-  return t.replace(/\{vorname\}/g, vn).replace(/\{name\}/g, l.name || "").replace(/\{kampagne\}/g, l.kampagne || "").replace(/\{tag\}/g, waTag()).replace("Hallo , ", "Hallo, ");
+  const t = vorl ? vorl.text : "Guten Tag {anrede}, hier ist Dennis Mende. Ich habe gerade versucht, Sie wegen Ihrer Bewerbung als LKW-Fahrer zu erreichen. Wann passt es Ihnen {tag} für ein kurzes Telefonat?";
+  return t.replace(/\{anrede\}/g, anredeName(l.name)).replace(/\{vorname\}/g, vn).replace(/\{name\}/g, l.name || "").replace(/\{kampagne\}/g, l.kampagne || "").replace(/\{tag\}/g, waTag()).replace("Hallo , ", "Hallo, ").replace("Guten Tag , ", "Guten Tag, ");
 }
 function neWahl(s) {
   const l = cur; if (!l) return;
@@ -3241,22 +3244,22 @@ function vgLaden(id) {
   vgCache[id] = { laedt: true };
   api("transa_vg_link", { id }).then((r) => { vgCache[id] = { link: r.link, vorname: r.vorname }; }).catch((e) => { vgCache[id] = { err: e.message }; });
 }
-const TR_VG_WA = "Hallo {vorname}, hier ist Dennis Mende von TALENTJAGD. Danke für Ihre Bewerbung als LKW-Fahrer im Fernverkehr!\n\nHier ist Ihr Link zum Vorgespräch (2 Minuten). Damit prüfen wir, wo Ihr LKW stehen kann:\n{link}\n\nViele Grüße\nDennis Mende";
+const TR_VG_WA = "Guten Tag {anrede}, hier ist Dennis Mende von TALENTJAGD. Danke für Ihre Bewerbung als LKW-Fahrer im Fernverkehr!\n\nHier ist Ihr Link zum Vorgespräch (2 Minuten). Damit prüfen wir, wo Ihr LKW stehen kann:\n{link}\n\nViele Grüße\nDennis Mende";
 function sendVgLink(l) {
   const v = vgCache[l.lead_id];
   if (!v || v.laedt) { toast("Link wird noch geladen – bitte gleich nochmal tippen", true); vgLaden(l.lead_id); return; }
   if (v.err) { toast("Link konnte nicht erstellt werden: " + v.err, true); delete vgCache[l.lead_id]; vgLaden(l.lead_id); return; }
   const vn = v.vorname || String(l.name || "").trim().split(/\s+/)[0] || "";
-  const text = TR_VG_WA.replace("{vorname}", vn).replace("Hallo , ", "Hallo, ").replace("{link}", v.link);
+  const text = TR_VG_WA.replace("{anrede}", anredeName(l.name)).replace("{vorname}", vn).replace("Guten Tag , ", "Guten Tag, ").replace("{link}", v.link);
   window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
   api("lead_note", { id: l.lead_id, text: "Link zum Online-Vorgespräch per WhatsApp geschickt" }).catch(() => {});
 }
-const TR_DANKE = "Hallo {vorname},\n\nvielen Dank für das nette Gespräch! Wie besprochen kläre ich jetzt Ihren Abstellort, danach melde ich mich mit allem Weiteren bei Ihnen.\n\nBei Fragen erreichen Sie mich jederzeit hier per WhatsApp oder unter 0176 19 10 15 82.\n\nViele Grüße\nDennis Mende, TALENTJAGD";
+const TR_DANKE = "Guten Tag {anrede},\n\nvielen Dank für das nette Gespräch! Wie besprochen kläre ich jetzt Ihren Abstellort, danach melde ich mich mit allem Weiteren bei Ihnen.\n\nBei Fragen erreichen Sie mich jederzeit hier per WhatsApp oder unter 0176 19 10 15 82.\n\nViele Grüße\nDennis Mende, TALENTJAGD";
 // WhatsApp-Vorlagen in der Transa-Karte (Sie-Form, ohne Firmennamen; die Ihro-Vorlagen nennen die Hans Ihro GmbH und passen nicht)
 const TR_WA_VORL = [
-  { titel: "Heute telefonieren?", text: "Hallo {vorname}, hier ist Dennis Mende von TALENTJAGD. Danke für Ihre Bewerbung als LKW-Fahrer im Fernverkehr. Können wir {tag} kurz telefonieren (ca. 5 Minuten)? Wann passt es Ihnen am besten?" },
-  { titel: "Nicht erreicht", text: "Hallo {vorname}, hier ist Dennis Mende von TALENTJAGD. Ich habe gerade versucht, Sie wegen Ihrer Bewerbung als LKW-Fahrer im Fernverkehr zu erreichen. Wann passt es Ihnen {tag} für ein kurzes Telefonat?" },
-  { titel: "Rückruf bestätigen", text: "Hallo {vorname}, hier ist Dennis Mende von TALENTJAGD. Gerne rufe ich Sie zurück. Passt es {tag}? Nennen Sie mir einfach eine Uhrzeit." },
+  { titel: "Heute telefonieren?", text: "Guten Tag {anrede}, hier ist Dennis Mende von TALENTJAGD. Danke für Ihre Bewerbung als LKW-Fahrer im Fernverkehr. Können wir {tag} kurz telefonieren (ca. 5 Minuten)? Wann passt es Ihnen am besten?" },
+  { titel: "Nicht erreicht", text: "Guten Tag {anrede}, hier ist Dennis Mende von TALENTJAGD. Ich habe gerade versucht, Sie wegen Ihrer Bewerbung als LKW-Fahrer im Fernverkehr zu erreichen. Wann passt es Ihnen {tag} für ein kurzes Telefonat?" },
+  { titel: "Rückruf bestätigen", text: "Guten Tag {anrede}, hier ist Dennis Mende von TALENTJAGD. Gerne rufe ich Sie zurück. Passt es {tag}? Nennen Sie mir einfach eine Uhrzeit." },
 ];
 const TR_REG = [["fulda", "Fulda/Bad Hersfeld", /fulda|hersfeld/i], ["ruhr", "Ruhrgebiet", /ruhr/i], ["rheinmain", "Rhein-Main", /rhein[\s-]*main/i], ["osnabrueck", "Raum Osnabrück", /osnabr/i], ["halle", "Halle/Leipzig", /halle|leipzig/i], ["a6", "A6-Korridor", /\ba6\b|korridor/i]];
 const trRegion = (k) => (TR_REG.find((r) => r[2].test(k || "")) || [null, "Allgemein"])[1];
