@@ -1708,7 +1708,8 @@ const ST_QUALI = [...ABST_ST, "Online-Vorqualifiziert", "Standort passt", "Stand
 function abFall(l) { const a = l.abstellort; if (a && a.fall) return { ...a, quelle: "vg" }; const p = TRPLZ[l.lead_id]; return p ? { ...p, quelle: "plz" } : null; }
 // Nach dem Anruf (Ergebnis-Knöpfe in der Karte) bleibt der Bewerber sichtbar: Stufe „Im Gespräch“
 // Statusvorlage „Transa“ in LeadTable (Stand 09.11.2026) – alle Anruf-Ergebnisse müssen hier vorkommen, sonst fällt der Bewerber aus dem Board
-const TR_NE = ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3", "Keine Reaktion auf Nachgefasst"];
+const ST_NE_WA = "Nicht erreicht (WA)"; // eigener LeadTable-Status ohne SMS-Automatik (Dennis, 11.11.2026), egal wie oft
+const TR_NE = [ST_NE_WA, "Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3", "Keine Reaktion auf Nachgefasst"];
 const TR_ANG = ["Angebot verschickt", "Details verschickt", "Nachfassen nach Angebot", "Nachgefasst nach Angebot", "Termin", "Termin gebucht", "Vorstellungsgespr. NEUENSTEIN"];
 const TR_KON = ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Möchte Rückruf", "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat", "Nachgefasst", "Nachfassen bitte", "Talentpool-Angebot"];
 const TRG = { ne: TR_NE.map(stN), ang: TR_ANG.map(stN), kon: TR_KON.map(stN) };
@@ -1999,7 +2000,7 @@ let IHQ = null, ihF = store.get("tc_ihbrd") || "st_jetzt";
 const IH_G = { // LeadTable-Status je Unterpunkt
   mail: ["Info verschickt"], erinn: ["Erinnerungsmail verschickt"], wa: ["Per Whatsapp bearbeitet"],
   rr: ["Möchte Rückruf"], neu: ["Unbearbeitet"], anr: ["Anrufen", "Vasile Anruf"], nf: ["Nachfassen bitte"],
-  ne: ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3"],
+  ne: ["Nicht-Erreicht 1", "Nicht-Erreicht 2", "Nicht-Erreicht 3", "Nicht erreicht 1", "Nicht erreicht 2", "Nicht erreicht 3", "Nicht erreicht (WA)"],
   kon: ["in Kontakt", "Bedenkzeit (nach Telefonat)", "Nachgefasst", "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat", "Tendenz gut", "Tendenz Absage", "Angebot unterbreitet.", "Reaktivierung", "Manuell Bearbeitung", "Unterlagen erhalten"],
   term: ["Termin", "Termin gebucht"],
   ptp: ["Probetag vereinbaren"], ptv: ["Probetag vereinbart", "Probetag durchgeführt"], vgs: ["Vorstellungsgespr. NEUENSTEIN"],
@@ -2579,7 +2580,7 @@ const PRIMARY = [ST_BEDENK, ST_NACHGEF, "Tendenz gut", "Tendenz Absage", "Probet
 const TR_NACHGEF_ST = ["Nachgefasst nach Telefonat", "Nachgefasst nach Angebot"], TR_NF_ST = ["Nachfassen nach Telefonat", "Nachfassen nach Angebot"], TR_KEINE = "Keine Reaktion auf Nachgefasst";
 const PRIMARY_TR = [ST_BEDENK, ...TR_NACHGEF_ST, "Details verschickt", "Angebot verschickt", "Möchte Rückruf"];
 // Transa-Statusvorlage in LeadTable (Stand 09.11.2026), Reihenfolge wie der Ablauf – für „Anderer Status …“ in der Bewerberkarte
-const TR_VORLAGE = ["Unbearbeitet", "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Per Whatsapp bearbeitet",
+const TR_VORLAGE = ["Unbearbeitet", "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Per Whatsapp bearbeitet", "Nicht erreicht (WA)",
   "Online-Vorqualifiziert ", ...ABST_ST, "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort",
   "Möchte Rückruf", ST_BEDENK, "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat",
   "Abstellort vorgeschlagen", "Abstellort bestätigt", "Freigabe abgelehnt",
@@ -3037,8 +3038,8 @@ function neFollowup(status) {
 }
 /* Nicht erreicht (11.11.2026, Dennis): bei jedem „Nicht erreicht“ selbst wählen –
    „SMS automatisch“ = Status Nicht-Erreicht 1–3 wie bisher (Make schickt die SMS),
-   „WhatsApp selbst“ = WhatsApp mit Text (Sie-Form) öffnen, Status in LeadTable bleibt (sonst ginge die SMS trotzdem raus),
-   dafür Notiz und Wiedervorlage wie nach NE 1/2. */
+   „WhatsApp selbst“ = WhatsApp mit Text (Sie-Form) öffnen, Status „Nicht erreicht (WA)“ – egal wie oft, an ihm hängt keine SMS-Automatik –,
+   dazu Notiz und Wiedervorlage wie nach NE 1/2. Kennt LeadTable den Status (noch) nicht, bleibt der Status und es gibt nur Notiz + Wiedervorlage. */
 function neWaText(l) {
   const vn = String(l.name || "").trim().split(/\s+/)[0] || "";
   const vorl = isTransa(l) ? TR_WA_VORL.find((v) => /nicht erreicht/i.test(v.titel)) : (W.wa_vorlagen || []).find((v) => /nicht erreicht/i.test(v.titel || ""));
@@ -3056,7 +3057,7 @@ function neWahl(s) {
     <div style="display:grid;gap:10px;margin-top:12px">
       <button class="btn ne" id="nwSms" type="button" style="justify-content:flex-start;padding:12px 14px;text-align:left"><b>SMS automatisch</b>&nbsp;· Status ${esc(s)}</button>
       <div style="border:1px solid var(--line,#e4e7ec);border-radius:14px;padding:10px 12px">
-        <b>WhatsApp selbst</b> <span style="color:var(--ink3,#8a8f98);font-size:13px">· keine SMS, Status bleibt „${esc(l.status || "–")}“, Notiz und Wiedervorlage kommen dazu</span>
+        <b>WhatsApp selbst</b> <span style="color:var(--ink3,#8a8f98);font-size:13px">· keine SMS, Status „Nicht erreicht (WA)“ (egal wie oft), Notiz und Wiedervorlage</span>
         <textarea class="inp" id="nwText" rows="4">${esc(neWaText(l))}</textarea>
         <button class="btn ok" id="nwWa" type="button" style="margin-top:8px" ${hatNr ? "" : "disabled title=\"keine Handynummer\""}>WhatsApp öffnen</button>
       </div>
@@ -3069,10 +3070,13 @@ async function neWhatsApp(lead, s, text) {
   window.open(`https://wa.me/${waNumber(lead.phone)}?text=${encodeURIComponent(text)}`, "_blank");
   const fu = neFollowup(s), jetzt = new Date().toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   try {
+    const fuWa = fu ? { at: fu.at, note: "nicht erreicht, WhatsApp geschickt" } : null;
+    let stOk = true;
+    try { await api("lead_status", { id: lead.lead_id, status: ST_NE_WA, followup: fuWa }); }
+    catch (e) { stOk = false; if (fuWa) await api("lead_followup", { id: lead.lead_id, at: fuWa.at, note: fuWa.note }); }
     await api("lead_note", { id: lead.lead_id, text: `Nicht erreicht (${jetzt}) – WhatsApp statt SMS geschickt` });
-    if (fu) await api("lead_followup", { id: lead.lead_id, at: fu.at, note: "nicht erreicht, WhatsApp geschickt" });
-    toast(`${lead.name || "Bewerber"}: WhatsApp geschickt${fu ? ", wieder dran " + when(fu.at) : ""}`);
-    if (fu) ihLokal(lead.lead_id, { followup_at: fu.at, followup_note: "nicht erreicht, WhatsApp geschickt" });
+    toast(`${lead.name || "Bewerber"}: ${stOk ? ST_NE_WA : "WhatsApp geschickt (Status in LeadTable noch nicht angelegt)"}${fu ? ", wieder dran " + when(fu.at) : ""}`, !stOk);
+    ihLokal(lead.lead_id, { ...(stOk ? { status: ST_NE_WA, last_status_change: new Date().toISOString() } : {}), ...(fuWa ? { followup_at: fuWa.at, followup_note: fuWa.note } : {}) });
     await loadWork(); loadStats();
     if (W.auto_weiter !== false) { post = null; const n = filtered().find((x) => x.lead_id !== lead.lead_id); if (n) { openLead(n.lead_id); return; } }
     const r = await api("lead_get", { id: lead.lead_id }); if (selId === lead.lead_id) { cur = r.lead; renderCard(r); }
