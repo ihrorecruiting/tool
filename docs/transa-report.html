@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Transa Regionen-Report</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<link rel="stylesheet" href="lib/leaflet/leaflet.css">
+<script src="lib/leaflet/leaflet.js"></script>
+<script src="lib/leaflet/leaflet-heat.js"></script>
 <style>
 :root{--bg:#f4f5f7;--card:#fff;--ink:#16181d;--muted:#667085;--line:#e4e7ec;--acc:#7c3aed;--acc2:#ede9fe;--ok:#12b76a;--warn:#f79009;--bad:#f04438;
   --r-fulda:#0ea5e9;--r-ruhr:#7c3aed;--r-rheinmain:#0d9488;--r-osnabrueck:#92400e;--r-halle:#c026d3;--r-a6:#ea580c}
@@ -239,7 +239,7 @@ function kpiRow(key) {
   return kpi("Bewerbungen gesamt", L.length, key === "alle" ? "alle Regionen, seit Start" : "seit Kampagnenstart") + kpi("Bewerbungen heute", nH, "seit 0 Uhr") + kpi("Bewerbungen 7 Tage", n7, "inkl. heute") +
     kpi("Qualifiziert", `${QL ? Q.length : "–"}${QL && qH ? ` <span style="font-size:15px;color:#16a34a">+${qH} heute</span>` : ""}`, QL ? `${qOn} online · ${Q.length - qOn} von dir · ${nq} nicht qualifiziert` : "nicht geladen") +
     kpi("Werbekosten", eur(kost), `heute ${eur(kH)} · Meta`) +
-    kpi("Kosten je Bewerbung", nH ? eur(kH / nH) : "–", `heute · Durchschnitt ${L.length ? eur(kost / L.length) : "–"}`);
+    kpi("Kosten je Bewerbung", nH ? eur(kH / nH) : "–", `heute · Durchschnitt ${L.length ? eur(kost / L.length) : "–"}<br><span title="Seit 08.11.2026 sendet das Formular nur noch, wer Fernverkehr fahren will und den CE-Führerschein hat. Die Kosten je Bewerbung sind deshalb ab dann höher und mit den Tagen davor nicht direkt vergleichbar.">ab 08.11. nur Fernverkehr + CE ⓘ</span>`);
 }
 /* Online vorqualifiziert: Zeile für Liste und Excel */
 const VQ_REG = [["fulda", /fulda|hersfeld/i], ["ruhr", /ruhr/i], ["rheinmain", /rhein[\s-]*main/i], ["osnabrueck", /osnabr/i], ["halle", /halle|leipzig/i], ["a6", /\ba6\b|korridor/i]];
@@ -247,14 +247,14 @@ const REGWORT = /^(ruhr|ruhrgebiet|nordwest|nordost|suedwest|südwest|suedost|s�
 function vqRow(l) {
   const a = {}; for (const x of (l.answers || [])) a[String(x.q).toLowerCase()] = String(x.a ?? "").trim();
   const d = String(l.description || "").split(/\n/);
-  let err = "", vgStart = "";
-  for (const z of d) { const m = z.match(/am besten erreichbar\s*:\s*(.+)/i); if (m) err = m[1].trim(); const s = z.match(/^\s*start\s*:\s*(.+)/i); if (s) vgStart = s[1].trim(); }
+  let err = "", vgStart = "", auto = "";
+  for (const z of d) { const au = z.match(/^\s*eigenes auto\s*:\s*(.+)/i); if (au) auto = au[1].trim(); const m = z.match(/am besten erreichbar\s*:\s*(.+)/i); if (m) err = m[1].trim(); const s = z.match(/^\s*start\s*:\s*(.+)/i); if (s) vgStart = s[1].trim(); }
   const warn = [...new Set(d.filter((z) => /⚠|bitte prüfen/i.test(z)).map((z) => z.trim()))].join(" | ");
   const reg = (VQ_REG.find(([, re]) => re.test(l.kampagne || "")) || ["allgemein"])[0];
   // the postcode from the Online-Vorgespräch (Abstellort step) is newer than the one from the application and wins (06.11.2026)
   const ab = l.abstellort || null;
   return { id: l.lead_id, name: l.name || "", abst: ab, plz: ab?.plz || (a.plz || "").replace(/\D/g, "").slice(0, 5), ort: [a.wohnort, a.ort].find((o) => o && !REGWORT.test(o)) || "", region: reg,
-    kampagne: l.kampagne || "", seit: l.last_status_change || l.lead_created_at, klasse: l.gespraech && !l.gespraech.entwurf ? [l.gespraech.klasse, l.gespraech.punkte != null ? l.gespraech.punkte + " P." : ""].filter(Boolean).join(" · ") : "", erreichbar: err, erfahrung: a.erfahrung || "", start: a.start || "", vgStart: vgStart === "–" ? "" : vgStart, adr: a.adr || "", hinweis: warn };
+    kampagne: l.kampagne || "", seit: l.last_status_change || l.lead_created_at, klasse: l.gespraech && !l.gespraech.entwurf ? [l.gespraech.klasse, l.gespraech.punkte != null ? l.gespraech.punkte + " P." : ""].filter(Boolean).join(" · ") : "", erreichbar: err, erfahrung: a.erfahrung || "", start: a.start || "", vgStart: vgStart === "–" ? "" : vgStart, adr: a.adr || "", hinweis: warn, auto };
 }
 /* Startmonat (Dennis, 04.11.2026): Liste und Excel nach Beginn Januar / Februar / später (Talentpool) ordnen.
    Vorrang hat die Antwort im Online-Vorgespräch („Start: Ab Januar“ in der LeadTable-Beschreibung), sonst die Angabe aus der Bewerbung. */
@@ -368,7 +368,10 @@ function abKm(lat, lon) {
 // A6 corridor (T_Transa A6, since 06.11.2026): Meta only reports its pins once the campaign has costs, until then the
 // five pins from the ad set (20 km each) stand in, so the rule check and the maps work from the first applicant on
 const A6_PINS = [[49.3837, 8.5415], [49.3194, 8.5746], [49.2187, 9.0166], [49.2046, 9.4728], [49.1788, 9.9259]];
+// Anzeigename je Region (Dennis, 08.11.2026): auf fahrer.talentjagd.de heißt Rhein-Main „Rhein-Main und Rhein-Neckar“ (Schlüssel bleibt rheinmain)
+const REG_NAME = { rheinmain: "Rhein-Main und Rhein-Neckar" };
 function zielErsatz() {
+  for (const r of DATA.regionen) if (REG_NAME[r.key]) r.name = REG_NAME[r.key];
   for (const r of DATA.regionen) { const n = ZIEL_NEU[r.key]; if (!n) continue;
     const meta = r.ziel, schon = meta && km(meta.lat, meta.lon, n.lat, n.lon) < 3;
     r.zielAlt = schon ? null : meta;
@@ -396,7 +399,8 @@ function abAntwort(v) {
   const a = v.abst; if (!a) return '<span class="note" style="margin:0">noch nicht gefragt</span>';
   const t = { frei: "frei wählbar", entgegen: "kommt entgegen: ja", passt_nicht: "⚠ passt nicht", aus: "⚠ außerhalb", unbekannt: "⚠ PLZ unbekannt" }[a.fall] || a.text;
   const z = a.vorschlag ? "Vorschlag: " + a.vorschlag : a.hilfe ? "möchte Hilfe" : "";
-  return esc(t) + (z ? `<br><span class="note" style="margin:0">${esc(z)}</span>` : "");
+  const ohneAuto = /^nein/i.test(v.auto || "") ? '<br><b style="color:#b45309;font-size:12px">kein eigenes Auto</b>' : "";
+  return esc(t) + (z ? `<br><span class="note" style="margin:0">${esc(z)}</span>` : "") + ohneAuto;
 }
 function abDaten() {
   const namen = new Map([...(QL || []), ...(AB || [])].map((v) => [v.id, v]));
@@ -658,13 +662,13 @@ async function load() {
     try {
       const r2 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Online-Vorqualifiziert", "Qualifiziert", "Standort passt", "Standort prüfen", ...ABST_ST, "Abstellort bestätigt", "Vertrag unterschrieben"] }) });
       const d2 = await r2.json().catch(() => ({}));
-      QL = r2.ok ? (d2.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b/i.test(l.name || "")).map((l) => ({ ...vqRow(l), status: String(l.status || "").trim() })) : null;
+      QL = r2.ok ? (d2.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b|^dennis mende$/i.test(String(l.name || "").trim())).map((l) => ({ ...vqRow(l), status: String(l.status || "").trim() })) : null;
       VQ = QL ? QL.filter((v) => ONLINE_ST.test(v.status)) : null;
     } catch { VQ = null; QL = null; }
     try {
       const r3 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Nicht qualifiziert", "Absage durch Bewerber", "Talentpool bestätigt"], mitText: true }) });
       const d3 = await r3.json().catch(() => ({}));
-      AB = r3.ok ? (d3.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b/i.test(l.name || "")).map(abRow) : null;
+      AB = r3.ok ? (d3.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !/^test\b|^dennis mende$/i.test(String(l.name || "").trim())).map(abRow) : null;
     } catch { AB = null; }
     render();
   } catch (e) { $("main").innerHTML = '<div class="msg err">Konnte nicht laden: ' + esc(e.message) + '</div>'; }
@@ -672,7 +676,8 @@ async function load() {
 
 /* Testeinträge (eigene Testbewerbungen) zählen im Report nicht */
 const TEST_IDS = new Set(["6ae83c5ca286e77282f27196", "6ae31d16f5aeb9f5a81e9491", "6ae2101e24e78f012e4d8007", "6aeae29339f68c19b9832cb0",
-  "6aedc0e9c05978b08b168b87", "6aedc451c38a53f3760d80cf", "6aedc7a23ca49457fa3cf125"]); // Dennis' Tests 06.11. (A6)
+  "6aedc0e9c05978b08b168b87", "6aedc451c38a53f3760d80cf", "6aedc7a23ca49457fa3cf125", // Dennis' Tests 06.11. (A6)
+  "6aeeda87433be0980e288710", "6aede308cfd6ba4846590a8e"]); // Dennis' Tests Abstellort (Löwenstein, Öhringen), gefunden 08.11.
 
 /* Bewerber mit Koordinaten, Entfernung zum Mittelpunkt der Kampagne, Zeitraum-Filter */
 function prep() {
