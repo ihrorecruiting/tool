@@ -912,7 +912,7 @@ function renderGF() {
     return `<tr class="${kl}"><td>${hatTab ? `<a href="#" data-tab="${tab}" style="color:inherit">${esc(r.name)}</a>` : esc(r.name)}${r.key === "mitte" ? ' <span class="note" style="margin:0">beendet</span>' : ""}${seg(r)}</td>
     <td class="n">${r.bewerber}</td><td class="n">${r.umkreis} <span class="note" style="margin:0">${pct(r.umkreis, r.bewerber)}</span></td><td class="n">${r.qualifiziert}</td>
     <td class="n">${eur(r.kosten)}</td><td class="n">${eur(r.bewerber ? r.kosten / r.bewerber : null)}</td><td class="n"><b>${r.umkreis ? eur(r.kosten / r.umkreis) : "–"}</b></td></tr>`; };
-  const stufen = [["Echte Bewerber", g.bewerber], ["Wohnen im Umkreis", g.umkreis], ["Qualifiziert (im Umkreis)", g.qualifiziert], ["Abstellort vorgeschlagen", g.vorgeschlagen], ["Freigegeben", g.freigegeben], ["Vertrag", g.vertrag]];
+  const stufen = [["Echte Bewerber", g.bewerber], ["Wohnen im Umkreis", g.umkreis], ["Qualifiziert (im Umkreis)", g.qualifiziert], ["Abstellort vorgeschlagen", g.vorgeschlagen], ["Freigegeben", g.freigegeben], ["Vertrag verschickt", g.verschickt ?? 0], ["Vertrag unterschrieben", g.vertrag]];
   const akt = regs.filter((r) => r.aktiv && r.bewerber >= 5 && r.umkreis), say = [];
   say.push(`Von <b>${g.bewerber}</b> echten Bewerbern wohnen <b>${g.umkreis} (${pct(g.umkreis, g.bewerber)})</b> im Umkreis einer Region, ${g.aus} außerhalb.`);
   if (akt.length) {
@@ -945,7 +945,7 @@ function renderGF() {
       <p class="note">Prozent = Anteil der Stufe davor.</p>
   <div class="gf-info" style="margin-top:14px"><p style="margin:0"><b>Was heißt „qualifiziert“?</b> Der Bewerber wohnt im Umkreis <i>und</i> hat mindestens eins davon geschafft:
       das <b>Online-Vorgespräch</b> (will Fernverkehr Montag bis Freitag, Start Januar 2027 oder früher, bereit zu Führungszeugnis und Sicherheitsüberprüfung für Klasse 1, Abstellort passt)
-      oder das <b>Telefonat mit Dennis</b>. Qualifiziert heißt noch nicht eingestellt: Danach kommen Abstellort-Vorschlag, Freigabe durch Herrn Baumann und Vertrag.
+      oder das <b>Telefonat mit Dennis</b>. Qualifiziert heißt noch nicht eingestellt: Danach kommen Abstellort-Vorschlag, Freigabe durch Herrn Baumann, Vertrag verschickt und Vertrag unterschrieben.
       Nicht mitgezählt: abgesagt, nicht qualifiziert oder Sicherheitsprüfung nicht möglich.</p></div>
     </div>
   </div>

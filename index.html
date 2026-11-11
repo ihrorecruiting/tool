@@ -1702,6 +1702,8 @@ const ST_WA = "Per Whatsapp bearbeitet", ST_AUS = "Wohnort außerhalb Umkreis";
 // Freigabe durch Hr. Baumann (09.11.2026): „Abstellort vorgeschlagen“ → freigabe.html → „Abstellort bestätigt“ (= freigegeben, Vertrag schicken) oder „Freigabe abgelehnt“
 const ST_SL = "Sicherheitsprüfung n. mgl", ST_DOPP = "Doppelte Bewerbung"; // seit 11.11.2026 in der Transa-Vorlage
 const ST_VORG = "Abstellort vorgeschlagen", ST_FOK = "Abstellort bestätigt", ST_FNO = "Freigabe abgelehnt";
+// „Vertrag verschickt“ (11.11.2026, Dennis): nach der Freigabe Vertrag raus → wartet auf Unterschrift, Wiedervorlage nach 3 Werktagen
+const ST_VV = "Vertrag verschickt";
 let FGLOG = {};
 const ST_OFFEN = ["Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet", ST_WA, "Anrufen"].map(stN);
 const ST_QUALI = [...ABST_ST, "Online-Vorqualifiziert", "Standort passt", "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort"].map(stN);
@@ -1716,21 +1718,21 @@ const TRG = { ne: TR_NE.map(stN), ang: TR_ANG.map(stN), kon: TR_KON.map(stN) };
 function trTopf(l) {
   const s = stN(l.status), a = abFall(l), f = a ? a.fall : "";
   if (s === stN(ST_AUS)) return "wa";
-  if (s === stN(ST_VORG)) return "fg_w"; if (s === stN(ST_FOK)) return "fg_ok"; if (s === stN(ST_FNO)) return "fg_no";
+  if (s === stN(ST_VORG)) return "fg_w"; if (s === stN(ST_FOK)) return "fg_ok"; if (s === stN(ST_VV)) return "fg_vv"; if (s === stN(ST_FNO)) return "fg_no";
   for (const [k, w] of Object.entries(TRG)) if (w.includes(s)) return k;
   if (ST_OFFEN.includes(s)) return f === "frei" ? "of_frei" : f === "entgegen" ? "of_ent" : f === "aus" ? "of_aus" : "of_pz";
   if (ST_QUALI.includes(s)) return f === "frei" ? "bf" : f === "entgegen" ? "be" : f === "aus" ? "wa" : "pz";
   return "";
 }
-const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1, fg_w: 1, fg_ok: 1, fg_no: 1 };
-Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro", "No-Show", "Doppelte Bewerbung"], nq: ["Nicht qualifiziert", ST_SL], vu: ["Vertrag unterschrieben", "Mündliche Zusage", "Eingestellt"], wav: ST_WA, wau: ST_AUS, fg_w: [], fg_ok: [], fg_no: [], fgv: ST_VORG, fgn: ST_FNO });
+const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1, fg_w: 1, fg_ok: 1, fg_vv: 1, fg_no: 1 };
+Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], fg_vv: [ST_VV], abs: ["Absage durch Bewerber", "Absage Ihro", "No-Show", "Doppelte Bewerbung"], nq: ["Nicht qualifiziert", ST_SL], vu: ["Vertrag unterschrieben", "Mündliche Zusage", "Eingestellt"], wav: ST_WA, wau: ST_AUS, fg_w: [], fg_ok: [], fg_no: [], fgv: ST_VORG, fgn: ST_FNO });
 // Diese Status holt das Cockpit für Transa (alle Stufen inkl. Anruf-Ergebnisse)
 const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON, "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet"])];
 Object.assign(QST, { st_offen: [], st_gespr: [], st_frg: [], st_pruef: [], st_erg: [] });
 Object.assign(QTITEL, { st_offen: "Vorgespräch offen – alle", st_gespr: "Im Gespräch – alle", st_frg: "Freigabe – alle", st_pruef: "Prüfen – alle", st_erg: "Ergebnis – alle", jetzt: "Bereit fürs Angebot", bf: "Bereit fürs Angebot – Abstellort frei", be: "Bereit fürs Angebot – kommt entgegen", wa: "Wohnort außerhalb der Region",
   pz: "PLZ unklar – bitte prüfen", of_frei: "Vorgespräch offen – Abstellort frei (laut PLZ)", of_ent: "Vorgespräch offen – kommt entgegen (laut PLZ)",
   of_aus: "Vorgespräch offen – Wohnort außerhalb", of_pz: "Vorgespräch offen – PLZ unklar",
-  fg_w: "Freigabe – wartet auf Hr. Baumann", fg_ok: "Freigegeben – Vertrag schicken", fg_no: "Freigabe abgelehnt",
+  fg_w: "Freigabe – wartet auf Hr. Baumann", fg_ok: "Freigegeben – Vertrag schicken", fg_vv: "Vertrag verschickt – wartet auf Unterschrift", fg_no: "Freigabe abgelehnt",
   ne: "Im Gespräch – nicht erreicht", kon: "Im Gespräch – Rückruf, Bedenkzeit, in Kontakt", ang: "Im Gespräch – Angebot oder Details raus" });
 // Gleiche Reihenfolge für die Liste in der Mitte und für „Nächster“: in Anruflisten nach Wohnort-Region, mit Vorgespräch zuerst, dann am längsten wartend
 function trSortTopf(L, f) {
@@ -1763,6 +1765,7 @@ const STAND = [ // g = Zeile im Block „Stand“; topf = gezählt nach der Eint
   { g: "gespr", f: "ang", topf: 1, st: "Angebot oder Details verschickt, Termin", t: "Angebot raus", c: "#16a34a" },
   { g: "frg", f: "fg_w", topf: 1, st: "Abstellort vorgeschlagen – wartet auf Freigabe", t: "Wartet", c: "#eab308" },
   { g: "frg", f: "fg_ok", topf: 1, st: "Abstellort bestätigt = freigegeben, Vertrag schicken", t: "Freigegeben", c: "#16a34a" },
+  { g: "frg", f: "fg_vv", topf: 1, st: "Vertrag verschickt – wartet auf Unterschrift", t: "Vertrag raus", c: "#0369a1" },
   { g: "frg", f: "fg_no", topf: 1, st: "Freigabe abgelehnt", t: "Abgelehnt", c: "#dc2626" },
   { g: "erg", f: "vu", st: "Vertrag unterschrieben", t: "Vertrag", c: "#0369a1" }, { g: "erg", f: "nq", st: "Nicht qualifiziert", t: "Nicht qualifiziert", c: "#dc2626" },
   { g: "erg", f: "abs", st: "Absage durch Bewerber", t: "Absage", c: "#6b7280" }, { g: "erg", f: "tp", st: "Talentpool bestätigt", t: "Talentpool", c: "#8b5cf6" }];
@@ -1806,8 +1809,8 @@ function setTrMode() { document.body.classList.toggle("trbrd", boardAn() && !sel
 const TB_STUFEN = [
   { k: "offen", t: "Vorgespräch offen", hint: "Einladung oder Erinnerung ist raus, noch keine Antwort", f: ["mail", "erinn", "kr"], unter: "nach Wohnort (laut PLZ)", f2: ["of_frei", "of_ent", "of_aus", "of_pz"] },
   { k: "bereit", t: "Bereit fürs Angebot", hint: "online oder am Telefon „ja“, Abstellort passt – anrufen", f: ["bf", "be"], haupt: 1 },
-  { k: "gespr", t: "Im Gespräch", hint: "angerufen – nach dem Ergebnis", f: ["ne", "kon", "ang"] },
-  { k: "frg", t: "Freigabe", hint: "Abstellort vorgeschlagen – Hr. Baumann gibt frei, dann Vertrag", f: ["fg_w", "fg_ok", "fg_no"] },
+  { k: "gespr", t: "Im Gespräch", hint: "angerufen – nach dem Ergebnis", f: ["ne", "kon"] }, // „Angebot raus“ entfällt (Angebots-Status für Transa gestrichen, 11.11.2026)
+  { k: "frg", t: "Freigabe", hint: "Abstellort vorgeschlagen – Hr. Baumann gibt frei, dann Vertrag", f: ["fg_w", "fg_ok", "fg_vv", "fg_no"] },
   { k: "pruef", t: "Prüfen", hint: "„ja“, aber Wohnort außerhalb oder PLZ unklar", f: ["wa", "pz"] },
   { k: "erg", t: "Ergebnis", hint: "abgeschlossen", f: ["vu", "nq", "abs", "tp"] }];
 const tbX = (f) => STAND.find((x) => x.f === f) || { f, t: f, c: "#999" };
@@ -2578,16 +2581,14 @@ const NEUE_STATUS = [ST_BEDENK, ST_NACHGEF, ST_NFBITTE, "Termin", "Termin gebuch
 const PRIMARY = [ST_BEDENK, ST_NACHGEF, "Tendenz gut", "Tendenz Absage", "Probetag vereinbaren", "Möchte Rückruf"];
 // Transa hat eine eigene Statusvorlage (seit 02.11.2026): Nachfassen/Nachgefasst getrennt nach Telefonat und Angebot
 const TR_NACHGEF_ST = ["Nachgefasst nach Telefonat", "Nachgefasst nach Angebot"], TR_NF_ST = ["Nachfassen nach Telefonat", "Nachfassen nach Angebot"], TR_KEINE = "Keine Reaktion auf Nachgefasst";
-const PRIMARY_TR = [ST_BEDENK, ...TR_NACHGEF_ST, "Details verschickt", "Angebot verschickt", "Möchte Rückruf"];
-// Transa-Statusvorlage in LeadTable (Stand 09.11.2026), Reihenfolge wie der Ablauf – für „Anderer Status …“ in der Bewerberkarte
-const TR_VORLAGE = ["Unbearbeitet", "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Per Whatsapp bearbeitet", "Nicht-Erreicht (WA)",
-  "Online-Vorqualifiziert ", ...ABST_ST, "Standort prüfen", "Qualifiziert", "Abstellort-Anfrage verschickt", "Keine Reaktion auf Abstellort",
-  "Möchte Rückruf", ST_BEDENK, "Nachfassen nach Telefonat", "Nachgefasst nach Telefonat",
-  "Abstellort vorgeschlagen", "Abstellort bestätigt", "Freigabe abgelehnt",
-  "Details verschickt", "Angebot verschickt", "Nachfassen nach Angebot", "Nachgefasst nach Angebot", "Keine Reaktion auf Nachgefasst",
-  "Termin", "Termin gebucht", "Vorstellungsgespr. NEUENSTEIN", "Mündliche Zusage", "Vertrag unterschrieben", "Eingestellt", "Talentpool-Angebot", "Talentpool bestätigt",
-  "Wohnort außerhalb Umkreis", "Nicht qualifiziert", "Sicherheitsprüfung n. mgl", "Doppelte Bewerbung", "Absage durch Bewerber", "Absage Ihro", "No-Show"];
-const primFor = (l) => (berL(l) === "transa" ? PRIMARY_TR : PRIMARY);
+// Transa (11.11.2026): Angebots- und Nachfass-Status gestrichen; nach der Freigabe die Vertrags-Knöpfe
+const PRIMARY_TR = [ST_BEDENK, "Möchte Rückruf"];
+// Transa-Statusvorlage in LeadTable (Stand 11.11.2026, aufgeräumt), Reihenfolge wie der Ablauf – für „Anderer Status …“ in der Bewerberkarte
+const TR_VORLAGE = ["Unbearbeitet", "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Per Whatsapp bearbeitet",
+  "Online-Vorqualifiziert ", ...ABST_ST, "Standort prüfen", "Qualifiziert", "Nicht-Erreicht (WA)", "Möchte Rückruf", ST_BEDENK,
+  "Abstellort vorgeschlagen", "Abstellort bestätigt", "Freigabe abgelehnt", "Vertrag verschickt", "Vertrag unterschrieben", "Talentpool-Angebot", "Talentpool bestätigt",
+  "Wohnort außerhalb Umkreis", "Nicht qualifiziert", "Sicherheitsprüfung n. mgl", "Doppelte Bewerbung", "Absage durch Bewerber"];
+const primFor = (l) => { if (berL(l) !== "transa") return PRIMARY; const s = stN(l.status); return s === stN(ST_FOK) ? [ST_VV, ...PRIMARY_TR] : s === stN(ST_VV) ? ["Vertrag unterschrieben", ...PRIMARY_TR] : PRIMARY_TR; };
 const isTrNachgef = (s) => TR_NACHGEF_ST.some((x) => norm(x) === norm(s)), isTrNf = (s) => TR_NF_ST.some((x) => norm(x) === norm(s));
 const isBedenk = (s) => norm(s).startsWith("bedenkzeit"), isNachgef = (s) => norm(s) === "nachgefasst", isNfBitte = (s) => norm(s) === "nachfassenbitte";
 // Bedenkzeit / Nachgefasst: automatisch Wiedervorlage in 7 Tagen (Werktag, 9 Uhr)
@@ -2596,6 +2597,8 @@ function autoFollowup(s) {
   const heute = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
   if (isNachgef(s)) return { at: in7Tagen().toISOString(), note: `Seit ${heute} nachgefasst, keine Rückmeldung? → Absage durch Bewerber` };
   if (isTrNachgef(s)) return { at: in7Tagen().toISOString(), note: `Seit ${heute} nachgefasst, keine Rückmeldung? → ${TR_KEINE}` };
+  if (stN(s) === stN(ST_VV)) { const d = new Date(); let n = 0; while (n < 3) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; } d.setHours(9, 0, 0, 0);
+    return { at: d.toISOString(), note: `Vertrag seit ${heute} verschickt – schon unterschrieben zurück?` }; }
   return null;
 }
 function nextNE(s) { const n = norm(s); return n === "nichterreicht1" ? "Nicht-Erreicht 2" : (n === "nichterreicht2" || n === "nichterreicht3") ? "Nicht-Erreicht 3" : "Nicht-Erreicht 1"; }
