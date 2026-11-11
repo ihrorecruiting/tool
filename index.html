@@ -891,6 +891,9 @@
 
   /* ---------- Transa: Gesprächsfenster (Leitfaden + Scoring) ---------- */
   body:not([data-ber="transa"]) .tr-only{display:none!important}
+  /* Kollegen-Zugang: nur Transa-Arbeit */
+  html.helfer #tabs button:not([data-b="transa"]), html.helfer #openSettings, html.helfer #addBtn, html.helfer #callBtn, html.helfer #berSeg,
+  html.helfer .trkpis, html.helfer #tbVcf, html.helfer #tbVcfM, html.helfer #vOver, html.helfer .panel:has(#newest), html.helfer .panel:has(#trials), html.helfer #terminBtn, html.helfer #calledBtn, html.helfer #dispBtn{display:none!important}
   #trOv .modal{max-width:860px}
   #trOv .modal>.trhead,#trOv .modal>.trsteps,#trOv .modal>.trlive,#trOv .modal>.trnote{flex:0 0 auto}
   .trnote{padding:8px 24px 6px;border-top:.5px solid var(--sep)}
@@ -1430,9 +1433,22 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 let cfg = { url: store.get("tc_url") || "https://mpsobinfzfjxorfbdzae.supabase.co", token: store.get("tc_token") || "" };
+// ---------- Kollegen-Zugang (11.11.2026): cockpit.karriere-ihro.de/?helfer#hk=<Schlüssel> ----------
+// Ein Kollege telefoniert Transa-Bewerber ab. Eigener Schlüssel (Tabelle helfer_zugang), eigener Name, Function helfer-api prüft jede Aktion.
+// Nur Transa-Board, Bewerberkarte, Leitfaden, WhatsApp, „Nicht erreicht“ – keine Übersicht, Statistik, Kosten, Einstellungen, kein Ihro.
+const HELFER = new URLSearchParams(location.search).has("helfer");
+const HELFER_OK = /^(work|lead_get|lead_history|lead_status|lead_note|lead_followup|lead_description|lead_description_refresh|search|transa_get|transa_save|transa_list|transa_antworten|transa_status_liste|transa_vg_link|abst_plz|fg_log|dubletten|heute|lock|unlock|locks)$/;
+if (HELFER) {
+  const hh = new URLSearchParams(location.hash.slice(1));
+  if (hh.get("hk")) { store.set("tc_helfer_key", hh.get("hk")); history.replaceState(null, "", location.pathname + location.search); }
+  cfg = { url: "https://mpsobinfzfjxorfbdzae.supabase.co", token: store.get("tc_helfer_key") || "" };
+  document.documentElement.classList.add("helfer");
+}
+const helferName = () => store.get("tc_helfer_name") || "";
 const configured = () => !!(cfg.url && cfg.token);
 
 function toast(msg, err) {
+  if (HELFER && msg === "Nicht eingerichtet") return; // gesperrte Aktion im Kollegen-Zugang: still
   const t = $("toast");
   t.innerHTML = (err ? "" : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`) + `<span>${esc(msg)}</span>`;
   t.className = "toast show" + (err ? " err" : "");
@@ -1440,9 +1456,11 @@ function toast(msg, err) {
 }
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
+  if (HELFER && !HELFER_OK.test(action)) throw new Error("Nicht eingerichtet"); // im Kollegen-Zugang still übergehen
+  const helferWeg = HELFER || /^(lock|unlock|locks)$/.test(action);
   const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids|fg_log|chef_liste|dubletten|heute)$/.test(action) ? "cockpit-plus" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
-  const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + fn, opt = {
-    method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
+  const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + (helferWeg ? "helfer-api" : fn), opt = {
+    method: "POST", headers: HELFER ? { "Content-Type": "application/json", "x-helfer-key": cfg.token, "x-helfer-name": encodeURIComponent(helferName()) } : { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
   // Am Handy reißt die Verbindung kurz ab (Funkloch, Wechsel LTE/5G/WLAN, App aus dem Hintergrund) – Safari meldet dann „Load failed“.
   // Lesende Abfragen werden still wiederholt, beim Speichern kommt eine verständliche Meldung.
@@ -1528,6 +1546,7 @@ $("tabbar").addEventListener("click", (e) => { const b = e.target.closest("butto
 // ---------- Zahlen ----------
 let tagesziel = 0;
 async function loadStats() {
+  if (HELFER) return;
   try {
     const [d, hb] = await Promise.all([api("stats"), api("heute_bereiche").catch(() => null)]);
     HB = hb && hb.gesamt ? hb : null; STATS = d;
@@ -1835,6 +1854,7 @@ function tbHinweis(l) {
   const a = abFall(l), s = stN(l.status), h = [];
   if (trWaGesendet(l)) h.push(`<span class="ok">WhatsApp ✓</span>`);
   const fg = FGLOG[l.lead_id], dt = (x) => new Date(x).toLocaleDateString("de-DE");
+  const lk = LOCKS[l.lead_id]; if (lk) h.push(`<span class="warn" title="seit ${new Date(new Date(lk.bis).getTime() - 15 * 60e3).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr">🔒 ${esc(lk.wer)} ist dran</span>`);
   const du = DUP[l.lead_id]; if (du && du.length) h.push(`<span class="warn" title="${esc(du.map((x) => `${x.name} · ${x.kampagne} · ${x.status}`).join(" | "))}">⚠ doppelt (${du.length + 1}×)</span>`);
   if (s === stN(ST_VORG)) h.push(`<span class="warn">wartet auf Freigabe</span>`);
   else if (s === stN(ST_FOK)) h.push(`<span class="ok">freigegeben${fg && fg.entscheidung === "frei" ? ` von ${esc(fg.von)} am ${dt(fg.created_at)}` : ""} – Vertrag schicken</span>`);
@@ -2185,6 +2205,7 @@ async function loadTrq() {
     api("fg_log").then((r) => { FGLOG = r.log || {}; if (BER === "transa") renderTrBoard(); }).catch(() => {});
     // Doppelte Bewerber (gleiche Nummer/Mail, alle Kampagnen) und Tageszähler, 10.11.2026
     if (Date.now() - DUP_AT > 3e5) api("dubletten").then((r) => { DUP = r.dubletten || {}; DUP_AT = Date.now(); if (BER === "transa") renderTrBoard(); }).catch(() => {});
+    api("locks").then((r) => { LOCKS = r.locks || {}; if (BER === "transa") renderTrBoard(); }).catch(() => {});
     api("heute").then((r) => { HEUTE = r; if (BER === "transa") { renderTrBoard(); if (TRK) renderTrKpi(); } }).catch(() => {});
     const plz = Date.now() - TRPLZ_AT > 6e5 ? api("abst_plz").then((p) => { TRPLZ = p.abst || {}; TRPLZ_AT = Date.now(); }).catch(() => {}) : null;
     const r = await api("transa_status_liste", { alle: true, stati: TR_HOLEN, mitText: true }); await plz; TRQ = r.leads || []; TRSTAND = r.stand || null;
@@ -2503,7 +2524,7 @@ async function loadWork() {
   try {
     if (!configured()) return;
     // Bedenkzeit/Nachgefasst, die direkt in LeadTable gesetzt wurden: Wiedervorlage nachziehen (höchstens alle 5 Minuten)
-    if (!window._wvAt || Date.now() - window._wvAt > 300000) { window._wvAt = Date.now(); try { await api("wiedervorlagen"); } catch {} }
+    if (!HELFER && (!window._wvAt || Date.now() - window._wvAt > 300000)) { window._wvAt = Date.now(); try { await api("wiedervorlagen"); } catch {} }
     WALL = await api("work");
     for (const x of NEUE_STATUS) if (!(WALL.status_liste || []).some((y) => norm(y) === norm(x))) (WALL.status_liste = WALL.status_liste || []).push(x);
     applyBereich(); renderWork(); loadTrq(); loadTra(); loadNeu(); loadIm(); loadOrte(); loadIhq();
@@ -2640,8 +2661,13 @@ function fill(tpl, l, extra = {}) {
   const v = { name: l.name || "", vorname: vor, anrede: anredeName(l.name), kampagne: l.kampagne || "", telefon: l.phone || "", email: l.email || "", antworten: ans, ...extra };
   return String(tpl || "").replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
 }
+let LOCKS = {}, lockId = null;
 async function openLead(id) {
   stopRec(true);
+  // Sperre gegen Doppel-Anrufe (Kollegen-Zugang, 11.11.2026): wer einen Bewerber öffnet, hat ihn 15 Minuten
+  if (lockId && lockId !== id) api("unlock", { id: lockId }).catch(() => {});
+  lockId = id;
+  api("lock", { id }).then((r) => { if (r && r.frei === false) toast(`Achtung: ${r.wer} hat diesen Bewerber gerade offen (seit ${new Date(new Date(r.bis).getTime() - 15 * 60e3).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr)`, true); }).catch(() => {});
   selId = id; setTrMode();
   if (window.matchMedia("(max-width:860px)").matches) { document.body.classList.add("mcard"); window.scrollTo({ top: 0 }); }
   document.querySelectorAll(".li").forEach((b) => b.classList.toggle("on", b.dataset.id === id));
@@ -5038,7 +5064,7 @@ function ovLab(b) {
 }
 const ovLong = (b) => OV.modus === "woche" ? `${b.label} (${shortDate(b.von)}–${shortDate(b.bis)})` : new Date(b.key + "T12:00:00Z").toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 async function loadOverview(frisch) {
-  if (!configured()) return;
+  if (!configured() || HELFER) return;
   loadOverview.t = Date.now();
   loadWoche();
   if (frisch) $("ovRefresh").classList.add("spinning");
@@ -5219,7 +5245,7 @@ applyTheme(store.get("tc_theme") === "dark" ? "dark" : "light");
 $("themeBtn").addEventListener("click", () => { const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; store.set("tc_theme", t); applyTheme(t); });
 
 // ---------- Start ----------
-function loadAll() { setDate(); if (!configured()) return; loadOverview(); loadStats(); loadWork(); loadItems(); loadReports(); loadMails(); loadPipe(); }
+function loadAll() { setDate(); if (!configured()) return; if (HELFER) { helferStart(); return; } loadOverview(); loadStats(); loadWork(); loadItems(); loadReports(); loadMails(); loadPipe(); }
 $("refresh").addEventListener("click", () => { loadAll(); if (selId) openLead(selId); });
 let lastDay = todayISO();
 setInterval(() => {
@@ -5272,8 +5298,27 @@ function showQr() {
 $("hsCopy").addEventListener("click", async () => { try { await navigator.clipboard.writeText(cfg.token); $("hsCopied").textContent = "kopiert"; } catch { $("hsCopied").textContent = "ging nicht – Schlüssel dann von Hand eintragen"; } });
 $("hsClose").addEventListener("click", () => $("hsOv").classList.remove("show"));
 $("qrClose").addEventListener("click", () => $("qrOv").classList.remove("show"));
+// Kollegen-Zugang: Name abfragen, Transa-Board öffnen
+let helferGestartet = false;
+async function helferStart() {
+  if (!helferName()) {
+    const n = (window.prompt("Kollegen-Zugang Transa\n\nBitte deinen Vor- und Nachnamen eintragen. Er steht bei jeder Notiz und jedem Status in LeadTable.") || "").trim();
+    if (!n) { document.body.innerHTML = '<div style="padding:40px;font:16px system-ui">Ohne Namen geht es nicht. Bitte Seite neu laden.</div>'; return; }
+    store.set("tc_helfer_name", n.slice(0, 40));
+  }
+  $("date").textContent = "Kollegen-Zugang · " + helferName();
+  // Texte mit seinem Namen statt „Dennis Mende“: Leitfaden (TR_DEF) und jede WhatsApp
+  const tausch = (s) => String(s).replace(/Dennis Mende/g, helferName());
+  const tief = (o) => { for (const k of Object.keys(o)) { if (typeof o[k] === "string") o[k] = tausch(o[k]); else if (o[k] && typeof o[k] === "object") tief(o[k]); } };
+  try { tief(TR_DEF); } catch {}
+  if (!window._waTausch) { window._waTausch = true; const auf = window.open.bind(window);
+    window.open = (u, ...r) => { try { const x = new URL(u, location.href); if (/wa\.me$/.test(x.hostname) && x.searchParams.get("text")) { x.searchParams.set("text", tausch(x.searchParams.get("text"))); u = x.toString(); } } catch {} return auf(u, ...r); }; }
+  await loadWork();
+  if (!helferGestartet) { helferGestartet = true; const b = document.querySelector('#tabs [data-b="transa"]'); if (b) b.click(); }
+}
 setDate();
 (async () => {
+  if (HELFER && !configured()) { document.body.innerHTML = '<div style="padding:40px;font:16px system-ui;max-width:520px">Kein Zugang auf diesem Gerät. Bitte den Link verwenden, den Dennis geschickt hat (mit #hk=…).</div>'; return; }
   // Link aus dem QR-Code: #k=Schlüssel&u=Adresse
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get("k")) {
