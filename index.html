@@ -2586,7 +2586,7 @@ const PRIMARY_TR = [ST_BEDENK, "Möchte Rückruf"];
 // Transa-Statusvorlage in LeadTable (Stand 11.11.2026, aufgeräumt), Reihenfolge wie der Ablauf – für „Anderer Status …“ in der Bewerberkarte
 const TR_VORLAGE = ["Unbearbeitet", "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Per Whatsapp bearbeitet",
   "Online-Vorqualifiziert ", ...ABST_ST, "Standort prüfen", "Qualifiziert", "Nicht-Erreicht (WA)", "Möchte Rückruf", ST_BEDENK,
-  "Abstellort vorgeschlagen", "Abstellort bestätigt", "Freigabe abgelehnt", "Vertrag verschickt", "Vertrag unterschrieben", "Talentpool-Angebot", "Talentpool bestätigt",
+  "Abstellort vorgeschlagen", "Abstellort bestätigt", "Freigabe abgelehnt", "Mündliche Zusage", "Vertrag verschickt", "Vertrag unterschrieben", "Talentpool-Angebot", "Talentpool bestätigt",
   "Wohnort außerhalb Umkreis", "Nicht qualifiziert", "Sicherheitsprüfung n. mgl", "Doppelte Bewerbung", "Absage durch Bewerber"];
 const primFor = (l) => { if (berL(l) !== "transa") return PRIMARY; const s = stN(l.status); return s === stN(ST_FOK) ? [ST_VV, ...PRIMARY_TR] : s === stN(ST_VV) ? ["Vertrag unterschrieben", ...PRIMARY_TR] : PRIMARY_TR; };
 const isTrNachgef = (s) => TR_NACHGEF_ST.some((x) => norm(x) === norm(s)), isTrNf = (s) => TR_NF_ST.some((x) => norm(x) === norm(s));
