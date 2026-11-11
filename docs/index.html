@@ -1504,7 +1504,7 @@ async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
   if (HELFER && !HELFER_OK.test(action)) throw new Error("Nicht eingerichtet"); // im Kollegen-Zugang still übergehen
   const helferWeg = HELFER || /^(lock|unlock|locks|anruf)$/.test(action);
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids|fg_log|chef_liste|dubletten|heute)$/.test(action) ? "cockpit-plus" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids|fg_log|chef_liste|dubletten|heute)$/.test(action) ? "cockpit-plus" : action === "kontakte" ? "kontakte" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + (helferWeg ? "helfer-api" : fn), opt = {
     method: "POST", headers: HELFER ? { "Content-Type": "application/json", "x-helfer-key": cfg.token, "x-helfer-name": encodeURIComponent(helferName()) } : { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
@@ -2151,7 +2151,8 @@ function renderIhBoard() {
   const zeile = (l) => `<tr class="l" data-id="${l.lead_id}"><td class="n"><b>${esc(l.name || "Ohne Namen")}</b><small>${esc(l.kampagne || "")}</small></td>`
     + `<td>${ihWohnort(l)}</td><td>${pillFor(l.status)}${ageBadge(l)}</td><td>${ihHinweis(l)}</td><td class="alt">${rel(l.last_status_change || l.lead_created_at)}</td></tr>`;
   el.innerHTML = `<div class="tb-kopf"><h2>Ihro-Bewerber</h2><span class="note">${IHQ ? "alle Ihro-Kampagnen, nach dem nächsten Schritt" : "wird geladen …"}</span>
-      <span class="act"><select class="inp" id="tbCamp"><option value="">Alle Kampagnen</option>${camps.map((c) => `<option ${c === campF ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></span></div>
+      <span class="act"><select class="inp" id="tbCamp"><option value="">Alle Kampagnen</option>${camps.map((c) => `<option ${c === campF ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+      <button class="btn sm" type="button" id="tbVcf" title="Kontaktdatei (.vcf) aller Ihro-Bewerber: fürs Handy oder Google Kontakte – dann zeigen Telefon und WhatsApp Namen statt Nummern">Kontakte fürs Handy</button></span></div>
     <div class="tb-stufen">${stufen}</div>
     <div class="tb-titel"><h3>${esc(ihTitel(f))}</h3><span>${IHQ ? L.length + " Bewerber" : ""}${f === "st_jetzt" ? " · Wiedervorlage und Rückruf zuerst" : ""} · Klick öffnet die Karte</span></div>
     ${!IHQ ? `<div class="sk"><i></i><i></i><i></i></div>` : !L.length ? `<div class="empty">${f === "st_jetzt" ? "Gerade niemand zum Anrufen. Gute Arbeit." : "Niemand in dieser Liste"}${campF ? " (in dieser Kampagne)" : ""}</div>`
@@ -2420,7 +2421,7 @@ function renderQueue() {
   if (!searchRes && QST[qf]) return renderTrq(L);
   const pt = !searchRes && qf === "ptplan", base = pt ? (W.probetag_planen || []) : W.arbeitsliste;
   $("listTitle").textContent = (searchRes ? "Suchergebnis" : pt ? "Probetag planen" : "Heute anrufen") + (!searchRes && BER !== "ihro" ? " · " + BER_NAME[BER] : "");
-  $("listNote").textContent = searchRes ? `${L.length} Treffer` : pt ? `${L.length} offen · älteste zuerst` : `${L.length} von ${W.arbeitsliste.length}`;
+  $("listNote").innerHTML = esc(searchRes ? `${L.length} Treffer` : pt ? `${L.length} offen · älteste zuerst` : `${L.length} von ${W.arbeitsliste.length}`) + (searchRes || HELFER ? "" : ` <button class="btn sm" type="button" id="tbVcfM">Kontakte fürs Handy</button>`);
   $("clearSearch").hidden = !searchRes;
   $("qFilter").style.display = searchRes ? "none" : "";
   if (trListMode() && L.length) {
@@ -2676,29 +2677,33 @@ function autoFollowup(s) {
 }
 function nextNE(s) { const n = norm(s); return n === "nichterreicht1" ? "Nicht-Erreicht 2" : (n === "nichterreicht2" || n === "nichterreicht3") ? "Nicht-Erreicht 3" : "Nicht-Erreicht 1"; }
 const telHref = (p) => "tel:" + String(p || "").replace(/[^\d+]/g, "");
-// Kontakte fürs Handy (10.11.2026): Transa-Bewerber als .vcf, damit WhatsApp/Telefon Namen statt Nummern zeigen.
-// Kein Google, keine Make-Operationen: Datei wird im Browser erzeugt. Standard: nur neue seit dem letzten Export (tc_vcf_bis).
+// Kontakte fürs Handy (10.11.2026, seit 11.11.2026 für alle Bereiche): Bewerber des gewählten Bereichs (Ihro, Transa, HeyRecruit) als .vcf,
+// damit WhatsApp/Telefon Namen statt Nummern zeigen. iPhone: „Alle hinzufügen“; Google Kontakte: contacts.google.com → Importieren.
+// Daten aus der Function kontakte (nur lesen), die Datei entsteht im Browser. Standard: nur neue seit dem letzten Export (je Bereich).
 function vcfEsc(x) { return String(x || "").replace(/\\/g, "\\\\").replace(/[,;]/g, (c) => "\\" + c).replace(/\r?\n/g, " "); }
+const VCF_ART = { transa: { vor: "TJ", org: "TALENTJAGD", datei: "TJ" }, ihro: { vor: "IH", org: "Ihro Bewerber", datei: "Ihro" }, heyrecruit: { vor: "HR", org: "Ihro HeyRecruit", datei: "HeyRecruit" } };
 async function kontakteExport() {
-  const alle = (TRQ || []).filter((l) => l.phone && !/\btest\b/i.test(l.name || ""));
-  let bis = ""; try { bis = localStorage.getItem("tc_vcf_bis") || ""; } catch {}
+  const ber = VCF_ART[BER] ? BER : "ihro", art = VCF_ART[ber], key = "tc_vcf_bis" + (ber === "transa" ? "" : "_" + ber);
+  let alle;
+  try { alle = ((await api("kontakte", { bereich: ber })).kontakte || []).filter((l) => l.phone); } catch (e) { toast(e.message, true); return; }
+  let bis = ""; try { bis = localStorage.getItem(key) || ""; } catch {}
   const neu = bis ? alle.filter((l) => String(l.lead_created_at || "") > bis) : alle;
   let L = neu;
-  if (!neu.length || (bis && !confirm(`${neu.length} neue Bewerber seit dem letzten Export.\n\nOK = nur die neuen · Abbrechen = alle ${alle.length}`))) L = alle;
+  if (!neu.length || (bis && !confirm(`${BER_NAME[ber]}: ${neu.length} neue Bewerber seit dem letzten Export.\n\nOK = nur die neuen · Abbrechen = alle ${alle.length}`))) L = alle;
   if (!L.length) { toast("Keine Bewerber mit Telefonnummer"); return; }
   const seen = new Set(), karten = [];
   for (const l of L) {
     const tel = "+" + waNumber(l.phone); if (seen.has(tel)) continue; seen.add(tel);
     const teile = String(l.name || "Bewerber").trim().split(/\s+/), vor = teile.slice(0, -1).join(" ") || teile[0], nach = teile.length > 1 ? teile[teile.length - 1] : "";
-    const reg = String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "") || "Transa";
-    karten.push(["BEGIN:VCARD", "VERSION:3.0", `N:${vcfEsc(nach)};${vcfEsc("TJ " + vor)};;;`, `FN:${vcfEsc(`TJ ${l.name || "Bewerber"} (${reg})`)}`,
-      `TEL;TYPE=CELL:${tel}`, l.email ? `EMAIL:${vcfEsc(l.email)}` : "", `ORG:TALENTJAGD ${vcfEsc(reg)}`, `NOTE:${vcfEsc("Transa-Bewerber, beworben " + (l.lead_created_at ? new Date(l.lead_created_at).toLocaleDateString("de-DE") : ""))}`, "END:VCARD"].filter(Boolean).join("\r\n"));
+    const kamp = ber === "transa" ? (String(l.campaign || "").replace(/^T_Transa[_ ]*/i, "") || "Transa") : String(l.campaign || BER_NAME[ber]).replace(/^T_/, "");
+    karten.push(["BEGIN:VCARD", "VERSION:3.0", `N:${vcfEsc(nach)};${vcfEsc(art.vor + " " + vor)};;;`, `FN:${vcfEsc(`${art.vor} ${l.name || "Bewerber"} (${kamp})`)}`,
+      `TEL;TYPE=CELL:${tel}`, l.email ? `EMAIL:${vcfEsc(l.email)}` : "", `ORG:${vcfEsc(art.org + " " + kamp)}`, `NOTE:${vcfEsc(BER_NAME[ber] + "-Bewerber, beworben " + (l.lead_created_at ? new Date(l.lead_created_at).toLocaleDateString("de-DE") : ""))}`, "END:VCARD"].filter(Boolean).join("\r\n"));
   }
-  const name = `TJ-Bewerber-${new Date().toISOString().slice(0, 10)}.vcf`, file = new File([karten.join("\r\n") + "\r\n"], name, { type: "text/vcard" });
-  try { localStorage.setItem("tc_vcf_bis", alle.map((l) => String(l.lead_created_at || "")).sort().pop() || ""); } catch {}
-  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); toast(`${karten.length} Kontakte geteilt – in „Kontakte“ auf „Alle hinzufügen“ tippen`); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+  const name = `${art.datei}-Bewerber-${new Date().toISOString().slice(0, 10)}.vcf`, file = new File([karten.join("\r\n") + "\r\n"], name, { type: "text/vcard" });
+  try { localStorage.setItem(key, alle.map((l) => String(l.lead_created_at || "")).sort().pop() || ""); } catch {}
+  if (matchMedia("(pointer:coarse)").matches && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); toast(`${karten.length} Kontakte geteilt – in „Kontakte“ auf „Alle hinzufügen“ tippen`); return; } catch (e) { if (e && e.name === "AbortError") return; } }
   const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-  toast(`${karten.length} Kontakte als ${name} gespeichert – auf dem iPhone öffnen und „Alle hinzufügen“`);
+  toast(`${karten.length} Kontakte als ${name} gespeichert – Handy: Datei öffnen, „Alle hinzufügen“ · Google: contacts.google.com → Importieren`);
 }
 function waNumber(p) { let d = String(p || "").replace(/\D/g, ""); if (d.startsWith("00")) d = d.slice(2); else if (d.startsWith("0")) d = "49" + d.slice(1); return d; }
 function fill(tpl, l, extra = {}) {
