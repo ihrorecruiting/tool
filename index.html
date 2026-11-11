@@ -3210,7 +3210,7 @@ const TR_DEF = {
     { k: "ce", label: "Führerschein CE gültig?", o: [["ja", "ja", 0], ["nein", "nein", 0, 1]] },
     { k: "code95", label: "Code 95 gültig bis wann?", o: [["gueltig", "gültig", 10], ["bald", "läuft bald ab", 5], ["nein", "nein", 0]], t: "gültig bis …" },
     { k: "karte", label: "Fahrerkarte vorhanden?", o: [["ja", "ja", 0], ["nein", "nein", 0]] },
-    { k: "adr", label: "ADR heute – gültig bis? (nur Info, keine Punkte – ADR ist keine Voraussetzung)", o: [["klasse1", "Klasse 1", 0], ["basis", "Basis", 0], ["keiner", "keiner", 0]], t: "gültig bis …" },
+    { k: "adr", label: "ADR heute – gültig bis? (nur Info, keine Punkte – ADR ist keine Voraussetzung)", o: [["keiner", "Keinen", 0], ["basis", "Basis", 0], ["zusatz", "Basis mit Zusätzen (z. B. Tank)", 0], ["klasse1", "Mit Klasse 1", 0], ["abgelaufen", "Hatte ich, ist abgelaufen", 0]], t: "gültig bis …" }, // gleiche Auswahl wie im Online-Vorgespräch (11.11.2026)
     { k: "schulung", label: "Bereit für Basis- und Klasse-1-Kurs inkl. Prüfung?", o: [["ja", "ja", 0], ["nein", "nein", 0, 1]] },
     { k: "erfahrung", label: "Erfahrung – Jahre und Einsätze", o: [["ueber3", "über 3 Jahre", 25], ["1bis3", "1–3 Jahre", 15], ["unter1", "unter 1 Jahr", 5]], t: "Nah, Fern, Gefahrgut, Tank …" },
     { k: "start", label: "Aktuelle Situation, Kündigungsfrist, frühester Start", o: [["januar", "bis Januar", 15], ["febmaerz", "Februar/März", 10], ["spaeter", "später", 3]], t: "angestellt? Kündigungsfrist?" },
@@ -3320,12 +3320,15 @@ function trPrefill(l) {
   const f = trAnswersMap(l), a = {}, t = {};
   if (f.fuehrerschein_ce) a.ce = f.fuehrerschein_ce === "ja" ? "ja" : "nein";
   if (f.code_95) a.code95 = f.code_95 === "ja" ? "gueltig" : /bald/.test(f.code_95) ? "bald" : "nein";
-  if (f.adr) a.adr = f.adr === "klasse1" ? "klasse1" : f.adr === "basis" ? "basis" : "keiner";
+  // ADR: zuerst die genauere Antwort aus dem Online-Vorgespräch, sonst das Bewerbungsformular
+  const vgAdr = f["vorgespräch: adr-schein genau"] || "";
+  if (vgAdr && vgAdr !== "–") a.adr = /klasse\s*1/i.test(vgAdr) ? "klasse1" : /zus[äa]tz/i.test(vgAdr) ? "zusatz" : /abgelaufen/i.test(vgAdr) ? "abgelaufen" : /^basis/i.test(vgAdr) ? "basis" : "keiner";
+  else if (f.adr) a.adr = f.adr === "klasse1" ? "klasse1" : f.adr === "basis" ? "basis" : "keiner";
   if (f.erfahrung) a.erfahrung = /mehr/.test(f.erfahrung) ? "ueber3" : /unter/.test(f.erfahrung) ? "unter1" : "1bis3";
   if (f.start) a.start = /januar/i.test(f.start) ? "januar" : /feb|maerz|märz/i.test(f.start) ? "febmaerz" : "spaeter";
   const ort = [f.wohnort, f.ort].find((o) => o && !/^(mitte|osten|westen|norden|sueden|süden|nord|süd|sued|west|ost|nordwest|nordost|südwest|suedwest|südost|suedost|ruhr|rheinmain)$/i.test(o)) || "";
   t.anfahrt = [f.plz, ort].filter(Boolean).join(" ");
-  return { a, t, from: Object.keys(a), wohnsitz: f.wohnsitz_de || "" };
+  return { a, t, from: Object.keys(a), vg: vgAdr && vgAdr !== "–" ? ["adr"] : [], wohnsitz: f.wohnsitz_de || "" };
 }
 function trScore() {
   const C = trCfg; let pts = 0; const ko = [], offen = [];
@@ -3368,7 +3371,7 @@ async function openTr(l, viaAnruf) {
   if (TR && TR.lead.lead_id === l.lead_id && $("trOv").classList.contains("show")) return;
   const p = trPrefill(l);
   if (trAbDraft[l.lead_id]) p.t.abstellort = trAbDraft[l.lead_id];
-  TR = { lead: l, ans: p.a, txt: p.t, from: new Set(p.from), wohnsitz: p.wohnsitz, notiz: "", status: null, start: viaAnruf ? Date.now() : null, dauer: 0, step: 0, saved: null, dirty: false };
+  TR = { lead: l, ans: p.a, txt: p.t, from: new Set(p.from), vg: new Set(p.vg || []), wohnsitz: p.wohnsitz, notiz: "", status: null, start: viaAnruf ? Date.now() : null, dauer: 0, step: 0, saved: null, dirty: false };
   trCfg = TR_DEF; trRender(); $("trOv").classList.add("show");
   clearInterval(trTick); trTick = setInterval(() => { const c = $("trClock"); if (c && TR) c.textContent = fmtDur(trElapsed()); }, 1000);
   try {
@@ -3449,7 +3452,7 @@ function trQ(q, i) {
   const v = TR.ans[q.k], isKo = q.o && q.o.some((o) => o[3] && o[0] === v), hasKo = q.o && q.o.some((o) => o[3]);
   const offen = TR.zeigOffen && q.o && v == null;
   return `<div class="trq${isKo ? " ko" : ""}${offen ? " offen" : ""}" data-i="${i + 1}"><span class="n">${i + 1}</span><div class="b">
-    <div class="l">${esc(q.label)}${hasKo ? '<span class="kotag">K.O.</span>' : ""}${TR.from.has(q.k) ? '<span class="fromtag">aus Formular</span>' : ""}</div>
+    <div class="l">${esc(q.label)}${hasKo ? '<span class="kotag">K.O.</span>' : ""}${TR.from.has(q.k) ? `<span class="fromtag">${TR.vg && TR.vg.has(q.k) ? "aus Vorgespräch" : "aus Formular"}</span>` : ""}</div>
     ${q.staaten ? `<div class="hintline" style="margin:2px 0 6px">„Für die Sicherheitsprüfung muss ich allen Bewerbern dieselbe Frage stellen: Wo sind Sie geboren, welche Staatsangehörigkeit haben Sie – und haben enge Familienangehörige einen Bezug zu bestimmten Staaten?“</div>
       <div class="slrow"><input class="inp" id="slGeb" list="slListe" autocomplete="off" placeholder="Geburtsland" value="${esc((TR.sl || {}).geb || "")}"><input class="inp" id="slAng" list="slListe" autocomplete="off" placeholder="Staatsangehörigkeit" value="${esc((TR.sl || {}).ang || "")}"></div>
       <datalist id="slListe">${SL_LAENDER.map((x) => `<option value="${esc(x)}">`).join("")}</datalist>
