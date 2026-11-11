@@ -1700,6 +1700,7 @@ let TRPLZ = {}, TRPLZ_AT = 0;
 // „Wohnort außerhalb Umkreis“ (09.11.2026): Wohnort außerhalb des Meta-Umkreises (60 km, A6 5 × 20 km) – steht immer unter „Prüfen“
 const ST_WA = "Per Whatsapp bearbeitet", ST_AUS = "Wohnort außerhalb Umkreis";
 // Freigabe durch Hr. Baumann (09.11.2026): „Abstellort vorgeschlagen“ → freigabe.html → „Abstellort bestätigt“ (= freigegeben, Vertrag schicken) oder „Freigabe abgelehnt“
+const ST_SL = "Sicherheitsprüfung n. mgl", ST_DOPP = "Doppelte Bewerbung"; // seit 11.11.2026 in der Transa-Vorlage
 const ST_VORG = "Abstellort vorgeschlagen", ST_FOK = "Abstellort bestätigt", ST_FNO = "Freigabe abgelehnt";
 let FGLOG = {};
 const ST_OFFEN = ["Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet", ST_WA, "Anrufen"].map(stN);
@@ -1721,7 +1722,7 @@ function trTopf(l) {
   return "";
 }
 const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1, fg_w: 1, fg_ok: 1, fg_no: 1 };
-Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro", "No-Show"], vu: ["Vertrag unterschrieben", "Mündliche Zusage", "Eingestellt"], wav: ST_WA, wau: ST_AUS, fg_w: [], fg_ok: [], fg_no: [], fgv: ST_VORG, fgn: ST_FNO });
+Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], abs: ["Absage durch Bewerber", "Absage Ihro", "No-Show", "Doppelte Bewerbung"], nq: ["Nicht qualifiziert", ST_SL], vu: ["Vertrag unterschrieben", "Mündliche Zusage", "Eingestellt"], wav: ST_WA, wau: ST_AUS, fg_w: [], fg_ok: [], fg_no: [], fgv: ST_VORG, fgn: ST_FNO });
 // Diese Status holt das Cockpit für Transa (alle Stufen inkl. Anruf-Ergebnisse)
 const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON, "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet"])];
 Object.assign(QST, { st_offen: [], st_gespr: [], st_frg: [], st_pruef: [], st_erg: [] });
@@ -2506,7 +2507,7 @@ function applyBereich() {
   const f = (arr) => (arr || []).filter((x) => berL(x) === BER);
   // Abgeschlossene Bewerber nie in „Heute anrufen“, auch wenn noch eine alte Wiedervorlage fällig ist
   // (z. B. Absage direkt in LeadTable gesetzt – der Webhook löscht die Wiedervorlage nicht), 09.11.2026
-  const zu = (x) => /^(absage|nicht qualifiziert|eingestellt|talentpool bestätigt|no-?show|wohnort außerhalb umkreis|vertrag unterschrieben)/i.test(String(x.status || "").trim());
+  const zu = (x) => /^(absage|nicht qualifiziert|eingestellt|talentpool bestätigt|no-?show|wohnort außerhalb umkreis|vertrag unterschrieben|doppelte bewerbung|sicherheitsprüfung)/i.test(String(x.status || "").trim());
   W = { ...WALL, arbeitsliste: f(WALL.arbeitsliste).filter((x) => !zu(x)), neueste: f(WALL.neueste), probetage: f(WALL.probetage), geplant: f(WALL.geplant),
     probetag_planen: f(WALL.probetag_planen), probetag_erinnern: f(WALL.probetag_erinnern), termine_nah: (WALL.termine_nah || []).filter((t) => berL(t.lead || t) === BER) };
   W.arbeitsliste_gesamt = W.arbeitsliste.length;
@@ -2581,7 +2582,7 @@ const TR_VORLAGE = ["Unbearbeitet", "Anrufen", "Qualifizierung", "Erinnerungsmai
   "Abstellort vorgeschlagen", "Abstellort bestätigt", "Freigabe abgelehnt",
   "Details verschickt", "Angebot verschickt", "Nachfassen nach Angebot", "Nachgefasst nach Angebot", "Keine Reaktion auf Nachgefasst",
   "Termin", "Termin gebucht", "Vorstellungsgespr. NEUENSTEIN", "Mündliche Zusage", "Vertrag unterschrieben", "Eingestellt", "Talentpool-Angebot", "Talentpool bestätigt",
-  "Wohnort außerhalb Umkreis", "Nicht qualifiziert", "Absage durch Bewerber", "Absage Ihro", "No-Show"];
+  "Wohnort außerhalb Umkreis", "Nicht qualifiziert", "Sicherheitsprüfung n. mgl", "Doppelte Bewerbung", "Absage durch Bewerber", "Absage Ihro", "No-Show"];
 const primFor = (l) => (berL(l) === "transa" ? PRIMARY_TR : PRIMARY);
 const isTrNachgef = (s) => TR_NACHGEF_ST.some((x) => norm(x) === norm(s)), isTrNf = (s) => TR_NF_ST.some((x) => norm(x) === norm(s));
 const isBedenk = (s) => norm(s).startsWith("bedenkzeit"), isNachgef = (s) => norm(s) === "nachgefasst", isNfBitte = (s) => norm(s) === "nachfassenbitte";
@@ -3131,7 +3132,7 @@ const TR_DEF = {
     { k: "eindruck", label: "Gesamteindruck (Motivation, Zuverlässigkeit, Auftreten)", o: [["1", "1", 2], ["2", "2", 4], ["3", "3", 6], ["4", "4", 8], ["5", "5", 10]] },
   ],
 };
-const TR_STATI = ["Abstellort vorgeschlagen", "Qualifiziert", "Nicht qualifiziert"];
+const TR_STATI = ["Abstellort vorgeschlagen", "Qualifiziert", "Nicht qualifiziert"]; // „Sicherheitsprüfung n. mgl“ setzt nur der Knopf „Gespräch beenden: Staatenliste“
 // Staatenliste-Prüfung (Dennis, 10.11.2026): Geburtsland + Staatsangehörigkeit eintippen → sofort „auf der Liste ja/nein“.
 // Die Länder selbst werden NICHT gespeichert (nur das Ergebnis „kein Bezug“ / „Bezug“), Treffer → „Nicht qualifiziert“ + Notiz.
 const SL_ALIAS = { "belarus": ["weissrussland", "weißrussland", "belarus"], "china": ["china", "volksrepublik china", "hongkong", "hong kong", "macau", "macao"],
@@ -3170,7 +3171,7 @@ function slPruefen() {
 }
 async function slBeenden() {
   if (!TR) return;
-  TR.ans.staat = "bezug"; TR.status = "Nicht qualifiziert";
+  TR.ans.staat = "bezug"; TR.status = ST_SL;
   TR.notiz = (String(TR.notiz || "").trim() ? TR.notiz.trim() + "\n" : "") + "Staatenliste: Bezug – Sicherheitsprüfung nicht möglich, Gespräch beendet.";
   TR.slEnde = true; await trFinal();
 }
