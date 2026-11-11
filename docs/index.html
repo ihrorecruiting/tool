@@ -3035,8 +3035,52 @@ function neFollowup(status) {
   }
   return null;
 }
-async function setStatus(s) {
+/* Nicht erreicht (11.11.2026, Dennis): bei jedem „Nicht erreicht“ selbst wählen –
+   „SMS automatisch“ = Status Nicht-Erreicht 1–3 wie bisher (Make schickt die SMS),
+   „WhatsApp selbst“ = WhatsApp mit Text (Sie-Form) öffnen, Status in LeadTable bleibt (sonst ginge die SMS trotzdem raus),
+   dafür Notiz und Wiedervorlage wie nach NE 1/2. */
+function neWaText(l) {
+  const vn = String(l.name || "").trim().split(/\s+/)[0] || "";
+  const vorl = isTransa(l) ? TR_WA_VORL.find((v) => /nicht erreicht/i.test(v.titel)) : (W.wa_vorlagen || []).find((v) => /nicht erreicht/i.test(v.titel || ""));
+  const t = vorl ? vorl.text : "Hallo {vorname}, hier ist Dennis Mende. Ich habe gerade versucht, Sie wegen Ihrer Bewerbung als LKW-Fahrer zu erreichen. Wann passt es Ihnen {tag} für ein kurzes Telefonat?";
+  return t.replace(/\{vorname\}/g, vn).replace(/\{name\}/g, l.name || "").replace(/\{kampagne\}/g, l.kampagne || "").replace(/\{tag\}/g, waTag()).replace("Hallo , ", "Hallo, ");
+}
+function neWahl(s) {
+  const l = cur; if (!l) return;
+  if (!$("neWahl")) { const d = document.createElement("div"); d.id = "neWahl"; d.className = "wsov"; document.body.appendChild(d);
+    d.addEventListener("click", (e) => { if (e.target === d || e.target.closest("[data-nw=zu]")) d.classList.remove("show"); }); }
+  const el = $("neWahl"), hatNr = !!waNumber(l.phone);
+  el.innerHTML = `<div class="wsbox" role="dialog" aria-label="Nicht erreicht">
+    <div class="wsk"><span>Nicht erreicht · ${esc(l.name || "Bewerber")}</span><button class="btn quiet sm" data-nw="zu" type="button">Abbrechen</button></div>
+    <h3>Wie soll ${esc(String(l.name || "er").split(/\s+/)[0])} Bescheid bekommen?</h3>
+    <div style="display:grid;gap:10px;margin-top:12px">
+      <button class="btn ne" id="nwSms" type="button" style="justify-content:flex-start;padding:12px 14px;text-align:left"><b>SMS automatisch</b>&nbsp;· Status ${esc(s)}</button>
+      <div style="border:1px solid var(--line,#e4e7ec);border-radius:14px;padding:10px 12px">
+        <b>WhatsApp selbst</b> <span style="color:var(--ink3,#8a8f98);font-size:13px">· keine SMS, Status bleibt „${esc(l.status || "–")}“, Notiz und Wiedervorlage kommen dazu</span>
+        <textarea class="inp" id="nwText" rows="4">${esc(neWaText(l))}</textarea>
+        <button class="btn ok" id="nwWa" type="button" style="margin-top:8px" ${hatNr ? "" : "disabled title=\"keine Handynummer\""}>WhatsApp öffnen</button>
+      </div>
+    </div></div>`;
+  el.classList.add("show");
+  $("nwSms").onclick = () => { el.classList.remove("show"); setStatus(s, true); };
+  $("nwWa").onclick = () => { el.classList.remove("show"); neWhatsApp(l, s, $("nwText").value); };
+}
+async function neWhatsApp(lead, s, text) {
+  window.open(`https://wa.me/${waNumber(lead.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  const fu = neFollowup(s), jetzt = new Date().toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  try {
+    await api("lead_note", { id: lead.lead_id, text: `Nicht erreicht (${jetzt}) – WhatsApp statt SMS geschickt` });
+    if (fu) await api("lead_followup", { id: lead.lead_id, at: fu.at, note: "nicht erreicht, WhatsApp geschickt" });
+    toast(`${lead.name || "Bewerber"}: WhatsApp geschickt${fu ? ", wieder dran " + when(fu.at) : ""}`);
+    if (fu) ihLokal(lead.lead_id, { followup_at: fu.at, followup_note: "nicht erreicht, WhatsApp geschickt" });
+    await loadWork(); loadStats();
+    if (W.auto_weiter !== false) { post = null; const n = filtered().find((x) => x.lead_id !== lead.lead_id); if (n) { openLead(n.lead_id); return; } }
+    const r = await api("lead_get", { id: lead.lead_id }); if (selId === lead.lead_id) { cur = r.lead; renderCard(r); }
+  } catch (e) { toast(e.message, true); }
+}
+async function setStatus(s, direkt) {
   if (!cur) return;
+  if (!direkt && statusKind(s) === "ne") { neWahl(s); return; } // erst fragen: SMS automatisch oder WhatsApp selbst
   const lead = cur, kind = statusKind(s) === "ne" ? "nicht" : statusKind(s), isPT = /^probetag/.test(norm(s));
   const btns = $("card").querySelectorAll("[data-st]"); btns.forEach((b) => (b.disabled = true));
   const fu = kind === "nicht" ? neFollowup(s) : autoFollowup(s);
