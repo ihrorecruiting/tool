@@ -2787,8 +2787,14 @@ function renderCard(r) {
       if (b.dataset.i === "danke") { sendDanke(cur); $("waMenu").classList.remove("open"); return; }
       if (b.dataset.i === "vg") { sendVgLink(cur); $("waMenu").classList.remove("open"); return; }
       const i = Number(b.dataset.i), text = i >= 0 ? fill(wa[i].text, cur).replace(/\{tag\}/g, waTag()) : "";
-      window.open(`https://wa.me/${waNumber(cur.phone)}${text ? "?text=" + encodeURIComponent(text) : ""}`, "_blank");
       $("waMenu").classList.remove("open");
+      // Transa (11.11.2026): Vorlage „Nicht erreicht“ = wie „Nicht erreicht → WhatsApp selbst“ (Status Nicht-Erreicht (WA), Notiz, Wiedervorlage).
+      // Andere Vorlagen: Status bleibt (er zeigt, wo der Bewerber steht), dafür Notiz in LeadTable.
+      if (isTransa(cur) && i >= 0 && /nicht erreicht/i.test(wa[i].titel || "")) { neWhatsApp(cur, nextNE(cur.status), text); return; }
+      window.open(`https://wa.me/${waNumber(cur.phone)}${text ? "?text=" + encodeURIComponent(text) : ""}`, "_blank");
+      if (isTransa(cur)) { const l = cur, jetzt = new Date().toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        api("lead_note", { id: l.lead_id, text: `WhatsApp ${i >= 0 ? "„" + wa[i].titel + "“" : "(freier Text)"} geschickt (${jetzt})` })
+          .then(() => toast(`Notiz: WhatsApp an ${l.name || "Bewerber"} – Status bleibt „${String(l.status || "").trim()}“`)).catch((e) => toast(e.message, true)); }
     }));
   }
 }
