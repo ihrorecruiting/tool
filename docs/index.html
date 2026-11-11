@@ -946,6 +946,39 @@
   .trtable td.num{font-variant-numeric:tabular-nums}
   .trtable tr[data-id]{cursor:pointer}.trtable tr[data-id]:hover td{background:var(--fill2)}
   @media (max-width:720px){.trhead,.trsteps,.trlive,#trBody{padding-left:16px;padding-right:16px}.trq.ko,.trq.offen{margin:0 -16px;padding-left:16px;padding-right:16px}.trplate{width:80px}.trplate .t{font-size:22px}}
+  /* Leitfaden am Handy (11.11.2026): Vollbild, eine durchgehende Scrollfläche statt fester Kopf-/Fußbereiche –
+     vorher blieb für die Fragen nur ein schmaler Streifen, mit Tastatur (Geburtsland) praktisch nichts mehr */
+  @media (max-width:720px){
+    #trOv.ov.center{padding:0}
+    #trOv .modal{display:block;max-width:none;width:100%;height:100dvh;max-height:100dvh;border-radius:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-top:env(safe-area-inset-top)}
+    #trOv .modal>#trBody{overflow:visible;padding-bottom:8px}
+    #trOv .trhead{flex-wrap:nowrap;gap:10px;padding:12px 14px 8px}
+    #trOv .trhead .who{flex:1 1 auto}
+    #trOv .trhead .who b{font-size:19px}
+    #trOv .trhead .who span{font-size:12.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #trOv .trclock{gap:2px}#trOv .trclock .btn{padding:4px 10px;font-size:12.5px}
+    #trOv .trplate{width:56px;border-width:2px}#trOv .trplate .t{font-size:18px;padding:3px 0 2px}#trOv .trplate .b{font-size:13px;padding:2px 0 3px}
+    #trOv .trsteps{padding:0 14px 8px}
+    #trOv #trSteps{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;border-radius:12px}
+    #trOv #trSteps::-webkit-scrollbar{display:none}
+    #trOv #trSteps button{flex:1 0 auto;white-space:nowrap;font-size:13.5px;padding:7px 10px}
+    #trOv #trBody,#trOv .trnote,#trOv .trlive{padding-left:14px;padding-right:14px}
+    #trOv .trq.ko,#trOv .trq.offen{margin:0 -14px;padding-left:14px;padding-right:14px}
+    #trOv .trq{grid-template-columns:20px minmax(0,1fr);gap:8px;padding:12px 0}
+    #trOv .trq .l{font-size:15px;line-height:1.3}
+    #trOv .tropts{gap:8px}
+    #trOv .tropts button{padding:8px 14px;font-size:15px}
+    /* 16 px verhindert, dass das iPhone beim Tippen in Geburtsland usw. hineinzoomt */
+    #trOv .inp,#trOv textarea,#trOv select{font-size:16px}
+    #trOv .slrow{grid-template-columns:1fr;gap:8px}
+    #trOv .trsay{font-size:15px;padding:10px 12px}
+    #trOv .trnote textarea{max-height:none}
+    #trOv .modal{background:#f8f8fa}[data-theme="dark"] #trOv .modal{background:#222226}
+    #trOv .modal-foot{position:sticky;bottom:0;z-index:2;background:inherit;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px 14px max(12px,env(safe-area-inset-bottom));border-top:.5px solid var(--sep)}
+    #trOv .modal-foot>span{display:none}
+    #trOv .modal-foot #trSave{grid-column:1/-1;order:-1;width:100%;min-height:46px}
+    #trOv .modal-foot .btn:not(#trSave){padding:8px 6px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  }
 
   /* ---------- Tippen ohne Verzögerung (02.11.2026) ----------
      Der Glas-Effekt (Weichzeichner hinter Fenstern) wird bei jedem Tastendruck neu berechnet – in Dialogen doppelt
@@ -1460,6 +1493,13 @@ function anrufLog(l) {
   if (!l || !l.lead_id) return;
   api("anruf", { id: l.lead_id, quelle: matchMedia("(pointer:coarse)").matches ? "handy" : "pc" }).catch(() => {});
 }
+// WhatsApp öffnen (11.11.2026): Am Handy direkt die WhatsApp-App (whatsapp://), nicht wa.me in einem neuen Fenster –
+// das neue Fenster ließ die Cockpit-App (Startbildschirm) beim Zurückkehren weiß zurück. Am PC wie bisher wa.me im neuen Tab.
+function openWa(tel, text) {
+  const nr = waNumber(tel), t = text ? encodeURIComponent(text) : "";
+  if (matchMedia("(pointer:coarse)").matches) { location.href = `whatsapp://send?phone=${nr}${t ? "&text=" + t : ""}`; return; }
+  window.open(`https://wa.me/${nr}${t ? "?text=" + t : ""}`, "_blank");
+}
 async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
   if (HELFER && !HELFER_OK.test(action)) throw new Error("Nicht eingerichtet"); // im Kollegen-Zugang still übergehen
@@ -1970,7 +2010,7 @@ function waSerieKlick(e) {
   if (a === "skip") { WS.i++; waSerieZeigen(); return; }
   if (a === "send") {
     const l = WS.liste[WS.i], text = $("wsText").value.trim(); if (!text) return;
-    window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+    openWa(l.phone, text);
     const heute = new Date().toLocaleDateString("de-DE"), at = naechsterWerktag9().toISOString(), note = `WhatsApp am ${heute} – anrufen`;
     const offen = ST_OFFEN.includes(stN(l.status)) && stN(l.status) !== stN(ST_WA);
     (offen ? api("lead_status", { id: l.lead_id, status: ST_WA, followup: { at, note } }) : api("lead_followup", { id: l.lead_id, at, note }))
@@ -2342,7 +2382,7 @@ function in2Werktagen() { const d = new Date(); let n = 0; while (n < 2) { d.set
 async function ihSend(art) {
   const l = cur; if (!l) return;
   const text = ihText(l, art); if (!text) return;
-  window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  openWa(l.phone, text);
   const was = { nach: "Nachfrage", det: "Details zur Tour", alt: "Angebot Tour " + (IH_NAME[ihDist(l.lead_id)?.alt?.k] || "") }[art];
   const heute = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
   api("lead_note", { id: l.lead_id, text: `WhatsApp verschickt (${was}) am ${heute}.` }).catch(() => {});
@@ -2824,7 +2864,7 @@ function renderCard(r) {
       // Transa (11.11.2026): Vorlage „Nicht erreicht“ = wie „Nicht erreicht → WhatsApp selbst“ (Status Nicht-Erreicht (WA), Notiz, Wiedervorlage).
       // Andere Vorlagen: Status bleibt (er zeigt, wo der Bewerber steht), dafür Notiz in LeadTable.
       if (isTransa(cur) && i >= 0 && /nicht erreicht/i.test(wa[i].titel || "")) { neWhatsApp(cur, nextNE(cur.status), text); return; }
-      window.open(`https://wa.me/${waNumber(cur.phone)}${text ? "?text=" + encodeURIComponent(text) : ""}`, "_blank");
+      openWa(cur.phone, text);
       if (isTransa(cur)) { const l = cur, jetzt = new Date().toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
         api("lead_note", { id: l.lead_id, text: `WhatsApp ${i >= 0 ? "„" + wa[i].titel + "“" : "(freier Text)"} geschickt (${jetzt})` })
           .then(() => toast(`Notiz: WhatsApp an ${l.name || "Bewerber"} – Status bleibt „${String(l.status || "").trim()}“`)).catch((e) => toast(e.message, true)); }
@@ -2861,7 +2901,7 @@ async function markPtReminded(l, quiet) {
 function sendPtReminder(l) {
   if (!l || !l.phone) return;
   const text = fill(W.probetag_erinnerung || "", l, ptReminderVars(l));
-  window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  openWa(l.phone, text);
   markPtReminded(l, true);
 }
 
@@ -2920,7 +2960,7 @@ $("tfList").addEventListener("click", async (e) => {
   try {
     if (a === "wa") {
       const v = tfVars(t), text = String(W.termin_erinnerung || "").replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m)).replace(/\n{3,}/g, "\n\n").trim();
-      window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+      openWa(l.phone, text);
       await api("termin_erinnert", { id: t.id }); api("lead_note", { id, text: `Terminerinnerung per WhatsApp: ${t.art} ${dk}` }).catch(() => {});
       return done("Erinnerung vermerkt");
     }
@@ -3115,7 +3155,7 @@ function neWahl(s) {
   $("nwWa").onclick = () => { el.classList.remove("show"); neWhatsApp(l, s, $("nwText").value); };
 }
 async function neWhatsApp(lead, s, text) {
-  window.open(`https://wa.me/${waNumber(lead.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  openWa(lead.phone, text);
   const fu = neFollowup(s), jetzt = new Date().toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   try {
     const fuWa = fu ? { at: fu.at, note: "nicht erreicht, WhatsApp geschickt" } : null;
@@ -3277,7 +3317,8 @@ async function slBeenden() {
 // Ziel-Status am Ende des Leitfadens: qualifiziert + Abstellort eingetragen → „Abstellort vorgeschlagen“ (geht an Hr. Baumann zur Freigabe)
 const trAbTxt = () => String((TR && TR.txt.abstellort) || "").trim();
 const trAuto = (s) => s.vorschlag !== "Qualifiziert" ? s.vorschlag : trAbTxt() ? "Abstellort vorgeschlagen" : "Qualifiziert";
-function trZiel(s) { return TR.status || trAuto(s); }
+// Abstellort eingetragen + „Qualifiziert“ gewählt → „Abstellort vorgeschlagen“, damit er auf Hr. Baumanns Freigabe-Liste landet (11.11.2026)
+function trZiel(s) { const z = TR.status || trAuto(s); return z === "Qualifiziert" && trAbTxt() ? "Abstellort vorgeschlagen" : z; }
 // ---------- Link zum Online-Vorgespräch per WhatsApp (Transa, 07.11.2026) ----------
 // Den Prüfcode rechnet die Function transa-gespraech (Aktion transa_vg_link, Salz nur als Secret) – nie im Cockpit.
 const vgCache = {};
@@ -3293,7 +3334,7 @@ function sendVgLink(l) {
   if (v.err) { toast("Link konnte nicht erstellt werden: " + v.err, true); delete vgCache[l.lead_id]; vgLaden(l.lead_id); return; }
   const vn = v.vorname || String(l.name || "").trim().split(/\s+/)[0] || "";
   const text = TR_VG_WA.replace("{anrede}", anredeName(l.name)).replace("{vorname}", vn).replace("Guten Tag , ", "Guten Tag, ").replace("{link}", v.link);
-  window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  openWa(l.phone, text);
   api("lead_note", { id: l.lead_id, text: "Link zum Online-Vorgespräch per WhatsApp geschickt" }).catch(() => {});
 }
 const TR_DANKE = "Guten Tag {anrede},\n\nvielen Dank für das nette Gespräch! Wie besprochen kläre ich jetzt Ihren Abstellort, danach melde ich mich mit allem Weiteren bei Ihnen.\n\nBei Fragen erreichen Sie mich jederzeit hier per WhatsApp oder unter 0176 19 10 15 82.\n\nViele Grüße\nDennis Mende, TALENTJAGD";
@@ -3626,7 +3667,7 @@ function sendDanke(l) {
   const tr = berL(l) === "transa";
   const text = tr ? fill(TR_DANKE, { name: l.name, phone: tel, kampagne: l.kampagne })
     : fill(W.danke_vorlage || "Hallo {vorname},\n\nvielen Dank für das nette Gespräch!\n\n{kontaktdaten}", { name: l.name, phone: tel, kampagne: l.kampagne }, { kontaktdaten: W.kontaktdaten || "" });
-  window.open(`https://wa.me/${waNumber(tel)}?text=${encodeURIComponent(text)}`, "_blank");
+  openWa(tel, text);
 }
 
 // ---------- Probetag ----------
@@ -3683,7 +3724,7 @@ $("ptSave").addEventListener("click", async () => {
 $("ptWa").addEventListener("click", () => {
   if (!pt) return; const l = pt.lead, v = ptVars();
   const text = fill(W.probetag_wa || "", l, { ...v, kontaktdaten: W.kontaktdaten || "" });
-  window.open(`https://wa.me/${waNumber(l.phone)}?text=${encodeURIComponent(text)}`, "_blank");
+  openWa(l.phone, text);
 });
 $("ptMail").addEventListener("click", () => {
   if (!pt) return; const l = pt.lead, v = ptVars(), d = (W.disponenten || [])[Number($("ptDisp").value)];
@@ -5049,7 +5090,7 @@ function tmText(kind) {
 }
 $("tmWa").addEventListener("click", () => {
   if (!tmEdit || !tmEdit.lead) return;
-  window.open(`https://wa.me/${waNumber(tmEdit.lead.phone)}?text=${encodeURIComponent(tmText("wa"))}`, "_blank");
+  openWa(tmEdit.lead.phone, tmText("wa"));
   api("lead_note", { id: tmEdit.lead_id, text: `Terminbestätigung per WhatsApp: ${tmLine()}` }).catch(() => {});
 });
 $("tmMail").addEventListener("click", () => {
