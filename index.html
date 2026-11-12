@@ -1788,16 +1788,18 @@ function trTopf(l) {
   if (s === stN(ST_AUS)) return "wa";
   if (s === stN(ST_VORG)) return "fg_w"; if (s === stN(ST_FOK)) return "fg_ok"; if (s === stN(ST_VV)) return "fg_vv"; if (s === stN(ST_FNO)) return "fg_no";
   for (const [k, w] of Object.entries(TRG)) if (w.includes(s)) return k;
+  // K.o. laut Bewerbungsformular (kein CE oder kein Wohnsitz in DE, 12.11.2026): nie „Jetzt anrufen“/„Bereit fürs Angebot“, eigener Topf unter „Prüfen“
+  if ((ST_QUALI.includes(s) || ST_OFFEN.includes(s)) && passung(l)?.stufe === "ko") return "ko";
   if (ST_OFFEN.includes(s)) return f === "frei" ? "of_frei" : f === "entgegen" ? "of_ent" : f === "aus" ? "of_aus" : "of_pz";
   if (ST_QUALI.includes(s)) return f === "frei" ? "bf" : f === "entgegen" ? "be" : f === "aus" ? "wa" : "pz";
   return "";
 }
-const TOPF = { bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1, fg_w: 1, fg_ok: 1, fg_vv: 1, fg_no: 1 };
-Object.assign(QST, { bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], fg_vv: [ST_VV], abs: ["Absage durch Bewerber", "Absage Ihro", "No-Show", "Doppelte Bewerbung"], nq: ["Nicht qualifiziert", ST_SL], vu: ["Vertrag unterschrieben", "Mündliche Zusage", "Eingestellt"], wav: ST_WA, wau: ST_AUS, fg_w: [], fg_ok: [], fg_no: [], fgv: ST_VORG, fgn: ST_FNO });
+const TOPF = { ko: 1, bf: 1, be: 1, wa: 1, pz: 1, of_frei: 1, of_ent: 1, of_aus: 1, of_pz: 1, ne: 1, kon: 1, ang: 1, fg_w: 1, fg_ok: 1, fg_vv: 1, fg_no: 1 };
+Object.assign(QST, { ko: [], bf: [], be: [], wa: [], pz: [], of_frei: [], of_ent: [], of_aus: [], of_pz: [], ne: [], kon: [], ang: [], fg_vv: [ST_VV], abs: ["Absage durch Bewerber", "Absage Ihro", "No-Show", "Doppelte Bewerbung"], nq: ["Nicht qualifiziert", ST_SL], vu: ["Vertrag unterschrieben", "Mündliche Zusage", "Eingestellt"], wav: ST_WA, wau: ST_AUS, fg_w: [], fg_ok: [], fg_no: [], fgv: ST_VORG, fgn: ST_FNO });
 // Diese Status holt das Cockpit für Transa (alle Stufen inkl. Anruf-Ergebnisse)
 const TR_HOLEN = [...new Set([...Object.values(QST).flat(), ...TR_NE, ...TR_ANG, ...TR_KON, "Anrufen", "Qualifizierung", "Erinnerungsmail verschickt", "Keine Reaktion auf Vor-Quali", "Unbearbeitet"])];
 Object.assign(QST, { st_offen: [], st_gespr: [], st_frg: [], st_pruef: [], st_erg: [] });
-Object.assign(QTITEL, { st_offen: "Vorgespräch offen – alle", st_gespr: "Im Gespräch – alle", st_frg: "Freigabe – alle", st_pruef: "Prüfen – alle", st_erg: "Ergebnis – alle", jetzt: "Bereit fürs Angebot", bf: "Bereit fürs Angebot – Abstellort frei", be: "Bereit fürs Angebot – kommt entgegen", wa: "Wohnort außerhalb der Region",
+Object.assign(QTITEL, { st_offen: "Vorgespräch offen – alle", st_gespr: "Im Gespräch – alle", st_frg: "Freigabe – alle", st_pruef: "Prüfen – alle", st_erg: "Ergebnis – alle", jetzt: "Bereit fürs Angebot", ko: "K.o. laut Formular – prüfen", bf: "Bereit fürs Angebot – Abstellort frei", be: "Bereit fürs Angebot – kommt entgegen", wa: "Wohnort außerhalb der Region",
   pz: "PLZ unklar – bitte prüfen", of_frei: "Vorgespräch offen – Abstellort frei (laut PLZ)", of_ent: "Vorgespräch offen – kommt entgegen (laut PLZ)",
   of_aus: "Vorgespräch offen – Wohnort außerhalb", of_pz: "Vorgespräch offen – PLZ unklar",
   fg_w: "Freigabe – wartet auf Hr. Baumann", fg_ok: "Freigegeben – Vertrag schicken", fg_vv: "Vertrag verschickt – wartet auf Unterschrift", fg_no: "Freigabe abgelehnt",
@@ -1826,6 +1828,7 @@ const STAND = [ // g = Zeile im Block „Stand“; topf = gezählt nach der Eint
   { g: "vgw", f: "of_aus", topf: 1, st: "Vorgespräch offen, Wohnort außerhalb der Region", t: "außerhalb", c: "#eab308" }, { g: "vgw", f: "of_pz", topf: 1, st: "Vorgespräch offen, PLZ fehlt oder unbekannt", t: "PLZ unklar", c: "#a3a3a3" },
   { g: "bereit", f: "bf", topf: 1, st: "Qualifiziert (online oder am Telefon), Abstellort frei – aus dem Vorgespräch oder laut PLZ", t: "Abstellort frei", c: "#16a34a" },
   { g: "bereit", f: "be", topf: 1, st: "Qualifiziert, kommt Richtung Autobahn entgegen", t: "Kommt entgegen", c: "#ea580c" },
+  { g: "pruef", f: "ko", topf: 1, st: "„Ja“ im Vorgespräch oder qualifiziert, aber laut Bewerbungsformular kein CE oder kein Wohnsitz in Deutschland", t: "K.o. laut Formular", c: "#dc2626" },
   { g: "pruef", f: "wa", topf: 1, st: "Qualifiziert, aber Wohnort außerhalb der Region", t: "Wohnort außerhalb", c: "#eab308" },
   { g: "pruef", f: "pz", topf: 1, st: "Qualifiziert, PLZ fehlt oder unbekannt", t: "PLZ unklar", c: "#a3a3a3" },
   { g: "gespr", f: "ne", topf: 1, st: "Nicht-Erreicht 1–3", t: "Nicht erreicht", c: "#dc2626" },
@@ -1879,7 +1882,7 @@ const TB_STUFEN = [
   { k: "bereit", t: "Bereit fürs Angebot", hint: "online oder am Telefon „ja“, Abstellort passt – anrufen", f: ["bf", "be"], haupt: 1 },
   { k: "gespr", t: "Im Gespräch", hint: "angerufen – nach dem Ergebnis", f: ["ne", "kon"] }, // „Angebot raus“ entfällt (Angebots-Status für Transa gestrichen, 11.11.2026)
   { k: "frg", t: "Freigabe", hint: "Abstellort vorgeschlagen – Hr. Baumann gibt frei, dann Vertrag", f: ["fg_w", "fg_ok", "fg_vv", "fg_no"] },
-  { k: "pruef", t: "Prüfen", hint: "„ja“, aber Wohnort außerhalb oder PLZ unklar", f: ["wa", "pz"] },
+  { k: "pruef", t: "Prüfen", hint: "„ja“, aber K.o. laut Formular, Wohnort außerhalb oder PLZ unklar", f: ["ko", "wa", "pz"] },
   { k: "erg", t: "Ergebnis", hint: "abgeschlossen", f: ["vu", "nq", "abs", "tp"] }];
 const tbX = (f) => STAND.find((x) => x.f === f) || { f, t: f, c: "#999" };
 // Klick auf einen ganzen Kasten (09.11.2026): alle Bewerber dieser Stufe; „Bereit fürs Angebot“ = „jetzt“
