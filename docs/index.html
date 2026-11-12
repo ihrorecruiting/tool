@@ -891,6 +891,7 @@
 
   /* ---------- Transa: Gesprächsfenster (Leitfaden + Scoring) ---------- */
   body:not([data-ber="transa"]) .tr-only{display:none!important}
+  body:not([data-ber="ihro"]) .ih-only{display:none!important}
   /* Kollegen-Zugang: nur Transa-Arbeit */
   html.helfer #tabs button:not([data-b="transa"]), html.helfer #openSettings, html.helfer #addBtn, html.helfer #callBtn, html.helfer #berSeg,
   html.helfer .trkpis, html.helfer #tbVcf, html.helfer #tbVcfM, html.helfer #vOver, html.helfer .panel:has(#newest), html.helfer .panel:has(#trials), html.helfer #terminBtn, html.helfer #calledBtn, html.helfer #dispBtn{display:none!important}
@@ -1119,6 +1120,7 @@
         <button data-f="neu">Neu</button>
         <button data-f="ne">Nicht erreicht</button>
         <button data-f="imail" title="Detail-Mail ist raus, der Bewerber hat noch nicht geklickt („Info verschickt“, „Erinnerungsmail verschickt“). Steht nicht unter „Alle“.">Mail raus, kein Klick <span class="segn" id="imN"></span></button>
+        <button class="ih-only" data-f="kalt" title="Per WhatsApp angeschrieben oder nachgefasst, seitdem keine Statusänderung. Kurz im WhatsApp-Verlauf prüfen: geantwortet → Status setzen, sonst „Absage durch Bewerber“. Steht nicht unter „Anrufen“.">WhatsApp, keine Antwort <span class="segn" id="kaltN"></span></button>
         <button data-f="ptplan" title="Alle mit Status „Probetag vereinbaren“ – Termin noch abstimmen">Probetag planen <span class="segn" id="ptN"></span></button>
         <button class="tr-only" data-f="jetzt" title="Bereit fürs Angebot: Vorgespräch oder Telefon „ja“ und Abstellort frei oder entgegen – aus dem Vorgespräch oder laut PLZ der Bewerbung">Jetzt anrufen <span class="segn" id="jetztN"></span></button>
         <button class="tr-only" hidden data-f="qual" title="Transa-Bewerber mit Status „Qualifiziert“ – über „Alle Kampagnen“ je Region">Qualifiziert <span class="segn" id="qualN"></span></button>
@@ -2295,6 +2297,12 @@ function trSortList(L) {
 }
 const MAIL_WARTE = ["infoverschickt", "erinnerungsmailverschickt"];
 const isMailWarte = (l) => MAIL_WARTE.includes(norm(l.status));
+// Ihro (12.11.2026): schriftlich angeschrieben, seitdem keine Reaktion – nicht unter „Anrufen“, eigener Topf zum Aufräumen
+const KALT_ST = ["perwhatsappbearbeitet", "nachgefasst", "nachgefasstnachtelefonat", "nachgefasstnachangebot"];
+const isKaltSt = (l) => KALT_ST.includes(norm(l.status));
+const isKalt = (l) => BER === "ihro" && isKaltSt(l);
+// „Anrufen“ bei Ihro: wer wirklich ein Gespräch braucht – Rückruf, Neu, Anrufen, laufende Kontakte, zuletzt Nicht erreicht
+const ihAnrufRang = (l) => ({ rueckruf: 0, neu: 1, anrufen: 2, ne: 4 })[statusKind(l.status)] ?? 3;
 
 // ---------- Ihro-Anrufliste: Entfernung zum Startpunkt, Querabgleich, WhatsApp (09.11.2026) ----------
 // Startpunkte und Fakten wie im Skill ihro-stellen und in der Detail-Mail (IHRO LPS/mail/bauen_mails.py). Ändert sich dort etwas, hier nachziehen.
@@ -2411,7 +2419,9 @@ function filtered() {
     if (qf === "neu") L = L.filter((l) => statusKind(l.status) === "neu");
     if (qf === "ne") L = L.filter((l) => statusKind(l.status) === "ne");
     // Mail-Automatik (06.11.2026): wer die Detail-Mail noch nicht bestätigt hat, steht nicht unter „Alle“, nur unter „Mail raus, kein Klick“
-    if (qf === "alle") L = L.filter((l) => !isMailWarte(l) || (l.followup_at && new Date(l.followup_at) <= now));
+    if (qf === "alle") L = BER === "ihro" ? L.filter((l) => !isMailWarte(l) && !isKalt(l)).map((l, i) => [l, i]).sort((a, b) => ihAnrufRang(a[0]) - ihAnrufRang(b[0]) || a[1] - b[1]).map((x) => x[0])
+      : L.filter((l) => !isMailWarte(l) || (l.followup_at && new Date(l.followup_at) <= now));
+    if (qf === "kalt") L = L.filter(isKalt).sort((a, b) => new Date(a.followup_at || a.last_status_change || 0) - new Date(b.followup_at || b.last_status_change || 0));
     if (qf === "imail") L = L.filter(isMailWarte).sort((a, b) => (ihDist(a.lead_id)?.eff ?? 9999) - (ihDist(b.lead_id)?.eff ?? 9999));
   }
   if (campF) L = L.filter((l) => l.kampagne === campF);
@@ -2424,7 +2434,7 @@ function renderQueue() {
   if (!searchRes && QST[qf]) return renderTrq(L);
   const pt = !searchRes && qf === "ptplan", base = pt ? (W.probetag_planen || []) : W.arbeitsliste;
   $("listTitle").textContent = (searchRes ? "Suchergebnis" : pt ? "Probetag planen" : "Heute anrufen") + (!searchRes && BER !== "ihro" ? " · " + BER_NAME[BER] : "");
-  $("listNote").innerHTML = esc(searchRes ? `${L.length} Treffer` : pt ? `${L.length} offen · älteste zuerst` : `${L.length} von ${W.arbeitsliste.length}`) + (searchRes || HELFER ? "" : ` <button class="btn sm" type="button" id="tbVcfM">Kontakte fürs Handy</button>`);
+  $("listNote").innerHTML = esc(searchRes ? `${L.length} Treffer` : pt ? `${L.length} offen · älteste zuerst` : BER === "ihro" ? (qf === "alle" ? `${L.length} lohnen den Anruf` : qf === "kalt" ? `${L.length} ohne Antwort · älteste zuerst` : `${L.length} in dieser Ansicht`) : `${L.length} von ${W.arbeitsliste.length}`) + (searchRes || HELFER ? "" : ` <button class="btn sm" type="button" id="tbVcfM">Kontakte fürs Handy</button>`);
   $("clearSearch").hidden = !searchRes;
   $("qFilter").style.display = searchRes ? "none" : "";
   if (trListMode() && L.length) {
@@ -2602,6 +2612,7 @@ function applyBereich() {
   const off = (b) => (WALL.arbeitsliste || []).filter((l) => berL(l) === b && !istZu(l));
   const ni = off("ihro").filter((l) => statusKind(l.status) === "rueckruf").length, nt = off("transa").length, nh = off("heyrecruit").length;
   $("bcI").title = $("tWork").title = "möchten Rückruf";
+  { const ab = $("qFilter").querySelector('[data-f="alle"]'); if (ab) ab.textContent = BER === "ihro" ? "Anrufen" : "Alle"; }
   $("tWork").textContent = ni;
   $("tTransa").textContent = nt; $("tTransa").hidden = !nt; $("tHey").textContent = nh; $("tHey").hidden = !nh;
   $("bcI").textContent = ni || ""; $("bcT").textContent = nt || ""; $("bcH").textContent = nh || "";
@@ -2613,7 +2624,7 @@ function applyBereich() {
 function setBereich(b) {
   if (b === BER) return;
   BER = b; campF = "";
-  if (QST[qf] && b !== "transa") { qf = "alle"; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === "alle")); }
+  if ((QST[qf] && b !== "transa") || (qf === "kalt" && b !== "ihro")) { qf = "alle"; $("qFilter").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.f === "alle")); }
   if (b === "transa") { if (trDesk() && !QST[qf]) qf = store.get("tc_trbrd") || "jetzt"; loadTrq(); loadTra(); }
   if (!searchRes) { selId = null; cur = null; document.body.classList.remove("mcard"); }
   applyBereich(); renderWork();
@@ -2624,16 +2635,18 @@ $("berSeg").addEventListener("click", (e) => { const b = e.target.closest("butto
 function renderWork() {
   {
     const imn = W.arbeitsliste.filter(isMailWarte).length; $("imN").textContent = imn || ""; $("imN").hidden = !imn;
-    $("kQueue").textContent = W.arbeitsliste_gesamt - imn;
+    const kn = W.arbeitsliste.filter(isKalt).length; $("kaltN").textContent = kn || ""; $("kaltN").hidden = !kn;
+    const anr = W.arbeitsliste.filter((l) => !isMailWarte(l) && !isKalt(l));
+    $("kQueue").textContent = anr.length;
     const ptn = (W.probetag_planen || []).length; $("ptN").textContent = ptn || ""; $("ptN").hidden = !ptn;
     const tfs = tfSplit(); renderTf();
-    const due = W.arbeitsliste.filter((l) => l.followup_at && new Date(l.followup_at) <= new Date()).length;
-    const rr = W.arbeitsliste.filter((l) => statusKind(l.status) === "rueckruf").length;
+    const due = anr.filter((l) => l.followup_at && new Date(l.followup_at) <= new Date() && statusKind(l.status) !== "rueckruf").length;
+    const rr = anr.filter((l) => statusKind(l.status) === "rueckruf").length;
     const neu = W.arbeitsliste.filter((l) => statusKind(l.status) === "neu" && l.lead_created_at);
     const oldest = neu.length ? Math.max(...neu.map((l) => bizMinutes(l.lead_created_at))) : null;
     const pts = (W.probetag_erinnern || []).filter((l) => !l.probetag_erinnert_at).length;
     $("kQueueS").innerHTML = [oldest !== null ? `<span class="amp ${ampCls(oldest)}" title="längste Wartezeit eines neuen Bewerbers">wartet ${waitLabel(oldest)}</span>` : "",
-      due ? `${due} Wiedervorlage` : "", rr ? `${rr} Rückruf` : "", pts ? `${pts} Probetag-Erinnerung` : "", tfs.remind.length ? `${tfs.remind.length} Termin-Erinnerung` : "", tfs.nach.length ? `${tfs.nach.length} nachfassen` : "", ptn ? `${ptn} Probetag planen` : ""].filter(Boolean).join(" · ").replace("</span> · ", "</span> ") || "nichts Dringendes";
+      due ? `${due} Wiedervorlage` : "", rr ? `${rr} Rückruf` : "", pts ? `${pts} Probetag-Erinnerung` : "", tfs.remind.length ? `${tfs.remind.length} Termin-Erinnerung` : "", tfs.nach.length ? `${tfs.nach.length} nachfassen` : "", ptn ? `${ptn} Probetag planen` : "", BER === "ihro" && kn + imn ? `<span title="WhatsApp ohne Antwort: ${kn} · Mail raus, kein Klick: ${imn} – stehen nicht unter „Anrufen“">${kn + imn} ohne Reaktion (aufräumen)</span>` : ""].filter(Boolean).join(" · ").replace("</span> · ", "</span> ") || "nichts Dringendes";
     renderQueue(); renderSide();
   }
 }
@@ -5216,7 +5229,7 @@ function renderBereiche() {
   if (!OV) return;
   const wk = OV.modus === "woche", prevL = wk ? "Vorwoche" : "gestern", zr = wk ? "8 Wochen" : "14 Tage";
   const B = OV.bereiche; if (!B) { $("ovBer").innerHTML = ""; return; }
-  const offen = (b) => WALL ? (WALL.arbeitsliste || []).filter((l) => berL(l) === b && !istZu(l) && !isMailWarte(l)).length : null;
+  const offen = (b) => WALL ? (WALL.arbeitsliste || []).filter((l) => berL(l) === b && !istZu(l) && !isMailWarte(l) && !(b === "ihro" && isKaltSt(l))).length : null;
   const reihe = (b, titel, sub, farbe, R, mitKosten) => {
     const c = R[R.length - 1] || {}, p = R[R.length - 2] || {}, cpb = (x) => (x.social && x.kosten ? x.kosten / x.social : null);
     const V = R.reduce((a, x) => a + (x.versuche || 0), 0), E = R.reduce((a, x) => a + (x.erreicht || 0), 0), S = R.reduce((a, x) => a + (x.social || 0), 0), K = R.reduce((a, x) => a + (x.kosten || 0), 0);
