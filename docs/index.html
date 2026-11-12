@@ -2586,16 +2586,22 @@ const bereichOf = (c) => /heyrecruit/i.test(c || "") ? "heyrecruit" : /transa/i.
 const berL = (l) => bereichOf(`${(l && l.campaign) || ""} ${(l && l.kampagne) || ""} ${(l && l.meas) || ""}`);
 const BER_NAME = { ihro: "Ihro", transa: "Transa", heyrecruit: "HeyRecruit" };
 let BER = "ihro", WALL = null;
+// Abgeschlossen (Absage, Eingestellt …) – zählt nirgends als offen, auch nicht mit alter Wiedervorlage
+const istZu = (x) => /^(absage|nicht qualifiziert|eingestellt|talentpool bestätigt|no-?show|wohnort außerhalb umkreis|vertrag unterschrieben|doppelte bewerbung|sicherheitsprüfung)/i.test(String(x.status || "").trim());
 function applyBereich() {
   if (!WALL) return;
   const f = (arr) => (arr || []).filter((x) => berL(x) === BER);
   // Abgeschlossene Bewerber nie in „Heute anrufen“, auch wenn noch eine alte Wiedervorlage fällig ist
   // (z. B. Absage direkt in LeadTable gesetzt – der Webhook löscht die Wiedervorlage nicht), 09.11.2026
-  const zu = (x) => /^(absage|nicht qualifiziert|eingestellt|talentpool bestätigt|no-?show|wohnort außerhalb umkreis|vertrag unterschrieben|doppelte bewerbung|sicherheitsprüfung)/i.test(String(x.status || "").trim());
+  const zu = istZu;
   W = { ...WALL, arbeitsliste: f(WALL.arbeitsliste).filter((x) => !zu(x)), neueste: f(WALL.neueste), probetage: f(WALL.probetage), geplant: f(WALL.geplant),
     probetag_planen: f(WALL.probetag_planen), probetag_erinnern: f(WALL.probetag_erinnern), termine_nah: (WALL.termine_nah || []).filter((t) => berL(t.lead || t) === BER) };
   W.arbeitsliste_gesamt = W.arbeitsliste.length;
-  const n = (b) => (WALL.arbeitsliste || []).filter((l) => berL(l) === b).length, ni = n("ihro"), nt = n("transa"), nh = n("heyrecruit");
+  // Zähler an den Reitern (12.11.2026): ohne Abgeschlossene. Ihro zeigt nur, wer auf „Möchte Rückruf“ steht –
+  // Wiedervorlagen, Neue und „Mail raus, kein Klick“ stehen in der Kachel „Heute anzurufen“ und in der Liste.
+  const off = (b) => (WALL.arbeitsliste || []).filter((l) => berL(l) === b && !istZu(l));
+  const ni = off("ihro").filter((l) => statusKind(l.status) === "rueckruf").length, nt = off("transa").length, nh = off("heyrecruit").length;
+  $("bcI").title = $("tWork").title = "möchten Rückruf";
   $("tWork").textContent = ni;
   $("tTransa").textContent = nt; $("tTransa").hidden = !nt; $("tHey").textContent = nh; $("tHey").hidden = !nh;
   $("bcI").textContent = ni || ""; $("bcT").textContent = nt || ""; $("bcH").textContent = nh || "";
@@ -5210,7 +5216,7 @@ function renderBereiche() {
   if (!OV) return;
   const wk = OV.modus === "woche", prevL = wk ? "Vorwoche" : "gestern", zr = wk ? "8 Wochen" : "14 Tage";
   const B = OV.bereiche; if (!B) { $("ovBer").innerHTML = ""; return; }
-  const offen = (b) => WALL ? (WALL.arbeitsliste || []).filter((l) => berL(l) === b).length : null;
+  const offen = (b) => WALL ? (WALL.arbeitsliste || []).filter((l) => berL(l) === b && !istZu(l) && !isMailWarte(l)).length : null;
   const reihe = (b, titel, sub, farbe, R, mitKosten) => {
     const c = R[R.length - 1] || {}, p = R[R.length - 2] || {}, cpb = (x) => (x.social && x.kosten ? x.kosten / x.social : null);
     const V = R.reduce((a, x) => a + (x.versuche || 0), 0), E = R.reduce((a, x) => a + (x.erreicht || 0), 0), S = R.reduce((a, x) => a + (x.social || 0), 0), K = R.reduce((a, x) => a + (x.kosten || 0), 0);
