@@ -3379,9 +3379,12 @@ function trPrefill(l) {
   else if (f.adr) a.adr = f.adr === "klasse1" ? "klasse1" : f.adr === "basis" ? "basis" : "keiner";
   if (f.erfahrung) a.erfahrung = /mehr/.test(f.erfahrung) ? "ueber3" : /unter/.test(f.erfahrung) ? "unter1" : "1bis3";
   if (f.start) a.start = /januar/i.test(f.start) ? "januar" : /feb|maerz|märz/i.test(f.start) ? "febmaerz" : "spaeter";
+  // Online-Vorgespräch (seit 12.11.2026 mit Kündigungsfrist, z. B. „Ab Februar · Kündigungsfrist 1 bis 3 Monate“) geht vor
+  const vgStart = f["vorgespräch: start ab"] || "";
+  if (vgStart && vgStart !== "–") { a.start = /januar/i.test(vgStart) ? "januar" : /feb/i.test(vgStart) ? "febmaerz" : "spaeter"; t.start = vgStart.replace(/^Ab /, "ab ").replace(" · ", ", "); }
   const ort = [f.wohnort, f.ort].find((o) => o && !/^(mitte|osten|westen|norden|sueden|süden|nord|süd|sued|west|ost|nordwest|nordost|südwest|suedwest|südost|suedost|ruhr|rheinmain)$/i.test(o)) || "";
   t.anfahrt = [f.plz, ort].filter(Boolean).join(" ");
-  return { a, t, from: Object.keys(a), vg: vgAdr && vgAdr !== "–" ? ["adr"] : [], wohnsitz: f.wohnsitz_de || "" };
+  return { a, t, from: Object.keys(a), vg: [vgAdr && vgAdr !== "–" ? "adr" : "", vgStart && vgStart !== "–" ? "start" : ""].filter(Boolean), wohnsitz: f.wohnsitz_de || "" };
 }
 function trScore() {
   const C = trCfg; let pts = 0; const ko = [], offen = [];
