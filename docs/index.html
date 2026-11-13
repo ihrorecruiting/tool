@@ -1964,7 +1964,7 @@ function renderTrBoard() {
       <button class="btn sm" type="button" id="tbOv">Scoring-Übersicht</button></span></div>
     ${HEUTE ? `<div class="tb-heute"><b>Heute</b><span>${HEUTE.anrufe ? HEUTE.anrufe.versuche + " Versuche" : HEUTE.angerufen + " angerufen"}</span><span>${HEUTE.anrufe ? HEUTE.anrufe.erreicht : HEUTE.gespraeche} erreicht</span><span class="ok">${HEUTE.vorgeschlagen} Abstellort vorgeschlagen</span><span>${HEUTE.anrufe ? HEUTE.anrufe.qualifiziert : HEUTE.qualifiziert} qualifiziert</span><span>${HEUTE.anrufe ? HEUTE.anrufe.nicht_qualifiziert : HEUTE.nicht_qualifiziert} nicht qualifiziert</span><span>${HEUTE.nicht_erreicht} nicht erreicht</span><span>${HEUTE.whatsapp} WhatsApp</span>${HEUTE.freigegeben ? `<span class="ok">${HEUTE.freigegeben} freigegeben</span>` : ""}</div>` : ""}
     <div class="tb-stufen">${stufen}</div>
-    <div class="tb-titel"><h3>${esc(titel)}</h3>${tbAktion(f, L)}<span>${TRQ ? L.length + (L.length === 1 ? " Bewerber" : " Bewerber") : ""}${nachRegion ? " · nach Start, dann Wohnort-Region" : f === "top" ? " · ohne WhatsApp zuerst, mit Abstellort-Vorschlag zuerst" : ""} · Klick öffnet die Karte</span></div>
+    <div class="tb-titel"><h3>${esc(titel)}</h3>${tbAktion(f, L)}${krBtn()}<span>${TRQ ? L.length + (L.length === 1 ? " Bewerber" : " Bewerber") : ""}${nachRegion ? " · nach Start, dann Wohnort-Region" : f === "top" ? " · ohne WhatsApp zuerst, mit Abstellort-Vorschlag zuerst" : ""} · Klick öffnet die Karte</span></div>
     ${!TRQ ? `<div class="sk"><i></i><i></i><i></i></div>` : !L.length ? `<div class="empty">Niemand in dieser Liste${campF ? " für diese Kampagne" : ""}.</div>`
       : `<table class="tb-tab"><thead><tr><th>Name</th><th>Wohnort</th><th>Abstellort</th><th>Hinweis</th><th>seit</th></tr></thead><tbody>${rows}</tbody></table>`}`;
 }
@@ -2043,6 +2043,56 @@ function waSerieKlick(e) {
     WS.erledigt++; WS.i++; waSerieZeigen();
   }
 }
+// ---------- „Keine Reaktion auf WhatsApp“ (13.11.2026): nacheinander auf „Absage durch Bewerber“, „Grund: Keine Reaktion“ als erste Zeile der Beschreibung ----------
+const KR_GRUND = "Grund: Keine Reaktion", KR_ST = "Absage durch Bewerber";
+const krWaDatum = (l) => (String(l.followup_note || "").match(/^WhatsApp am (\d{1,2}\.\d{1,2}\.\d{4}) – anrufen/) || [])[1] || "";
+const krOffen = (l) => !!krWaDatum(l) && (ST_OFFEN.includes(stN(l.status)) || ST_QUALI.includes(stN(l.status)));
+const krListe = () => (TRQ || []).filter((l) => krOffen(l) && (!campF || l.kampagne === campF)).sort((a, b) => new Date(a.followup_at || 0) - new Date(b.followup_at || 0) || String(a.name || "").localeCompare(String(b.name || ""), "de"));
+function krBtn() { const n = krListe().length;
+  return n ? ` <button class="btn sm" type="button" id="tbKr" title="Alle, denen du vor dem Anruf eine WhatsApp geschickt hast und die noch offen sind. Je Bewerber ein Klick: Status „${KR_ST}“, „${KR_GRUND}“ als erste Zeile der Beschreibung, Wiedervorlage weg.">Keine Reaktion auf WhatsApp (${n})</button>` : ""; }
+let KR = null; // { liste, i, abs, fehler }
+function krStart() {
+  const L = krListe(); if (!L.length) { toast("Niemand mit offener WhatsApp"); return; }
+  KR = { liste: L, i: 0, abs: 0, fehler: 0 };
+  if (!$("krSerie")) { const d = document.createElement("div"); d.id = "krSerie"; d.className = "wsov"; document.body.appendChild(d); d.addEventListener("click", krKlick); }
+  $("krSerie").classList.add("show"); krZeigen();
+}
+function krZeigen() {
+  if (!KR) return;
+  const el = $("krSerie");
+  if (KR.i >= KR.liste.length) {
+    el.innerHTML = `<div class="wsbox"><h3>Fertig</h3><p>${KR.abs} auf „${KR_ST}“ gesetzt${KR.fehler ? `, bei ${KR.fehler} hat das Speichern in LeadTable nicht geklappt (Meldung oben)` : ""}.</p><p class="trab-hint">Übersprungene bleiben mit ihrer Wiedervorlage stehen.</p><div class="row" style="gap:8px;justify-content:flex-end"><button class="btn blue" data-kr="zu">Schließen</button></div></div>`;
+    return;
+  }
+  const l = KR.liste[KR.i], w = tbWohnort(l);
+  el.innerHTML = `<div class="wsbox"><div class="wsk"><b>Keine Reaktion auf WhatsApp</b><span>${KR.i + 1} von ${KR.liste.length}</span><button class="btn sm quiet" data-kr="zu">Beenden</button></div>
+    <div class="wsmeter"><i style="width:${Math.round(KR.i / KR.liste.length * 100)}%"></i></div>
+    <h3>${esc(l.name || "Ohne Namen")}</h3><p class="trab-hint">${esc([w.ort, w.plz].filter(Boolean).join(" "))}${w.ort || w.plz ? " · " : ""}${esc(l.phone || "")} · ${esc(l.kampagne || l.campaign || "")}</p>
+    <p>WhatsApp verschickt am <b>${esc(krWaDatum(l))}</b> · Status: ${esc(l.status || "")}${l.followup_at ? ` · Wiedervorlage ${esc(when(l.followup_at))}` : ""}</p>
+    <div class="row" style="gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">${l.phone ? `<button class="btn" data-kr="wa">${ICON.wa} Verlauf ansehen</button>` : ""}<button class="btn" data-kr="skip">Überspringen</button><button class="btn stop" data-kr="abs">Absage – keine Reaktion</button></div>
+    <p class="trab-hint">Absage: Status „${KR_ST}“ in LeadTable, „${KR_GRUND}“ als erste Zeile der Beschreibung, Notiz im Verlauf, Wiedervorlage weg.</p></div>`;
+}
+async function krAbsage(l) {
+  const r = await api("lead_description_refresh", { id: l.lead_id }), base = String(r.description || "");
+  if (!base.trim().toLowerCase().startsWith(KR_GRUND.toLowerCase())) await api("lead_description", { id: l.lead_id, text: KR_GRUND + (base.trim() ? "\n" + base.trim() : ""), base });
+  await api("lead_status", { id: l.lead_id, status: KR_ST, followup: null });
+  if (l.followup_at || l.followup_note) await api("lead_followup", { id: l.lead_id, at: null, note: null });
+  await api("lead_note", { id: l.lead_id, text: `Absage durch Bewerber – Grund: Keine Reaktion (auf die WhatsApp vom ${krWaDatum(l)}).` });
+}
+function krKlick(e) {
+  const b = e.target.closest("[data-kr]"); if (!b || !KR) return;
+  const a = b.dataset.kr;
+  if (a === "zu") { $("krSerie").classList.remove("show"); KR = null; loadTrq(); loadWork(); return; }
+  const l = KR.liste[KR.i];
+  if (a === "wa") { openWa(l.phone, ""); return; }
+  if (a === "skip") { KR.i++; krZeigen(); return; }
+  if (a === "abs") {
+    const k = KR;
+    krAbsage(l).then(() => { l.status = KR_ST; l.followup_at = null; l.followup_note = null; })
+      .catch((err) => { k.fehler++; k.abs--; toast(`${l.name}: ${err.message}`, true); if (KR === k && k.i >= k.liste.length) krZeigen(); });
+    KR.abs++; KR.i++; krZeigen();
+  }
+}
 async function ausSetzen() {
   const L = trqList(qf).filter((l) => (!campF || l.kampagne === campF) && stN(l.status) !== stN(ST_AUS));
   if (!L.length) return;
@@ -2085,11 +2135,12 @@ $("trBoard").addEventListener("click", (e) => {
   if (e.target.closest("#tbWaJan")) { waSerieStart(true); return; }
   if (e.target.closest("#tbWa")) { waSerieStart(); return; }
   if (e.target.closest("#tbAus")) { ausSetzen(); return; }
+  if (e.target.closest("#tbKr")) { krStart(); return; }
   const r = e.target.closest("tr.l"); if (r) { tbScroll = window.scrollY; openLead(r.dataset.id); window.scrollTo({ top: 0 }); }
 });
 $("trBoard").addEventListener("change", (e) => { if (e.target.id === "tbCamp") { campF = e.target.value; renderTrBoard(); renderQueue(); } });
 $("card").addEventListener("click", (e) => { if (e.target.closest("[data-trback]")) trZurListe(); });
-$("listNote").addEventListener("click", (e) => { if (e.target.closest("#tbWaJanM")) waSerieStart(true); else if (e.target.closest("#tbWaM")) waSerieStart(); else if (e.target.closest("#tbAusM")) { ausSetzen(); } else if (e.target.closest("#tbVcfM")) kontakteExport(); });
+$("listNote").addEventListener("click", (e) => { if (e.target.closest("#tbKrM")) krStart(); else if (e.target.closest("#tbWaJanM")) waSerieStart(true); else if (e.target.closest("#tbWaM")) waSerieStart(); else if (e.target.closest("#tbAusM")) { ausSetzen(); } else if (e.target.closest("#tbVcfM")) kontakteExport(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("trcrd") && !document.querySelector(".ov.show, dialog[open], .modal.show") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) trZurListe(); });
 window.matchMedia("(max-width:860px)").addEventListener("change", () => renderTrBoard());
 
@@ -2475,7 +2526,7 @@ function renderTrq(L) {
   const base = trqList(qf), q = qf === "qual";
   renderStand();
   $("listTitle").textContent = QTITEL[qf] + " · Transa" + (campF ? " · " + campF.replace(/^T_Transa[_ ]*/i, "") : "");
-  $("listNote").innerHTML = (TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …") + (trDesk() ? "" : " " + tbAktion(qf, L).replace('id="tbWa"', 'id="tbWaM"').replace('id="tbWaJan"', 'id="tbWaJanM"').replace('id="tbAus"', 'id="tbAusM"') + ` <button class="btn sm" type="button" id="tbVcfM">Kontakte fürs Handy</button>`);
+  $("listNote").innerHTML = (TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …") + (trDesk() ? "" : " " + tbAktion(qf, L).replace('id="tbWa"', 'id="tbWaM"').replace('id="tbWaJan"', 'id="tbWaJanM"').replace('id="tbAus"', 'id="tbAusM"') + (BER === "transa" ? krBtn().replace('id="tbKr"', 'id="tbKrM"') : "") + ` <button class="btn sm" type="button" id="tbVcfM">Kontakte fürs Handy</button>`);
   $("clearSearch").hidden = true; $("qFilter").style.display = "";
   const kl = (l) => { const g = l.gespraech; if (!g) return `<span class="pill">ohne Gespräch</span>`; return g.klasse === "K.o." || (g.ko && g.ko.length) ? `<span class="trmini ko">K.o.</span>` : `<span class="trmini">${esc(g.klasse || "")}</span> <span class="hintline" style="margin:0">${g.punkte ?? ""} P.</span>`; };
   const sub = (l) => { const g = l.gespraech, ko = g && g.ko && g.ko.length ? " · " + g.ko.join(", ") : "", ab = abKurz(l); return esc(String(l.kampagne || "").replace(/^T_Transa[_ ]*/i, "")) + (ab ? " · " + esc(ab) : "") + (g && g.texte && g.texte.anfahrt ? " · " + esc(g.texte.anfahrt) : "") + esc(ko); };
