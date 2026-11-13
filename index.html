@@ -240,6 +240,7 @@
   .wsk{display:flex;align-items:center;gap:10px} .wsk span{color:var(--ink3,#8a8f98);font-size:13px} .wsk button{margin-left:auto}
   .wsmeter{height:5px;border-radius:9px;background:var(--sep);margin:10px 0 4px;overflow:hidden} .wsmeter i{display:block;height:100%;background:#16a34a}
   .wsbox .ok{color:#15803d;font-weight:600}
+  .li .sub .ok{color:#15803d;font-weight:600}
   .linkbtn{border:0;background:none;color:var(--blue-ink);font-weight:600;cursor:pointer;padding:0 2px}
   @media (max-width:1380px){ body.trbrd #vWork.on,body.trcrd #vWork.on{grid-template-columns:minmax(0,1fr)} }
   #vOver .full{grid-column:1/-1}
@@ -2497,11 +2498,11 @@ function renderTrq(L) {
     for (const l of S) {
       if (grp(l) !== last) { last = grp(l); h += `<div class="lidiv reg">${esc(last)} · ${S.filter((x) => grp(x) === last).length}</div>`; }
       const v = vgInfo(l);
-      const sb = [wo(l), abKurz(l), v.erreichbar ? "erreichbar: " + v.erreichbar : ""].filter(Boolean).map(esc).join(" · ") + (v.warn.length ? ` <span class="trwarn" title="${esc(v.warn.join(" | "))}">⚠ Bitte prüfen</span>` : "") + ((DUP[l.lead_id] || []).length ? ` <span class="trwarn">⚠ doppelt</span>` : "");
+      const sb = (trWaGesendet(l) ? `<span class="ok">WhatsApp ✓</span> · ` : "") + (trIstTop(l) ? `<span class="ok">★ Top</span> · ` : "") + [wo(l), abKurz(l), v.erreichbar ? "erreichbar: " + v.erreichbar : ""].filter(Boolean).map(esc).join(" · ") + (v.warn.length ? ` <span class="trwarn" title="${esc(v.warn.join(" | "))}">⚠ Bitte prüfen</span>` : "") + ((DUP[l.lead_id] || []).length ? ` <span class="trwarn">⚠ doppelt</span>` : "");
       h += liHtml(l, sb, `<span class="age" title="seit dann online vorqualifiziert">${rel(l.last_status_change || l.lead_created_at)}</span>`);
     }
     $("queue").innerHTML = h;
-  } else $("queue").innerHTML = L.map((l) => liHtml(l, sub(l), `${["qual", "nq", "abs", "tp"].includes(qf) ? kl(l) : ""}<span class="age">${rel(l.last_status_change || l.lead_created_at)}</span>`)).join("");
+  } else $("queue").innerHTML = L.map((l) => liHtml(l, (trWaGesendet(l) ? `<span class="ok">WhatsApp ✓</span> · ` : "") + sub(l), `${["qual", "nq", "abs", "tp"].includes(qf) ? kl(l) : ""}<span class="age">${rel(l.last_status_change || l.lead_created_at)}</span>`)).join("");
   const camps = [...new Set(base.map((l) => l.kampagne))].sort(), sel = $("campFilter"), keep = sel.value;
   sel.innerHTML = `<option value="">Alle Kampagnen</option>` + camps.map((c) => `<option ${c === keep ? "selected" : ""}>${esc(c)}</option>`).join("");
 }
