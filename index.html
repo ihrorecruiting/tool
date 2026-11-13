@@ -4005,6 +4005,9 @@ $("cArt").addEventListener("click", (e) => { const b = e.target.closest("button"
 function openCall(lead) {
   if (!configured()) { openSettings(); return; }
   call = { started: new Date(), ended: null, lead_id: lead ? lead.lead_id : null };
+  // 13.11.2026: „Hat angerufen“ beim bekannten Bewerber → Klickzeit sofort ins Anruf-Protokoll (quelle „eingehend“),
+  // auch wenn das Formular nicht gespeichert wird. Damit ordnet Claude die Plaud-Aufnahme eingehender Anrufe zu.
+  if (lead && lead.lead_id) api("anruf", { id: lead.lead_id, quelle: "eingehend" }).catch(() => {});
   ["cName", "cOrt", "cTel", "cMail", "cNote"].forEach((id) => ($(id).value = ""));
   $("cArtBek").hidden = !lead;
   if (lead) { $("cName").value = lead.name || ""; $("cTel").value = lead.phone || ""; $("cMail").value = lead.email || ""; }
