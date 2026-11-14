@@ -1647,6 +1647,17 @@ async function loadTrKpi() {
 // Läufe (14.11.2026): Gesamt / Runde 1 (bis 08.11.) / Runde 2 (seit Neustart 13.11.) – bereinigte Zahlen aus der Function transa-lauf.
 // Wer sich im ersten Lauf schon beworben hat, zählt dort; Kosten nach Tag (Meta).
 let TRL = {}, TRL_SEL = (() => { try { const r = localStorage.getItem("tc_tr_lauf"); return r === "0" || r === "1" ? Number(r) : 2; } catch { return 2; } })(); // Standard: laufende Runde 2
+// Board und Listen nur für die gewählte Runde (14.11.2026): Schalter in der Leiste, bewusst nicht gespeichert – nach dem Neuladen wieder alle.
+let TRL_NUR = false;
+function trLaufVon(l) {
+  const d = (TRL[1] && TRL[1].d) || (TRL[2] && TRL[2].d) || (TRL[0] && TRL[0].d), ab = (d && d.stichtag) || "2026-11-13";
+  if (d && (d.lauf1 || []).includes(l.lead_id)) return 1;
+  const t = l.lead_created_at ? new Date(l.lead_created_at).toLocaleDateString("en-CA", { timeZone: "Europe/Berlin" }) : "";
+  return t && t >= ab ? 2 : 1;
+}
+const trNur = () => (TRL_NUR && TRL_SEL ? TRL_SEL : 0);
+const trqSrc = () => { const n = trNur(); return n ? (TRQ || []).filter((l) => trLaufVon(l) === n) : (TRQ || []); };
+function trNurNeu() { try { renderWork(); } catch (e) { console.error(e); } try { if (TRK) renderTrKpi(); } catch (e) { console.error(e); } }
 async function loadTrLauf(neu) {
   if (typeof BER === "undefined" || BER !== "transa" || HELFER) return;
   const n = TRL_SEL, alt = TRL[n];
@@ -1669,8 +1680,10 @@ function renderTrLauf() {
       + `<span>Werbekosten <b>${eur(g.kosten)}</b></span><span><b>${eur(g.bewerber ? g.kosten / g.bewerber : null)}</b> je Bewerber</span><span class="hl"><b>${eur(g.umkreis ? g.kosten / g.umkreis : null)}</b> je passendem</span>`
       + `<span class="m">${d.zeitraum && d.zeitraum.von ? dm(d.zeitraum.von) + " bis " + dm(d.zeitraum.bis) : TRL_SEL === 2 ? "seit " + dm(d.stichtag) : ""}</span>`;
   } else h = `<span class="m">${x && x.fehler ? "Zahlen je Lauf nicht geladen: " + esc(x.fehler) : "wird geladen …"}</span>`;
-  box.innerHTML = seg + h;
-  box.querySelectorAll("button[data-lauf]").forEach((bt) => bt.onclick = () => { TRL_SEL = Number(bt.dataset.lauf); try { localStorage.setItem("tc_tr_lauf", String(TRL_SEL)); } catch { /* egal */ } loadTrLauf(); });
+  const nur = TRL_SEL ? `<button type="button" class="btn sm${TRL_NUR ? " blue" : ""}" id="trNurBtn" aria-pressed="${TRL_NUR}" title="Board, Listen und Zähler darunter zeigen dann nur Bewerber aus Runde ${TRL_SEL}. Gilt bis zum Neuladen.">${TRL_NUR ? "✓ Listen: nur Runde " + TRL_SEL : "Listen: nur Runde " + TRL_SEL + " zeigen"}</button>` : "";
+  box.innerHTML = seg + h + nur;
+  box.querySelectorAll("button[data-lauf]").forEach((bt) => bt.onclick = () => { const war = trNur(); TRL_SEL = Number(bt.dataset.lauf); if (!TRL_SEL) TRL_NUR = false; try { localStorage.setItem("tc_tr_lauf", String(TRL_SEL)); } catch { /* egal */ } loadTrLauf(); if (war !== trNur()) trNurNeu(); });
+  const nb = $("trNurBtn"); if (nb) nb.onclick = () => { TRL_NUR = !TRL_NUR; renderTrLauf(); trNurNeu(); };
 }
 function renderTrKpi() {
   const k = TRK; if (!k) return;
@@ -1864,12 +1877,12 @@ function trStartRang(l) { const s = trPre(l).a.start; return s === "januar" ? 0 
 function trIstTop(l) { return ["of_frei", "bf"].includes(trTopf(l)) && trStartRang(l) === 0 && trPre(l).a.erfahrung !== "unter1"; }
 const trqList = (f) => {
   if (!TRQ) return [];
-  if (f === "jetzt") return TRQ.filter((l) => ["bf", "be"].includes(trTopf(l)));
-  if (f === "top") return TRQ.filter(trIstTop);
+  if (f === "jetzt") return trqSrc().filter((l) => ["bf", "be"].includes(trTopf(l)));
+  if (f === "top") return trqSrc().filter(trIstTop);
   if (/^st_/.test(f)) { const st = TB_STUFEN.find((x) => TB_GANZ[x.k] === f); if (!st) return [];
     const ids = new Set(); const out = []; for (const k of st.f) for (const l of trqList(k)) if (!ids.has(l.lead_id)) { ids.add(l.lead_id); out.push(l); } return out; }
-  if (TOPF[f]) return TRQ.filter((l) => trTopf(l) === f);
-  const w = [].concat(QST[f]).map(stN); return TRQ.filter((l) => w.includes(stN(l.status)));
+  if (TOPF[f]) return trqSrc().filter((l) => trTopf(l) === f);
+  const w = [].concat(QST[f]).map(stN); return trqSrc().filter((l) => w.includes(stN(l.status)));
 };
 let TRSTAND = null;
 const STAND = [ // g = Zeile im Block „Stand“; topf = gezählt nach der Einteilung oben (nicht nach LeadTable-Status)
@@ -2001,7 +2014,7 @@ function renderTrBoard() {
       <button class="btn sm" type="button" id="tbOv">Scoring-Übersicht</button></span></div>
     ${HEUTE ? `<div class="tb-heute"><b>Heute</b><span>${HEUTE.anrufe ? HEUTE.anrufe.versuche + " Versuche" : HEUTE.angerufen + " angerufen"}</span><span>${HEUTE.anrufe ? HEUTE.anrufe.erreicht : HEUTE.gespraeche} erreicht</span><span class="ok">${HEUTE.vorgeschlagen} Abstellort vorgeschlagen</span><span>${HEUTE.anrufe ? HEUTE.anrufe.qualifiziert : HEUTE.qualifiziert} qualifiziert</span><span>${HEUTE.anrufe ? HEUTE.anrufe.nicht_qualifiziert : HEUTE.nicht_qualifiziert} nicht qualifiziert</span><span>${HEUTE.nicht_erreicht} nicht erreicht</span><span>${HEUTE.whatsapp} WhatsApp</span>${HEUTE.freigegeben ? `<span class="ok">${HEUTE.freigegeben} freigegeben</span>` : ""}</div>` : ""}
     <div class="tb-stufen">${stufen}</div>
-    <div class="tb-titel"><h3>${esc(titel)}</h3>${tbAktion(f, L)}${krBtn()}<span>${TRQ ? L.length + (L.length === 1 ? " Bewerber" : " Bewerber") : ""}${nachRegion ? " · nach Start, dann Wohnort-Region" : f === "top" ? " · ohne WhatsApp zuerst, mit Abstellort-Vorschlag zuerst" : ""} · Klick öffnet die Karte</span></div>
+    <div class="tb-titel"><h3>${esc(titel)}${trNur() ? ` <small style="font-weight:600;color:var(--blue)">· nur Runde ${trNur()}</small>` : ""}</h3>${tbAktion(f, L)}${krBtn()}<span>${TRQ ? L.length + (L.length === 1 ? " Bewerber" : " Bewerber") : ""}${nachRegion ? " · nach Start, dann Wohnort-Region" : f === "top" ? " · ohne WhatsApp zuerst, mit Abstellort-Vorschlag zuerst" : ""} · Klick öffnet die Karte</span></div>
     ${!TRQ ? `<div class="sk"><i></i><i></i><i></i></div>` : !L.length ? `<div class="empty">Niemand in dieser Liste${campF ? " für diese Kampagne" : ""}.</div>`
       : `<table class="tb-tab"><thead><tr><th>Name</th><th>Wohnort</th><th>Abstellort</th><th>Hinweis</th><th>seit</th></tr></thead><tbody>${rows}</tbody></table>`}`;
 }
@@ -2084,7 +2097,7 @@ function waSerieKlick(e) {
 const KR_GRUND = "Grund: Keine Reaktion", KR_ST = "Absage durch Bewerber";
 const krWaDatum = (l) => (String(l.followup_note || "").match(/^WhatsApp am (\d{1,2}\.\d{1,2}\.\d{4}) – anrufen/) || [])[1] || "";
 const krOffen = (l) => !!krWaDatum(l) && (ST_OFFEN.includes(stN(l.status)) || ST_QUALI.includes(stN(l.status)));
-const krListe = () => (TRQ || []).filter((l) => krOffen(l) && (!campF || l.kampagne === campF)).sort((a, b) => new Date(a.followup_at || 0) - new Date(b.followup_at || 0) || String(a.name || "").localeCompare(String(b.name || ""), "de"));
+const krListe = () => trqSrc().filter((l) => krOffen(l) && (!campF || l.kampagne === campF)).sort((a, b) => new Date(a.followup_at || 0) - new Date(b.followup_at || 0) || String(a.name || "").localeCompare(String(b.name || ""), "de"));
 function krBtn() { const n = krListe().length;
   return n ? ` <button class="btn sm" type="button" id="tbKr" title="Alle, denen du vor dem Anruf eine WhatsApp geschickt hast und die noch offen sind. Je Bewerber ein Klick: Status „${KR_ST}“, „${KR_GRUND}“ als erste Zeile der Beschreibung, Wiedervorlage weg.">Keine Reaktion auf WhatsApp (${n})</button>` : ""; }
 let KR = null; // { liste, i, abs, fehler }
@@ -2562,7 +2575,7 @@ function renderQueue() {
 function renderTrq(L) {
   const base = trqList(qf), q = qf === "qual";
   renderStand();
-  $("listTitle").textContent = QTITEL[qf] + " · Transa" + (campF ? " · " + campF.replace(/^T_Transa[_ ]*/i, "") : "");
+  $("listTitle").textContent = QTITEL[qf] + " · Transa" + (campF ? " · " + campF.replace(/^T_Transa[_ ]*/i, "") : "") + (trNur() ? " · nur Runde " + trNur() : "");
   $("listNote").innerHTML = (TRQ ? `${L.length}${campF ? " von " + base.length : ""}` : "wird geladen …") + (trDesk() ? "" : " " + tbAktion(qf, L).replace('id="tbWa"', 'id="tbWaM"').replace('id="tbWaJan"', 'id="tbWaJanM"').replace('id="tbAus"', 'id="tbAusM"') + (BER === "transa" ? krBtn().replace('id="tbKr"', 'id="tbKrM"') : "") + ` <button class="btn sm" type="button" id="tbVcfM">Kontakte fürs Handy</button>`);
   $("clearSearch").hidden = true; $("qFilter").style.display = "";
   const kl = (l) => { const g = l.gespraech; if (!g) return `<span class="pill">ohne Gespräch</span>`; return g.klasse === "K.o." || (g.ko && g.ko.length) ? `<span class="trmini ko">K.o.</span>` : `<span class="trmini">${esc(g.klasse || "")}</span> <span class="hintline" style="margin:0">${g.punkte ?? ""} P.</span>`; };
