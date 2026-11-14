@@ -1657,7 +1657,7 @@ function trLaufVon(l) {
 }
 const trNur = () => (TRL_NUR && TRL_SEL ? TRL_SEL : 0);
 const trqSrc = () => { const n = trNur(); return n ? (TRQ || []).filter((l) => trLaufVon(l) === n) : (TRQ || []); };
-function trNurNeu() { try { renderWork(); } catch (e) { console.error(e); } try { if (TRK) renderTrKpi(); } catch (e) { console.error(e); } }
+function trNurNeu() { for (const f of [applyBereich, renderWork, renderStand, () => { if (TRK) renderTrKpi(); }]) { try { f(); } catch (e) { console.error(e); } } }
 async function loadTrLauf(neu) {
   if (typeof BER === "undefined" || BER !== "transa" || HELFER) return;
   const n = TRL_SEL, alt = TRL[n];
@@ -1910,7 +1910,8 @@ let standZu = store.get("tc_standzu") === "1";
 function renderStand() {
   const el = $("trStand"); if (!el) return;
   const n = (st) => { if (!TRSTAND) return 0; let k = 0; for (const [s, v] of Object.entries(TRSTAND)) if (stN(s) === stN(st)) k += v; return k; };
-  const zahl = (x) => x.topf ? (TRQ ? trqList(x.f).length : null) : (TRSTAND ? n(x.st) : null);
+  // „nur Runde n“ (14.11.2026): dann zählen auch die Status-Chips aus der gefilterten Liste statt aus der Gesamtzahl je Status
+  const zahl = (x) => x.topf ? (TRQ ? trqList(x.f).length : null) : trNur() && TRQ ? (QST[x.f] ? trqList(x.f).length : trqSrc().filter((l) => stN(l.status) === stN(x.st)).length) : (TRSTAND ? n(x.st) : null);
   const chip = (x) => { const k = zahl(x); return `<button type="button" data-f="${x.f}" class="${qf === x.f ? "on" : ""}${k === 0 && qf !== x.f ? " z" : ""}" title="${esc(x.st)}"><i style="background:${x.c}"></i>${esc(x.t)} <b>${k === null ? "…" : k}</b></button>`; };
   const gew = STAND.find((x) => x.f === qf);
   const kopf = `<div class="st-kopf"><button type="button" class="st-zu" data-zu="1" aria-expanded="${!standZu}">${standZu ? "▸" : "▾"} Stand</button>${standZu && gew ? chip(gew) : ""}</div>`;
@@ -2554,7 +2555,7 @@ function renderQueue() {
   const L = filtered();
   if (!searchRes && QST[qf]) return renderTrq(L);
   const pt = !searchRes && qf === "ptplan", base = pt ? (W.probetag_planen || []) : W.arbeitsliste;
-  $("listTitle").textContent = (searchRes ? "Suchergebnis" : pt ? "Probetag planen" : "Heute anrufen") + (!searchRes && BER !== "ihro" ? " · " + BER_NAME[BER] : "");
+  $("listTitle").textContent = (searchRes ? "Suchergebnis" : pt ? "Probetag planen" : "Heute anrufen") + (!searchRes && BER !== "ihro" ? " · " + BER_NAME[BER] : "") + (!searchRes && BER === "transa" && trNur() ? " · nur Runde " + trNur() : "");
   $("listNote").innerHTML = esc(searchRes ? `${L.length} Treffer` : pt ? `${L.length} offen · älteste zuerst` : BER === "ihro" ? (qf === "alle" ? `${L.length} lohnen den Anruf` : qf === "kalt" ? `${L.length} ohne Antwort · älteste zuerst` : `${L.length} in dieser Ansicht`) : `${L.length} von ${W.arbeitsliste.length}`) + (searchRes || HELFER ? "" : ` <button class="btn sm" type="button" id="tbVcfM">Kontakte fürs Handy</button>`);
   $("clearSearch").hidden = !searchRes;
   $("qFilter").style.display = searchRes ? "none" : "";
@@ -2726,8 +2727,8 @@ function applyBereich() {
   const f = (arr) => (arr || []).filter((x) => berL(x) === BER);
   // Abgeschlossene Bewerber nie in „Heute anrufen“, auch wenn noch eine alte Wiedervorlage fällig ist
   // (z. B. Absage direkt in LeadTable gesetzt – der Webhook löscht die Wiedervorlage nicht), 09.11.2026
-  const zu = istZu;
-  W = { ...WALL, arbeitsliste: f(WALL.arbeitsliste).filter((x) => !zu(x)), neueste: f(WALL.neueste), probetage: f(WALL.probetage), geplant: f(WALL.geplant),
+  const zu = istZu, nurL = BER === "transa" ? trNur() : 0, rd = (arr) => (nurL ? arr.filter((x) => trLaufVon(x) === nurL) : arr);
+  W = { ...WALL, arbeitsliste: rd(f(WALL.arbeitsliste).filter((x) => !zu(x))), neueste: f(WALL.neueste), probetage: f(WALL.probetage), geplant: f(WALL.geplant),
     probetag_planen: f(WALL.probetag_planen), probetag_erinnern: f(WALL.probetag_erinnern), termine_nah: (WALL.termine_nah || []).filter((t) => berL(t.lead || t) === BER) };
   W.arbeitsliste_gesamt = W.arbeitsliste.length;
   // Zähler an den Reitern (12.11.2026): ohne Abgeschlossene. Ihro zeigt nur, wer auf „Möchte Rückruf“ steht –
