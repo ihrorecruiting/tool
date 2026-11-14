@@ -152,6 +152,13 @@
   body[data-ber="transa"] .trkpis{grid-template-columns:repeat(6,minmax(0,1fr))}
   .trkpis .s.st{flex-direction:column;gap:2px}
   .trkpis .hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.3}
+  /* Transa: Läufe getrennt (14.11.2026) – erster Lauf bis 08.11., Runde 2 seit dem Neustart am 13.11. */
+  .trlauf{display:none;align-items:center;gap:6px 18px;flex-wrap:wrap;margin-top:10px;padding:8px 12px;border:1px solid var(--line-soft);border-radius:12px;font-size:13px;color:var(--ink2)}
+  body[data-ber="transa"] .trlauf{display:flex}
+  html.helfer .trlauf{display:none!important}
+  .trlauf b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+  .trlauf .hl b{font-size:14.5px}
+  .trlauf .m{color:var(--muted)}
   .trfun{display:flex;flex-direction:column;gap:4px;margin-top:8px}
   .trfun .r{display:grid;grid-template-columns:132px minmax(0,1fr) 34px;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
   .trfun .bar{height:8px;border-radius:5px;background:rgba(120,120,128,.16);overflow:hidden}
@@ -1106,6 +1113,8 @@
     <div class="kpi"><div class="l">Kosten je Bewerbung heute</div><div class="v" id="tkCpl">–</div><div class="s" id="tkCplS"></div><div class="hint" id="tkCplH"></div></div>
     <div class="kpi"><div class="l">Online-Vorgespräch Schritte</div><div class="trfun" id="tkFun"><div class="s">–</div></div></div>
   </div>
+  <!-- Transa: Zahlen je Lauf (Gesamt / Runde 1 / Runde 2), bereinigt ohne Tests und Doppelte -->
+  <div class="trlauf" id="trLauf"></div>
 </section>
 
 <!-- ============ ARBEITEN ============ -->
@@ -1507,13 +1516,13 @@ async function api(action, data = {}) {
   if (!configured()) throw new Error("Nicht eingerichtet");
   if (HELFER && !HELFER_OK.test(action)) throw new Error("Nicht eingerichtet"); // im Kollegen-Zugang still übergehen
   const helferWeg = HELFER || /^(lock|unlock|locks|anruf)$/.test(action);
-  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids|fg_log|chef_liste|dubletten|heute)$/.test(action) ? "cockpit-plus" : action === "kontakte" ? "kontakte" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
+  const fn = /^transa_/.test(action) ? "transa-gespraech" : /^(item_edit|speicher|sicherung|sync_leads|wiedervorlagen|overview_getrennt|heute_bereiche|neue_seit)$/.test(action) ? "items-edit" : /^(info_mails|push_log)$/.test(action) ? "cockpit-info" : /^ihro_/.test(action) ? "ihro-anrufliste" : /^(abst_plz|ev_ids|fg_log|chef_liste|dubletten|heute)$/.test(action) ? "cockpit-plus" : action === "kontakte" ? "kontakte" : action === "lauf" ? "transa-lauf" : "dashboard-api"; // Notizen bearbeiten, Speicher & Sicherung laufen über eine eigene kleine Funktion
   const url = cfg.url.replace(/\/+$/, "") + "/functions/v1/" + (helferWeg ? "helfer-api" : fn), opt = {
     method: "POST", headers: HELFER ? { "Content-Type": "application/json", "x-helfer-key": cfg.token, "x-helfer-name": encodeURIComponent(helferName()) } : { "Content-Type": "application/json", "x-dashboard-token": cfg.token }, body: JSON.stringify({ action, ...data }),
   };
   // Am Handy reißt die Verbindung kurz ab (Funkloch, Wechsel LTE/5G/WLAN, App aus dem Hintergrund) – Safari meldet dann „Load failed“.
   // Lesende Abfragen werden still wiederholt, beim Speichern kommt eine verständliche Meldung.
-  const lesend = /^(ihro_board|work|stats|overview|overview_getrennt|heute_bereiche|neue_seit|info_mails|push_log|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
+  const lesend = /^(lauf|ihro_board|work|stats|overview|overview_getrennt|heute_bereiche|neue_seit|info_mails|push_log|woche|speicher|sicherung|lead_get|lead_history|items_list|mail_list|hires_list|settings_get|reports_latest|search|lead_search)$/.test(action);
   let r;
   for (let i = 0; ; i++) {
     try { r = await fetch(url, opt); break; }
@@ -1635,6 +1644,34 @@ async function loadTrKpi() {
   if (loadTrKpi.t && Date.now() - loadTrKpi.t < 30000) return; loadTrKpi.t = Date.now();
   try { TRK = await api("transa_kpi"); renderTrKpi(); } catch (e) { $("tkNeuS").textContent = "nicht geladen: " + e.message; }
 }
+// Läufe (14.11.2026): Gesamt / Runde 1 (bis 08.11.) / Runde 2 (seit Neustart 13.11.) – bereinigte Zahlen aus der Function transa-lauf.
+// Wer sich im ersten Lauf schon beworben hat, zählt dort; Kosten nach Tag (Meta).
+let TRL = {}, TRL_SEL = (() => { try { const r = localStorage.getItem("tc_tr_lauf"); return r === "0" || r === "1" ? Number(r) : 2; } catch { return 2; } })(); // Standard: laufende Runde 2
+async function loadTrLauf(neu) {
+  if (typeof BER === "undefined" || BER !== "transa" || HELFER) return;
+  const n = TRL_SEL, alt = TRL[n];
+  renderTrLauf();
+  if (!neu && alt && Date.now() - alt.at < 60000) return;
+  try { const d = await api("lauf", { lauf: n }); if (d && d.gesamt) { TRL[n] = { at: Date.now(), d }; if (TRL_SEL === n) renderTrLauf(); } }
+  catch (e) { if (!TRL[n]) { TRL[n] = { at: Date.now() - 50000, fehler: e.message }; if (TRL_SEL === n) renderTrLauf(); } }
+}
+function renderTrLauf() {
+  const box = $("trLauf"); if (!box) return;
+  const eur = (v) => v == null || !isFinite(v) ? "–" : v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  const dm = (iso) => iso ? iso.slice(8, 10) + "." + iso.slice(5, 7) + "." : "";
+  const x = TRL[TRL_SEL], d = x && x.d;
+  const seg = `<span class="seg" role="group" aria-label="Lauf">${["Gesamt", "Runde 1", "Runde 2"].map((t, i) => `<button type="button" data-lauf="${i}" class="${i === TRL_SEL ? "on" : ""}">${t}</button>`).join("")}</span>`;
+  let h = "";
+  if (d) {
+    const g = d.gesamt, b = d.bereinigung, dop = (b.doppelt_markiert || 0) + (b.doppelt_offen || 0) + (b.tests || 0);
+    h = `<span class="hl"><b>${g.bewerber}</b> echte Bewerber${dop ? ` <span class="m">(${b.roh} Eingänge, ${dop} doppelt${b.tests ? "/Test" : ""})</span>` : ""}</span>`
+      + `<span><b>${g.umkreis}</b> im Umkreis</span><span><b>${g.qualifiziert}</b> qualifiziert</span>`
+      + `<span>Werbekosten <b>${eur(g.kosten)}</b></span><span><b>${eur(g.bewerber ? g.kosten / g.bewerber : null)}</b> je Bewerber</span><span class="hl"><b>${eur(g.umkreis ? g.kosten / g.umkreis : null)}</b> je passendem</span>`
+      + `<span class="m">${d.zeitraum && d.zeitraum.von ? dm(d.zeitraum.von) + " bis " + dm(d.zeitraum.bis) : TRL_SEL === 2 ? "seit " + dm(d.stichtag) : ""}</span>`;
+  } else h = `<span class="m">${x && x.fehler ? "Zahlen je Lauf nicht geladen: " + esc(x.fehler) : "wird geladen …"}</span>`;
+  box.innerHTML = seg + h;
+  box.querySelectorAll("button[data-lauf]").forEach((bt) => bt.onclick = () => { TRL_SEL = Number(bt.dataset.lauf); try { localStorage.setItem("tc_tr_lauf", String(TRL_SEL)); } catch { /* egal */ } loadTrLauf(); });
+}
 function renderTrKpi() {
   const k = TRK; if (!k) return;
   const eur = (v) => v == null ? "–" : v.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
@@ -1686,7 +1723,7 @@ document.addEventListener("click", (e) => { const b = e.target.closest("#tkFun .
 TRF_SCHRITTE.nachfrage = TRF_SCHRITTE.vorgespraech;
 function renderKpiBer() {
   if (!STATS || typeof BER === "undefined") return;
-  if (BER === "transa") { if (TRK) renderTrKpi(); loadTrKpi(); }
+  if (BER === "transa") { if (TRK) renderTrKpi(); loadTrKpi(); loadTrLauf(); }
   const g = HB ? HB.gesamt : STATS.total, t = HB ? HB[BER] : STATS.total;
   $("kNeu").textContent = t.neu;
   $("kNeuS").textContent = BER === "ihro" ? "aus den Ihro-Kampagnen" : BER === "transa" ? "Transa-Kampagnen" : "HeyRecruit";

@@ -113,6 +113,7 @@ tr:last-child td{border-bottom:0}
     <div class="hrow">
       <h1>Transa · Projekt-Heatmap<small id="stand">wird geladen …</small></h1>
       <div class="sp"></div>
+      <span class="seg2 noprint" id="lauf" title="Erster Lauf = bis 08.11.2026 · Runde 2 = seit dem Neustart am 13.11.2026"><button data-l="0" class="on">Gesamt</button><button data-l="1">Runde 1</button><button data-l="2">Runde 2</button></span>
       <select id="zeit" title="Zeitraum">
         <option value="alle">seit Kampagnenstart</option>
         <option value="7">letzte 7 Tage</option>
@@ -161,6 +162,15 @@ const zP = (z) => z ? (Array.isArray(z.punkte) && z.punkte.length ? z.punkte : [
 // distance measured like for one centre: below z.radius = inside any pin
 const zKm = (z, lat, lon) => Math.min(...zP(z).map((p) => km(p.lat, p.lon, lat, lon) - (p.radius || z.radius || 60))) + (z.radius || 60);
 
+/* Läufe (14.11.2026): erster Lauf bis 08.11., Runde 2 seit dem Neustart am 13.11.2026. Der Umschalter oben wirkt auf alle Reiter.
+   Zahlen je Lauf aus der Function transa-lauf (gleiche Rechnung wie gf_report). Wer sich im ersten Lauf schon beworben hat, zählt dort. */
+let LAUF = 0, GFL = {}, LAUF1 = new Set(), LAUF_AB = "2026-11-13", QL0 = null, VQ0 = null, AB0 = null, LAUF_TAG = new Map();
+const LAUF_NAME = ["Gesamt", "Runde 1", "Runde 2"];
+const laufVon = (id, datum) => LAUF1.has(id) ? 1 : (datum && new Date(datum).toLocaleDateString("en-CA", { timeZone: "Europe/Berlin" }) >= LAUF_AB ? 2 : 1);
+const inLauf = (id, datum) => !LAUF || laufVon(id, datum ?? LAUF_TAG.get(id)) === LAUF;
+const kInLauf = (tag) => !LAUF || (tag >= LAUF_AB ? 2 : 1) === LAUF;
+const laufText = () => { const d = LAUF_AB.slice(8, 10) + "." + LAUF_AB.slice(5, 7) + "." + LAUF_AB.slice(0, 4); return LAUF === 2 ? `Runde 2: Bewerbungen und Werbekosten seit dem Neustart am ${d}` : LAUF === 1 ? `Runde 1: Bewerbungen und Werbekosten vor dem Neustart am ${d}` : ""; };
+function laufBox() { return LAUF ? `<div class="gf-info" style="margin-bottom:14px"><b>${laufText()}.</b> Wer sich im ersten Lauf schon beworben hat und sich jetzt noch einmal meldet, zählt im ersten Lauf (keine doppelte Zählung).</div>` : ""; }
 let GF = null, OHNE = new Set(); // bereinigte Zahlen (cockpit-plus gf_report): OHNE = Tests und Doppelte, zählen nirgends
 let DATA = null, TAB = "gf", map = null, VQ = null, QL = null, AB = null;
 /* Wohnort für alle Rechnungen (06.11.2026): normalerweise der PLZ-Mittelpunkt. Steht in LeadTable ein Ort, der mehr als 15 km von der
@@ -249,13 +259,13 @@ function abBind(key) { const b = document.getElementById("abXls"); if (b) b.oncl
 const bDay = (d) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Europe/Berlin" });
 function kpiRow(key) {
   const heute = bDay(Date.now()), d7 = bDay(Date.now() - 6 * 864e5);
-  const L = DATA.leads.filter((l) => !TEST_IDS.has(l.id) && (key === "alle" || l.region === key));
-  const K = DATA.kosten.filter((k) => key === "alle" || k.region === key);
+  const L = DATA.leads.filter((l) => !TEST_IDS.has(l.id) && (key === "alle" || l.region === key) && inLauf(l.id, l.datum) && !(LAUF && OHNE.has(l.id)));
+  const K = DATA.kosten.filter((k) => (key === "alle" || k.region === key) && kInLauf(k.tag));
   const nH = L.filter((l) => bDay(l.datum) === heute).length, n7 = L.filter((l) => bDay(l.datum) >= d7).length;
   const kost = K.reduce((s, k) => s + k.kosten, 0), kH = K.filter((k) => k.tag === heute).reduce((s, k) => s + k.kosten, 0);
   const Q = (QL || []).filter((v) => key === "alle" || v.region === key), qH = Q.filter((v) => v.seit && bDay(v.seit) === heute).length;
   const qOn = Q.filter((v) => ONLINE_ST.test(v.status)).length, nq = L.filter((l) => /^nicht qualifiziert$/i.test(String(l.status || "").trim())).length;
-  return kpi("Bewerbungen gesamt", L.length, key === "alle" ? "alle Regionen, seit Start" : "seit Kampagnenstart") + kpi("Bewerbungen heute", nH, "seit 0 Uhr") + kpi("Bewerbungen 7 Tage", n7, "inkl. heute") +
+  return kpi("Bewerbungen gesamt", L.length, LAUF ? LAUF_NAME[LAUF] + ", ohne Doppelte" : key === "alle" ? "alle Regionen, seit Start" : "seit Kampagnenstart") + kpi("Bewerbungen heute", nH, "seit 0 Uhr") + kpi("Bewerbungen 7 Tage", n7, "inkl. heute") +
     kpi("Qualifiziert", `${QL ? Q.length : "–"}${QL && qH ? ` <span style="font-size:15px;color:#16a34a">+${qH} heute</span>` : ""}`, QL ? `${qOn} online · ${Q.length - qOn} von dir · ${nq} nicht qualifiziert` : "nicht geladen") +
     kpi("Werbekosten", eur(kost), `heute ${eur(kH)} · Meta`) +
     kpi("Kosten je Bewerbung", nH ? eur(kH / nH) : "–", `heute · Durchschnitt ${L.length ? eur(kost / L.length) : "–"}<br><span title="Seit 08.11.2026 sendet das Formular nur noch, wer Fernverkehr fahren will und den CE-Führerschein hat. Die Kosten je Bewerbung sind deshalb ab dann höher und mit den Tagen davor nicht direkt vergleichbar.">ab 08.11. nur Fernverkehr + CE ⓘ</span>`);
@@ -680,6 +690,13 @@ async function load() {
       const rg = await fetch(c.url + "/functions/v1/cockpit-plus", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "gf_report" }) });
       GF = rg.ok ? await rg.json() : null; OHNE = new Set(GF?.ohne || []);
     } catch { GF = null; OHNE = new Set(); }
+    GFL = {}; LAUF1 = new Set(); LAUF_TAG = new Map(DATA.leads.map((l) => [l.id, l.datum]));
+    try {
+      const hol = async (n) => { const rl = await fetch(c.url + "/functions/v1/transa-lauf", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ lauf: n }) }); return rl.ok ? await rl.json() : null; };
+      const [l1, l2] = await Promise.all([hol(1), hol(2)]);
+      if (l1 && l1.gesamt) GFL[1] = l1; if (l2 && l2.gesamt) GFL[2] = l2;
+      const x = l1 || l2; if (x) { LAUF1 = new Set(x.lauf1 || []); if (x.stichtag) LAUF_AB = x.stichtag; }
+    } catch { GFL = {}; }
     // Liste „Online vorqualifiziert“ für die Dispo (mit Namen; aus der Function transa-gespraech)
     try {
       const r2 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Online-Vorqualifiziert", "Qualifiziert", "Standort passt", "Standort prüfen", ...ABST_ST, "Abstellort bestätigt", "Vertrag unterschrieben"] }) });
@@ -687,11 +704,13 @@ async function load() {
       QL = r2.ok ? (d2.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !OHNE.has(l.lead_id) && !/^test\b|^dennis mende$/i.test(String(l.name || "").trim())).map((l) => ({ ...vqRow(l), status: String(l.status || "").trim() })) : null;
       VQ = QL ? QL.filter((v) => ONLINE_ST.test(v.status)) : null;
     } catch { VQ = null; QL = null; }
+    QL0 = QL; VQ0 = VQ;
     try {
       const r3 = await fetch(c.url + "/functions/v1/transa-gespraech", { method: "POST", headers: { "Content-Type": "application/json", "x-dashboard-token": c.token }, body: JSON.stringify({ action: "transa_status_liste", stati: ["Nicht qualifiziert", "Absage durch Bewerber", "Talentpool bestätigt"], mitText: true }) });
       const d3 = await r3.json().catch(() => ({}));
       AB = r3.ok ? (d3.leads || []).filter((l) => !TEST_IDS.has(l.lead_id) && !OHNE.has(l.lead_id) && !/^test\b|^dennis mende$/i.test(String(l.name || "").trim())).map(abRow) : null;
     } catch { AB = null; }
+    AB0 = AB;
     render();
   } catch (e) { $("main").innerHTML = '<div class="msg err">Konnte nicht laden: ' + esc(e.message) + '</div>'; }
 }
@@ -705,7 +724,7 @@ const TEST_IDS = new Set(["6ae83c5ca286e77282f27196", "6ae31d16f5aeb9f5a81e9491"
 function prep() {
   const z = $("zeit").value, ab = z === "alle" ? 0 : Date.now() - Number(z) * 864e5;
   const reg = Object.fromEntries(DATA.regionen.map((r) => [r.key, r]));
-  const leads = DATA.leads.filter((l) => !TEST_IDS.has(l.id) && !OHNE.has(l.id) && new Date(l.datum).getTime() >= ab).map((l) => {
+  const leads = DATA.leads.filter((l) => !TEST_IDS.has(l.id) && !OHNE.has(l.id) && new Date(l.datum).getTime() >= ab && inLauf(l.id, l.datum)).map((l) => {
     const p = PLZ[l.plz]; const zr = reg[l.region]?.ziel;
     const ortOk = l.ort && !/^(ruhr|ruhrgebiet|nordwest|nordost|suedwest|südwest|suedost|südost|rheinmain|rhein-main|mitte|osten|westen|norden|sueden|süden|ost|west|nord|süd|sued)$/i.test(l.ort);
     const k = koord(l.plz, ortOk ? l.ort : "");
@@ -714,7 +733,7 @@ function prep() {
     o.km = k.lat != null && zr ? zKm(zr, k.lat, k.lon) : null;
     return o;
   });
-  const kosten = DATA.kosten.filter((k) => new Date(k.tag + "T12:00:00").getTime() >= ab - 864e5 / 2);
+  const kosten = DATA.kosten.filter((k) => new Date(k.tag + "T12:00:00").getTime() >= ab - 864e5 / 2 && kInLauf(k.tag));
   return { reg, leads, kosten };
 }
 
@@ -778,11 +797,14 @@ function tabs() {
 
 function render() {
   tabs();
+  $("lauf").querySelectorAll("button").forEach((b) => b.classList.toggle("on", Number(b.dataset.l) === LAUF));
+  QL = QL0 && QL0.filter((v) => inLauf(v.id)); VQ = VQ0 && VQ0.filter((v) => inLauf(v.id)); AB = AB0 && AB0.filter((v) => inLauf(v.id));
   const { reg, leads, kosten } = prep();
-  $("stand").textContent = "Stand " + new Date(DATA.stand).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " Uhr · " + $("zeit").selectedOptions[0].text + " · Meta-Zielgebiete live aus Meta";
+  $("stand").textContent = "Stand " + new Date(DATA.stand).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " Uhr · " + (LAUF ? LAUF_NAME[LAUF] + " · " : "") + $("zeit").selectedOptions[0].text + " · Meta-Zielgebiete live aus Meta";
   if (map) { map.remove(); map = null; }
   ST_LEADS = leads;
   if (TAB === "gf") renderGF(); else if (TAB === "planung") renderPlanung(); else if (TAB === "standorte") renderStandorte(); else if (TAB === "alle") renderAlle(reg, leads, kosten); else renderRegion(reg[TAB], leads.filter((l) => l.region === TAB), kosten.filter((k) => k.region === TAB));
+  if (LAUF && TAB !== "gf") $("main").insertAdjacentHTML("afterbegin", laufBox());
 }
 
 function hbars(rows) {
@@ -899,11 +921,12 @@ const GF_FARBE = { frei: "#0f8a6c", entgegen: "#d97706", aus: "#7b8494" };
 const GF_TAB = { mitte: "fulda", osten: "halle", nordwest: "osnabrueck" }; // Schlüssel gf_report → Reiter
 const dmy = (iso) => iso ? new Date(iso + (iso.length === 10 ? "T12:00:00" : "")).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "–";
 function renderGF() {
-  if (!GF || !GF.gesamt) { $("main").innerHTML = '<div class="msg err">Die bereinigten Zahlen konnten nicht geladen werden. Bitte „Aktualisieren“.</div>'; return; }
-  const d = GF, g = d.gesamt, b = d.bereinigung;
+  const d = LAUF ? GFL[LAUF] : GF;
+  if (!d || !d.gesamt) { $("main").innerHTML = '<div class="msg err">Die bereinigten Zahlen konnten nicht geladen werden. Bitte „Aktualisieren“.</div>'; return; }
+  const g = d.gesamt, b = d.bereinigung;
   const bis = d.zeitraum?.bis, heute = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Berlin" });
   const tagNach = (iso) => { const x = new Date(iso + "T12:00:00"); x.setDate(x.getDate() + 1); return x.toLocaleDateString("en-CA"); };
-  const pausiert = bis && tagNach(bis) < heute; // Meta liefert für andere Kampagnen weiter Kosten, für Transa nicht → Anzeigen pausiert
+  const pausiert = LAUF !== 1 && bis && tagNach(bis) < heute; // Meta liefert für andere Kampagnen weiter Kosten, für Transa nicht → Anzeigen pausiert
   const regs = d.regionen.slice().sort((a, b) => (b.aktiv - a.aktiv) || (b.bewerber - a.bewerber));
   const sum = { name: "Gesamt", bewerber: 0, umkreis: 0, qualifiziert: 0, frei: 0, entgegen: 0, aus: 0, kosten: 0 };
   for (const r of regs) for (const k of Object.keys(sum)) if (k !== "name") sum[k] += r[k] || 0;
@@ -925,13 +948,13 @@ function renderGF() {
   if (ful && ful.kosten) say.push(`Fulda / Bad Hersfeld ist beendet: ${eur(ful.kosten)} Werbekosten, ${ful.bewerber} Bewerber, ${ful.umkreis ? "davon " + ful.umkreis : "davon keiner"} im heutigen Umkreis.`);
   if (g.qualifiziert) say.push(`<b>${g.qualifiziert}</b> Bewerber im Umkreis sind qualifiziert, das sind ${eur(g.kosten / g.qualifiziert)} Werbekosten je qualifiziertem Fahrer.`);
   $("main").innerHTML = `
-  ${pausiert ? `<div class="gf-pause"><b>Anzeigen pausiert seit ${dmy(tagNach(bis))}.</b> Die letzten Transa-Werbekosten sind vom ${dmy(bis)}; die Kosten unten sind die Gesamtkosten der Kampagne (${dmy(d.zeitraum.von)} bis ${dmy(bis)}).</div>` : ""}
+  ${laufBox()}${pausiert ? `<div class="gf-pause"><b>Anzeigen pausiert seit ${dmy(tagNach(bis))}.</b> Die letzten Transa-Werbekosten sind vom ${dmy(bis)}; die Kosten unten sind die Gesamtkosten der Kampagne (${dmy(d.zeitraum.von)} bis ${dmy(bis)}).</div>` : ""}
   <div class="gf-kpis">
     <div class="gf-kpi"><div class="l">Echte Bewerber</div><div class="v">${g.bewerber}</div><div class="s">${b.roh} Einträge in LeadTable</div></div>
     <div class="gf-kpi hl"><div class="l">Davon im Umkreis</div><div class="v">${g.umkreis}</div><div class="s">${pct(g.umkreis, g.bewerber)} · ${g.frei} frei, ${g.entgegen} kommen entgegen</div></div>
     <div class="gf-kpi"><div class="l">Werbekosten</div><div class="v">${eur(g.kosten)}</div><div class="s">Meta, ${dmy(d.zeitraum?.von)} bis ${dmy(bis)}</div></div>
-    <div class="gf-kpi"><div class="l">€ je Bewerber</div><div class="v">${eur(g.kosten / g.bewerber)}</div><div class="s">alle echten Bewerber</div></div>
-    <div class="gf-kpi hl"><div class="l">€ je passendem Bewerber</div><div class="v">${eur(g.kosten / g.umkreis)}</div><div class="s">Wohnort im Umkreis</div></div>
+    <div class="gf-kpi"><div class="l">€ je Bewerber</div><div class="v">${eur(g.bewerber ? g.kosten / g.bewerber : null)}</div><div class="s">alle echten Bewerber</div></div>
+    <div class="gf-kpi hl"><div class="l">€ je passendem Bewerber</div><div class="v">${eur(g.umkreis ? g.kosten / g.umkreis : null)}</div><div class="s">Wohnort im Umkreis</div></div>
   </div>
   <div class="card" style="margin-top:14px"><ul class="gf-say">${say.map((s) => `<li>${s}</li>`).join("")}</ul></div>
   <div class="grid two" style="margin-top:14px">
@@ -954,7 +977,7 @@ function renderGF() {
     <tbody>${regs.map((r) => zeile(r, r.aktiv ? "" : "off")).join("")}${zeile(sum, "sum")}</tbody></table></div></div>
   <div class="gf-info" style="margin-top:14px">
     <p style="margin:0 0 6px"><b>Bereinigung:</b> ${b.roh} Einträge in LeadTable − ${b.tests} Test${b.tests === 1 ? "" : "s"} − ${b.doppelt_markiert + b.doppelt_offen} doppelte Bewerbungen (gleiche Handynummer oder E-Mail; je Person zählt der am weitesten fortgeschrittene Eintrag) = <b>${b.personen} echte Bewerber</b>.${g.unbekannt ? ` ${g.unbekannt} ohne gültige Postleitzahl.` : ""} Die anderen Reiter rechnen genauso ohne Tests und Doppelte.</p>
-    <p style="margin:0"><b>Umkreis:</b> „frei“ = bis 20 km zur Autobahn, Abstellort frei wählbar; „entgegen“ = weiter weg, kommt ein Stück Richtung Autobahn. Kosten laut Meta-Werbekonto, der Region nach Kampagnenname zugeordnet. Dieser Reiter zeigt immer alles seit Kampagnenstart.</p>
+    <p style="margin:0"><b>Umkreis:</b> „frei“ = bis 20 km zur Autobahn, Abstellort frei wählbar; „entgegen“ = weiter weg, kommt ein Stück Richtung Autobahn. Kosten laut Meta-Werbekonto, der Region nach Kampagnenname zugeordnet. ${LAUF ? laufText() + "." : "Zeitraum: seit Kampagnenstart (die Auswahl „letzte … Tage“ wirkt in diesem Reiter nicht)."}</p>
   </div>`;
   $("main").querySelectorAll("a[data-tab]").forEach((a) => a.onclick = (e) => { e.preventDefault(); TAB = a.dataset.tab; render(); window.scrollTo(0, 0); });
   if (!baseMap([51.2, 9.6], 6)) return;
@@ -1030,6 +1053,7 @@ function renderRegion(r, L, K) {
 }
 
 $("zeit").onchange = () => DATA && render();
+$("lauf").querySelectorAll("button").forEach((b) => b.onclick = () => { LAUF = Number(b.dataset.l); if (DATA) render(); });
 $("reload").onclick = load;
 $("print").onclick = () => { if (map) map.invalidateSize(); setTimeout(() => window.print(), 300); };
 $("cSave").onclick = () => {
